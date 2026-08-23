@@ -1,0 +1,1 @@
+-- Pendiente de T-11: carga idempotente de datos demo.
