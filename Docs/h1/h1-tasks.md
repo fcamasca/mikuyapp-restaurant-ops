@@ -2,6 +2,13 @@
 
 La estimación total es 240 minutos. Es un límite de planificación, no autorización para construir. Ninguna tarea comienza hasta la aprobación humana del spec.
 
+## Estado de ejecución
+
+- [x] T-01 — Repositorio existente verificado en `feature/h1-TechnicalBasis` y vinculado con `origin`.
+- [x] T-02 — Node.js `22.12.0`, npm `10.9.0`, configuración y lockfile verificados mediante `npm ci`.
+- [x] T-03 — Proyecto mínimo Vite + React + TypeScript validado mediante TypeScript, build y arranque local.
+- [ ] T-04–T-15 — Pendientes.
+
 | ID | Min | Objetivo | Dependencias | Resultado verificable | Pruebas |
 |---|---:|---|---|---|---|
 | T-01 | 10 | Confirmar workspace e inicializar el repositorio Git oficial `mikuyapp`. | Spec aprobado | Repositorio con rama `main`, `.gitignore` y nombre/remoto documentados. | TP-01 |

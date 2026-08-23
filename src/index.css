@@ -1,0 +1,52 @@
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #18201b;
+  background: #f5f7f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem;
+}
+
+.app-card {
+  width: min(100%, 36rem);
+  padding: 2.5rem;
+  border: 1px solid #d9e0d8;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 1rem 3rem rgb(24 32 27 / 8%);
+}
+
+.app-eyebrow {
+  margin: 0 0 0.5rem;
+  color: #477b55;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+}
+
+.app-card > p:last-child {
+  margin: 1rem 0 0;
+  color: #566159;
+}
