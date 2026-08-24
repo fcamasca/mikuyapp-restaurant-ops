@@ -6,7 +6,10 @@ create table public.local (
   nombre text not null,
   activo boolean not null default true,
   creado_en timestamptz not null default now(),
-  constraint pk_local primary key (id)
+  constraint pk_local primary key (id),
+  constraint uq_local_codigo unique (codigo),
+  constraint ck_local_codigo_no_vacio check (btrim(codigo) <> ''),
+  constraint ck_local_nombre_no_vacio check (btrim(nombre) <> '')
 );
 
 create table public.rol (
@@ -14,7 +17,13 @@ create table public.rol (
   codigo text not null,
   nombre text not null,
   activo boolean not null default true,
-  constraint pk_rol primary key (id)
+  constraint pk_rol primary key (id),
+  constraint uq_rol_codigo unique (codigo),
+  constraint uq_rol_nombre unique (nombre),
+  constraint ck_rol_codigo_valido check (
+    codigo in ('ADMINISTRADOR', 'MOZO', 'COCINA', 'CAJA')
+  ),
+  constraint ck_rol_nombre_no_vacio check (btrim(nombre) <> '')
 );
 
 create table public.perfil_usuario (
@@ -25,12 +34,13 @@ create table public.perfil_usuario (
   activo boolean not null default true,
   creado_en timestamptz not null default now(),
   constraint pk_perfil_usuario primary key (id),
+  constraint ck_perfil_usuario_nombre_no_vacio check (btrim(nombre) <> ''),
   constraint fk_perfil_usuario_auth_user foreign key (id)
-    references auth.users (id),
+    references auth.users (id) on delete restrict,
   constraint fk_perfil_usuario_local foreign key (local_id)
-    references public.local (id),
+    references public.local (id) on delete restrict,
   constraint fk_perfil_usuario_rol foreign key (rol_id)
-    references public.rol (id)
+    references public.rol (id) on delete restrict
 );
 
 create table public.mesa (
@@ -43,8 +53,14 @@ create table public.mesa (
   creado_en timestamptz not null default now(),
   constraint pk_mesa primary key (id),
   constraint uq_mesa_id_local_id unique (id, local_id),
+  constraint uq_mesa_local_id_codigo unique (local_id, codigo),
+  constraint ck_mesa_codigo_no_vacio check (btrim(codigo) <> ''),
+  constraint ck_mesa_nombre_no_vacio check (btrim(nombre) <> ''),
+  constraint ck_mesa_estado_valido check (
+    estado in ('LIBRE', 'OCUPADA', 'PEDIDO_LISTO', 'PENDIENTE_PAGO')
+  ),
   constraint fk_mesa_local foreign key (local_id)
-    references public.local (id)
+    references public.local (id) on delete restrict
 );
 
 create table public.categoria (
@@ -57,8 +73,12 @@ create table public.categoria (
   creado_en timestamptz not null default now(),
   constraint pk_categoria primary key (id),
   constraint uq_categoria_id_local_id unique (id, local_id),
+  constraint uq_categoria_local_id_codigo unique (local_id, codigo),
+  constraint ck_categoria_codigo_no_vacio check (btrim(codigo) <> ''),
+  constraint ck_categoria_nombre_no_vacio check (btrim(nombre) <> ''),
+  constraint ck_categoria_orden_no_negativo check (orden >= 0),
   constraint fk_categoria_local foreign key (local_id)
-    references public.local (id)
+    references public.local (id) on delete restrict
 );
 
 create table public.producto (
@@ -71,10 +91,14 @@ create table public.producto (
   activo boolean not null default true,
   creado_en timestamptz not null default now(),
   constraint pk_producto primary key (id),
+  constraint uq_producto_local_id_codigo unique (local_id, codigo),
+  constraint ck_producto_codigo_no_vacio check (btrim(codigo) <> ''),
+  constraint ck_producto_nombre_no_vacio check (btrim(nombre) <> ''),
+  constraint ck_producto_precio_no_negativo check (precio >= 0),
   constraint fk_producto_local foreign key (local_id)
-    references public.local (id),
+    references public.local (id) on delete restrict,
   constraint fk_producto_categoria_local foreign key (categoria_id, local_id)
-    references public.categoria (id, local_id)
+    references public.categoria (id, local_id) on delete restrict
 );
 
 create table public.pedido (
@@ -86,12 +110,24 @@ create table public.pedido (
   creado_en timestamptz not null default now(),
   enviado_en timestamptz null,
   constraint pk_pedido primary key (id),
+  constraint ck_pedido_estado_valido check (
+    estado in (
+      'ABIERTO',
+      'ENVIADO',
+      'RECIBIDO_COCINA',
+      'EN_PREPARACION',
+      'LISTO',
+      'ENTREGADO',
+      'PAGADO',
+      'ANULADO'
+    )
+  ),
   constraint fk_pedido_local foreign key (local_id)
-    references public.local (id),
+    references public.local (id) on delete restrict,
   constraint fk_pedido_creado_por foreign key (creado_por)
-    references public.perfil_usuario (id),
+    references public.perfil_usuario (id) on delete restrict,
   constraint fk_pedido_mesa_local foreign key (mesa_id, local_id)
-    references public.mesa (id, local_id)
+    references public.mesa (id, local_id) on delete restrict
 );
 
 create table public.detalle_pedido (
@@ -102,10 +138,15 @@ create table public.detalle_pedido (
   precio_unitario numeric(10,2) not null,
   observacion text null,
   constraint pk_detalle_pedido primary key (id),
+  constraint ck_detalle_pedido_cantidad_positiva check (cantidad > 0),
+  constraint ck_detalle_pedido_precio_no_negativo check (precio_unitario >= 0),
+  constraint ck_detalle_pedido_observacion_no_vacia check (
+    observacion is null or btrim(observacion) <> ''
+  ),
   constraint fk_detalle_pedido_pedido foreign key (pedido_id)
-    references public.pedido (id),
+    references public.pedido (id) on delete restrict,
   constraint fk_detalle_pedido_producto foreign key (producto_id)
-    references public.producto (id)
+    references public.producto (id) on delete restrict
 );
 
 create table public.historial_estado (
@@ -116,10 +157,38 @@ create table public.historial_estado (
   usuario_id uuid not null,
   creado_en timestamptz not null default now(),
   constraint pk_historial_estado primary key (id),
+  constraint ck_historial_estado_anterior_valido check (
+    estado_anterior is null
+    or estado_anterior in (
+      'ABIERTO',
+      'ENVIADO',
+      'RECIBIDO_COCINA',
+      'EN_PREPARACION',
+      'LISTO',
+      'ENTREGADO',
+      'PAGADO',
+      'ANULADO'
+    )
+  ),
+  constraint ck_historial_estado_nuevo_valido check (
+    estado_nuevo in (
+      'ABIERTO',
+      'ENVIADO',
+      'RECIBIDO_COCINA',
+      'EN_PREPARACION',
+      'LISTO',
+      'ENTREGADO',
+      'PAGADO',
+      'ANULADO'
+    )
+  ),
+  constraint ck_historial_estado_cambio_valido check (
+    estado_anterior is null or estado_anterior <> estado_nuevo
+  ),
   constraint fk_historial_estado_pedido foreign key (pedido_id)
-    references public.pedido (id),
+    references public.pedido (id) on delete restrict,
   constraint fk_historial_estado_usuario foreign key (usuario_id)
-    references public.perfil_usuario (id)
+    references public.perfil_usuario (id) on delete restrict
 );
 
 create table public.pago (
@@ -130,8 +199,49 @@ create table public.pago (
   usuario_id uuid not null,
   pagado_en timestamptz not null default now(),
   constraint pk_pago primary key (id),
+  constraint uq_pago_pedido_id unique (pedido_id),
+  constraint ck_pago_importe_positivo check (importe > 0),
+  constraint ck_pago_medio_valido check (
+    medio in ('EFECTIVO', 'YAPE', 'PLIN', 'TARJETA')
+  ),
   constraint fk_pago_pedido foreign key (pedido_id)
-    references public.pedido (id),
+    references public.pedido (id) on delete restrict,
   constraint fk_pago_usuario foreign key (usuario_id)
-    references public.perfil_usuario (id)
+    references public.perfil_usuario (id) on delete restrict
 );
+
+create index idx_perfil_usuario_local_id
+  on public.perfil_usuario (local_id);
+
+create index idx_perfil_usuario_rol_id
+  on public.perfil_usuario (rol_id);
+
+create index idx_mesa_local_id_estado
+  on public.mesa (local_id, estado);
+
+create index idx_categoria_local_id_activo_orden
+  on public.categoria (local_id, activo, orden);
+
+create index idx_producto_categoria_id_activo
+  on public.producto (categoria_id, activo);
+
+create index idx_producto_local_id_activo
+  on public.producto (local_id, activo);
+
+create index idx_pedido_local_id_estado_creado_en
+  on public.pedido (local_id, estado, creado_en);
+
+create index idx_pedido_mesa_id_estado
+  on public.pedido (mesa_id, estado);
+
+create index idx_detalle_pedido_pedido_id
+  on public.detalle_pedido (pedido_id);
+
+create index idx_detalle_pedido_producto_id
+  on public.detalle_pedido (producto_id);
+
+create index idx_historial_estado_pedido_id_creado_en
+  on public.historial_estado (pedido_id, creado_en);
+
+create index idx_pago_pagado_en
+  on public.pago (pagado_en);
