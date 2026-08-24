@@ -76,7 +76,7 @@ Incluye inicialización del repositorio, frontend mínimo, esquema completo inic
 - Producto: `mikuyapp`.
 - Proyecto Cloudflare Pages: `mikuyapp`.
 - Repositorio GitHub oficial: `fcamasca/mikuyapp-restaurant-ops`.
-- Spec: `Docs/h1/`.
+- Spec: `specs/H1-TechnicalBasis/`.
 - Datos: demo reproducibles.
 - Stack y hosting: los aprobados en el plan.
 - Nombre y región de Supabase: parámetros disponibles al ejecutar; se registra la selección.

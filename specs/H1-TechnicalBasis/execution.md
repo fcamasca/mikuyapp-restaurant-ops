@@ -192,3 +192,27 @@
 | Resultado de pruebas | TP-01–TP-20 aprobadas |
 | Estado del hito | H1 técnicamente construido, validado y aceptado |
 | Pendiente posterior | Fusionar a `main` y comprobar el despliegue de producción |
+
+## Limpieza organizativa posterior a la aceptación
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Responsable | Frankz Camasca |
+| Inventario | Raíz, `docs/`, `specs/`, `scripts/`, `src/` y `supabase/` revisados según su responsabilidad |
+| Movimientos | Ninguno; todos los archivos versionados ya estaban en ubicaciones compatibles con Vite, npm, TypeScript, Supabase, Git y Cloudflare |
+| README | Primera versión de `README.md` creada en la raíz, con alcance real de H1, entorno local, seguridad, documentación y Preview aceptado |
+| Referencias | Enlaces relativos del README dirigidos a los documentos y recursos existentes |
+| Cambios funcionales | Ninguno; aplicación, migración, seed, RLS, dependencias y datos permanecen sin cambios |
+| Validaciones | `npm ci`, typecheck, build, acceso anónimo, lockfile, rutas, enlaces, diff y secretos verificados |
+
+## Estandarización documental previa al merge
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Documentación transversal | Plan general movido a `docs/PLAN_MVP.md` |
+| Spec cerrada | Paquete H1 movido a `specs/H1-TechnicalBasis/` con nombres estándar e índices de navegación |
+| README principal | Enlaces actualizados, badges reales, calidad y licencia documentados |
+| CI | Workflow mínimo en `.github/workflows/ci.yml` con instalación limpia, typecheck y build |
+| Cambios funcionales | Ninguno; aplicación, base de datos, seguridad y datos de H1 permanecen sin cambios |

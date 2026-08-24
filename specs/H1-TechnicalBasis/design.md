@@ -21,7 +21,7 @@ src/
   main.tsx
 supabase/migrations/
 supabase/seed.sql
-Docs/h1/
+specs/H1-TechnicalBasis/
 ```
 
 Componentes en PascalCase; funciones y variables en camelCase; tipos explícitos en servicios. Una responsabilidad por módulo. Sin router, estado global ni capas reservadas para funciones futuras.
