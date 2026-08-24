@@ -245,3 +245,59 @@ create index idx_historial_estado_pedido_id_creado_en
 
 create index idx_pago_pagado_en
   on public.pago (pagado_en);
+
+alter table public.local enable row level security;
+alter table public.rol enable row level security;
+alter table public.perfil_usuario enable row level security;
+alter table public.mesa enable row level security;
+alter table public.categoria enable row level security;
+alter table public.producto enable row level security;
+alter table public.pedido enable row level security;
+alter table public.detalle_pedido enable row level security;
+alter table public.historial_estado enable row level security;
+alter table public.pago enable row level security;
+
+revoke all privileges
+on table
+  public.local,
+  public.rol,
+  public.perfil_usuario,
+  public.mesa,
+  public.categoria,
+  public.producto,
+  public.pedido,
+  public.detalle_pedido,
+  public.historial_estado,
+  public.pago
+from anon;
+
+revoke all privileges on all sequences in schema public from anon;
+
+grant select on table public.local to anon;
+grant select on table public.mesa to anon;
+grant select on table public.categoria to anon;
+grant select on table public.producto to anon;
+
+create policy anon_select_active_local
+on public.local
+for select
+to anon
+using (activo = true);
+
+create policy anon_select_active_mesa
+on public.mesa
+for select
+to anon
+using (activo = true);
+
+create policy anon_select_active_categoria
+on public.categoria
+for select
+to anon
+using (activo = true);
+
+create policy anon_select_active_producto
+on public.producto
+for select
+to anon
+using (activo = true);
