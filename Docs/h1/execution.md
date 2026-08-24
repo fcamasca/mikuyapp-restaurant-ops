@@ -52,3 +52,26 @@
 | Usuarios y perfiles | 0 usuarios Auth y 0 perfiles |
 | Datos transaccionales | 0 pedidos, 0 detalles, 0 historiales y 0 pagos |
 | Credenciales, secretos o UUID registrados | Ninguno |
+
+## T-12 — Cliente público y acceso anónimo
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Responsable | Frankz Camasca |
+| Commit HEAD | `f3045748dc4053f55829900e0fb9d952ce66e7e5` |
+| Proyecto | `mikuyapp` (`ibfrrifvhvtgcxfxuinf`) |
+| `@supabase/supabase-js` | `2.112.3` |
+| Variables configuradas | `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`, sin registrar valores |
+| TP-14 — `local` | 1 fila activa legible |
+| TP-14 — `mesa` | 6 filas activas legibles |
+| TP-14 — `categoria` | 5 filas activas legibles |
+| TP-14 — `producto` | 10 filas activas legibles |
+| TP-14 — tabla privada | `pedido` rechazó `SELECT` por permisos/RLS |
+| TP-17 — tablas públicas | `INSERT`, `UPDATE` y `DELETE` rechazados por permisos/RLS en las cuatro tablas |
+| TP-17 — tabla transaccional | `INSERT`, `UPDATE` y `DELETE` rechazados por permisos/RLS en `pedido` |
+| Comparación anterior/posterior | Conteos e identificadores sin cambios |
+| Typecheck | Correcto mediante `npm run typecheck` |
+| Build | Correcto mediante `npm run build` |
+| TP-19 — alcance local | Variables locales ignoradas y plantilla sin valores; queda pendiente la revisión del despliegue en Cloudflare Pages |
+| Revisión de secretos | Sin credenciales privadas en archivos versionables, build o reporte |
