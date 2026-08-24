@@ -100,3 +100,29 @@
 | Pruebas controladas | `App.tsx` restaurado al SHA-256 original después de observar los estados |
 | Revisión de secretos | Sin credenciales privadas en archivos versionables, bundle o logs; `.env.local` permanece ignorado |
 | Defectos | Sin defectos funcionales pendientes; el escenario temporal de reintento se ajustó para React Strict Mode y fue retirado |
+
+## T-14 — Despliegue Preview en Cloudflare Pages
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Responsable | Frankz Camasca |
+| Commit candidato | `c57cdf06ad83c5775a78eaf2f7029db854caaa98` (`c57cdf0`) |
+| Producto y proyecto Pages | `mikuyapp` |
+| Repositorio GitHub oficial | `fcamasca/mikuyapp-restaurant-ops` |
+| Aclaración de ejecución | El nombre lógico y el proyecto Pages son `mikuyapp`; el slug real del repositorio es `fcamasca/mikuyapp-restaurant-ops`. No constituye un cambio de arquitectura. |
+| Plan e integración | Cloudflare Pages Free conectado mediante GitHub |
+| Rama de producción | `main` |
+| Rama Preview | `feature/h1-TechnicalBasis`, configurada como rama personalizada |
+| Configuración de build | React (Vite); `npm run build`; salida `dist`; Node.js `22.12.0` |
+| Variables públicas | `NODE_VERSION`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`, sin registrar valores |
+| Despliegue inicial de producción | `main@4eb75d9` falló por ausencia de `package.json`; intento separado del candidato H1 y sin despliegue de producción |
+| Despliegue Preview | Correcto para `feature/h1-TechnicalBasis@c57cdf0`; build, carga de tres activos y publicación completados |
+| URL Preview validada | <https://c3cb696e.mikuyapp.pages.dev> |
+| TP-18 | Aprobada: URL accesible, aplicación cargada, conexión comprensible, local demo y conteos 6 mesas, 5 categorías y 10 productos visibles; recarga correcta y sin errores propios de MikuyApp en consola |
+| TP-19 | Aprobada: solo las tres variables públicas aprobadas en Preview; sin credenciales privadas en configuración, build o evidencia |
+| Datos | Sin mutaciones: el despliegue realizó únicamente consultas públicas de lectura |
+| Regresiones finales | `npm run typecheck`, `npm run build` y `npm run verify:anon` correctos; TP-14 y TP-17 permanecen aprobadas y los datos no cambiaron |
+| Activación del candidato | Se usó un deploy hook temporal para construir el HEAD ya publicado sin commit ni push adicionales; el hook fue eliminado después del despliegue |
+| Estado de producción | Sin despliegue de producción; no se fusionó ni convirtió la rama feature en producción |
+| TP-20 | Pendiente para H6 |
