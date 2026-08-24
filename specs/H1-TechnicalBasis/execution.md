@@ -191,7 +191,7 @@
 | Contenido validado | Aplicación cargada, conexión Supabase correcta, local `MIKUY-DEMO`, 6 mesas, 5 categorías y 10 productos visibles |
 | Resultado de pruebas | TP-01–TP-20 aprobadas |
 | Estado del hito | H1 técnicamente construido, validado y aceptado |
-| Pendiente posterior | Fusionar a `main` y comprobar el despliegue de producción |
+| Pendiente posterior | Resuelto: `main` y producción verificadas durante el cierre de H1 |
 
 ## Limpieza organizativa posterior a la aceptación
 
@@ -216,3 +216,19 @@
 | README principal | Enlaces actualizados, badges reales, calidad y licencia documentados |
 | CI | Workflow mínimo en `.github/workflows/ci.yml` con instalación limpia, typecheck y build |
 | Cambios funcionales | Ninguno; aplicación, base de datos, seguridad y datos de H1 permanecen sin cambios |
+
+## Cierre de H1 en producción
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Integración | Fast-forward de `feature/h1-TechnicalBasis` a `main`, sin merge commit, squash ni rebase |
+| SHA funcional desplegado | `03e75941349475562aa20d0e913abfbe418f4487` (`03e7594`) |
+| GitHub Actions en `main` | Aprobado: `npm ci`, typecheck y build correctos |
+| URL productiva | <https://mikuyapp.pages.dev/> |
+| Validación HTTP | 200 |
+| Validación funcional | MikuyApp visible, conexión Supabase correcta, local `MIKUY-DEMO` y datos 6 mesas, 5 categorías y 10 productos visibles |
+| TP-18 y TP-19 | Se conservan aprobadas; despliegue accesible y sin secretos privados |
+| Integridad de datos | TP-14 y TP-17 repetidas; lecturas 1/6/5/10, escrituras anónimas rechazadas y datos sin alteraciones |
+| Cambios funcionales durante el cierre | Ninguno; aplicación, dependencias, migración, seed, RLS y datos permanecieron sin cambios |
+| Estado | H1 cerrado en `main` y producción |

@@ -6,11 +6,9 @@
 
 Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedido → cocina → entrega → pago**.
 
-**Estado actual:** Hito H1 aceptado.
+**Estado actual:** Hito H1 aceptado, cerrado y desplegado en producción.
 
-**Preview H1 validado:** <https://1c1020bb.mikuyapp.pages.dev/>
-
-El merge a `main` y la comprobación del despliegue definitivo de producción continúan pendientes.
+**Producción:** <https://mikuyapp.pages.dev/>
 
 ## Problema y objetivo
 
@@ -33,9 +31,9 @@ H1 establece únicamente la base técnica verificable del producto. El flujo ope
 
 ## Demo H1
 
-El Preview aceptado permite comprobar:
+La aplicación desplegada en producción permite comprobar:
 
-- URL pública: <https://1c1020bb.mikuyapp.pages.dev/>;
+- URL productiva: <https://mikuyapp.pages.dev/>;
 - local demo `MIKUY-DEMO`;
 - 6 mesas activas;
 - 5 categorías activas;
@@ -87,7 +85,7 @@ flowchart TB
 - Permisos PostgreSQL y RLS para el acceso anónimo mínimo.
 - Pruebas SQL de esquema, restricciones y seed.
 - Pruebas automatizadas de lectura y rechazo de escrituras anónimas.
-- Preview publicado en Cloudflare Pages.
+- Producción publicada en Cloudflare Pages.
 
 ### Fuera del alcance actual
 

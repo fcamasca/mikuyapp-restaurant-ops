@@ -36,4 +36,6 @@ Se confirmó que la lectura anónima permanece limitada a los datos públicos re
 
 Frankz Camasca acepta H1 como técnicamente construido y validado dentro del alcance aprobado.
 
-Esta aceptación no fusiona la rama ni acredita todavía un despliegue de producción. Permanecen pendientes la fusión de `feature/h1-TechnicalBasis` a `main` y la comprobación posterior del despliegue de producción en Cloudflare Pages.
+La rama `feature/h1-TechnicalBasis` fue integrada en `main` mediante fast-forward. El SHA funcional `03e75941349475562aa20d0e913abfbe418f4487` fue verificado en `main` mediante GitHub Actions y desplegado correctamente en <https://mikuyapp.pages.dev/> con HTTP 200, conexión Supabase correcta y datos demo 6/5/10 sin alteraciones.
+
+Con la integración y la producción verificadas, H1 queda cerrado. Se conservan sin cambios los criterios históricos, la aceptación humana y la evidencia TP-01–TP-20.
