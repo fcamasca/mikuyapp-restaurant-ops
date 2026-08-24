@@ -2,7 +2,7 @@
 
 ## 1. Objetivo y límite
 
-H1 comprende los días 1 y 2 del plan, con un máximo planificado de cuatro horas. Su objetivo es establecer la base técnica mínima del MVP para un solo local: repositorio `mikuyapp`, aplicación React + TypeScript + Tailwind construida con Vite, base PostgreSQL en Supabase y despliegue en Cloudflare Pages.
+H1 comprende los días 1 y 2 del plan, con un máximo planificado de cuatro horas. Su objetivo es establecer la base técnica mínima del MVP para un solo local: producto `mikuyapp` en el repositorio GitHub oficial `fcamasca/mikuyapp-restaurant-ops`, aplicación React + TypeScript + Tailwind construida con Vite, base PostgreSQL en Supabase y despliegue en Cloudflare Pages.
 
 ## 2. Resultado verificable
 
@@ -19,7 +19,7 @@ H1 produce una aplicación que carga localmente y desde una URL pública, comuni
 
 ## 4. Requerimientos técnicos
 
-- **RT-01:** crear o inicializar el repositorio oficial `mikuyapp`, con Git, rama principal y configuración mínima documentada.
+- **RT-01:** crear o inicializar el repositorio GitHub oficial `fcamasca/mikuyapp-restaurant-ops` para el producto `mikuyapp`, con Git, rama principal y configuración mínima documentada.
 - **RT-02:** usar Vite, React y TypeScript; usar Tailwind CSS sin router ni estado global en H1.
 - **RT-03:** usar npm, Node.js 22 LTS compatible con Vite (`>=22.12.0`) y conservar `package-lock.json`.
 - **RT-04:** separar páginas, componentes, servicios, tipos y datos de prueba.
@@ -73,7 +73,9 @@ Incluye inicialización del repositorio, frontend mínimo, esquema completo inic
 
 ## 10. Decisiones cerradas y parámetros de ejecución
 
-- Repositorio: `mikuyapp`.
+- Producto: `mikuyapp`.
+- Proyecto Cloudflare Pages: `mikuyapp`.
+- Repositorio GitHub oficial: `fcamasca/mikuyapp-restaurant-ops`.
 - Spec: `Docs/h1/`.
 - Datos: demo reproducibles.
 - Stack y hosting: los aprobados en el plan.

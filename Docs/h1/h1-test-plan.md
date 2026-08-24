@@ -4,7 +4,7 @@ Cada ejecución registra fecha, responsable, commit, entorno y evidencia. “Aut
 
 | ID | Precondiciones | Pasos | Resultado esperado | Tipo |
 |---|---|---|---|---|
-| TP-01 — Repositorio | Construcción autorizada y Git disponible. | Consultar raíz Git, rama, remoto y archivos ignorados. | El repositorio se identifica como `mikuyapp`, usa `main`, tiene remoto esperado y no versiona `.env.local` ni artefactos. | Automatizada |
+| TP-01 — Repositorio | Construcción autorizada y Git disponible. | Consultar raíz Git, rama, remoto y archivos ignorados. | El producto se identifica como `mikuyapp`; el repositorio oficial es `fcamasca/mikuyapp-restaurant-ops`, usa `main`, tiene remoto esperado y no versiona `.env.local` ni artefactos. | Automatizada |
 | TP-02 — Instalación limpia | Node compatible, npm y `package-lock.json` presentes; sin `node_modules`. | Ejecutar `npm ci`. | Dependencias se instalan desde el lockfile sin modificarlo ni fallar. | Automatizada |
 | TP-03 — Entorno fijado | Repositorio creado. | Consultar versión de Node/npm y revisar `.nvmrc`, `package.json` y lockfile. | Node es 22 LTS `>=22.12.0`, npm es el gestor y el lockfile está versionado. | Técnica manual |
 | TP-04 — TypeScript | TP-02 aprobada. | Ejecutar el script de validación TypeScript sin emitir archivos. | Termina con código 0 y sin errores de tipos. | Automatizada |

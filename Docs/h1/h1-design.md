@@ -2,7 +2,7 @@
 
 ## D-01 — Repositorio y herramientas
 
-La construcción inicializa Git para el repositorio oficial `mikuyapp`, usa `main` como rama principal y conecta el remoto GitHub autorizado. Se versionan `.gitignore`, `.nvmrc` con `22`, `package.json` y `package-lock.json`.
+La construcción inicializa Git para el repositorio GitHub oficial `fcamasca/mikuyapp-restaurant-ops` del producto `mikuyapp`, usa `main` como rama principal y conecta el remoto GitHub autorizado. Se versionan `.gitignore`, `.nvmrc` con `22`, `package.json` y `package-lock.json`.
 
 El administrador de paquetes es npm. La versión base es Node.js 22 LTS, como mínimo `22.12.0`. Vite es la herramienta de desarrollo y construcción, con la plantilla React + TypeScript; `npm run build` produce `dist`.
 
@@ -193,7 +193,7 @@ Una migración versionada crea extensión, tablas, constraints, índices, RLS, p
 
 ## D-11 — Cloudflare Pages
 
-Cloudflare Pages se conecta al repositorio GitHub `mikuyapp`; comando `npm run build`, salida `dist`, versión Node compatible y variables públicas de producción. Se registra la URL resultante. La página publicada consulta el mismo entorno Supabase documentado.
+El proyecto Cloudflare Pages `mikuyapp` se conecta al repositorio GitHub oficial `fcamasca/mikuyapp-restaurant-ops`; comando `npm run build`, salida `dist`, versión Node compatible y variables públicas de producción. Se registra la URL resultante. La página publicada consulta el mismo entorno Supabase documentado.
 
 ## D-12 — Límite del diseño
 

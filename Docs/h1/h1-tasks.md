@@ -4,17 +4,25 @@ La estimación total es 240 minutos. Es un límite de planificación, no autoriz
 
 ## Estado de ejecución
 
-- [x] T-01 — Repositorio existente verificado en `feature/h1-TechnicalBasis` y vinculado con `origin`.
+- [x] T-01 — Satisfecha por el repositorio preexistente `fcamasca/mikuyapp-restaurant-ops`, verificado en `feature/h1-TechnicalBasis` y vinculado con `origin`.
 - [x] T-02 — Node.js `22.12.0`, npm `10.9.0`, configuración y lockfile verificados mediante `npm ci`.
 - [x] T-03 — Proyecto mínimo Vite + React + TypeScript validado mediante TypeScript, build y arranque local.
+- [x] T-04 — Tailwind y estructura aprobada integrados y validados.
+- [x] T-05 — Roles, estados, medios de pago y flujo operativo registrados y validados.
+- [x] T-06 — Dataset demo reproducible definido y validado.
+- [x] T-07 — Proyecto Supabase y parámetros de ejecución registrados sin secretos.
 - [x] T-08 — Migración de las diez tablas aplicada y validada sobre la base remota vacía.
 - [x] T-09 — Restricciones, índices y acciones `ON DELETE RESTRICT` aplicados y validados.
 - [x] T-10 — Privilegios y RLS anónimos mínimos aplicados y validados.
-- [ ] T-04–T-07 y T-11–T-15 — Pendientes.
+- [x] T-11 — Seed demo ejecutado dos veces, validado e idempotente.
+- [x] T-12 — Cliente público Supabase y acceso anónimo validados.
+- [x] T-13 — Página técnica y estados aprobados.
+- [x] T-14 — Preview de Cloudflare Pages aprobado con TP-18 y TP-19.
+- [ ] T-15 — En progreso; pendiente exclusivamente de TP-20 y aceptación humana.
 
 | ID | Min | Objetivo | Dependencias | Resultado verificable | Pruebas |
 |---|---:|---|---|---|---|
-| T-01 | 10 | Confirmar workspace e inicializar el repositorio Git oficial `mikuyapp`. | Spec aprobado | Repositorio con rama `main`, `.gitignore` y nombre/remoto documentados. | TP-01 |
+| T-01 | 10 | Confirmar workspace e inicializar el repositorio GitHub oficial `fcamasca/mikuyapp-restaurant-ops` del producto `mikuyapp`. | Spec aprobado | Repositorio con rama `main`, `.gitignore` y nombre/remoto documentados. | TP-01 |
 | T-02 | 15 | Fijar entorno: Node 22 LTS, npm y lockfile. | T-01 | `.nvmrc`, `package.json` y `package-lock.json` versionados. | TP-02, TP-03 |
 | T-03 | 20 | Crear el proyecto Vite React + TypeScript. | T-02 | Scripts de desarrollo, build y TypeScript funcionales. | TP-04, TP-05 |
 | T-04 | 15 | Integrar Tailwind y estructura de carpetas. | T-03 | Tailwind compila y estructura coincide con D-02. | TP-07, TP-08 |
@@ -27,7 +35,7 @@ La estimación total es 240 minutos. Es un límite de planificación, no autoriz
 | T-11 | 15 | Crear y ejecutar el seed idempotente. | T-06, T-09, T-10 | Conteos esperados sin duplicados ni usuarios o filas transaccionales tras dos ejecuciones. | TP-12, TP-13 |
 | T-12 | 15 | Configurar variables y cliente Supabase en React. | T-03, T-07, T-10 | Cliente público consulta datos permitidos sin secretos. | TP-14, TP-19 |
 | T-13 | 15 | Implementar la página técnica mínima y sus estados. | T-04, T-11, T-12 | Carga, éxito, vacío, configuración ausente y error son visibles. | TP-05, TP-15, TP-16 |
-| T-14 | 15 | Configurar y desplegar Cloudflare Pages. | T-01, T-13 | Build `dist` publicado desde `mikuyapp`; URL registrada. | TP-18, TP-19 |
+| T-14 | 15 | Configurar y desplegar el proyecto Cloudflare Pages `mikuyapp`. | T-01, T-13 | Build `dist` publicado desde `fcamasca/mikuyapp-restaurant-ops`; URL registrada. | TP-18, TP-19 |
 | T-15 | 15 | Ejecutar pruebas técnicas y validación humana; registrar defectos. | T-14 | Evidencias de TP-01–TP-20 y decisión humana pendiente/registrada. | TP-01–TP-20 |
 
 ## Orden de ejecución

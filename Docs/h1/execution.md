@@ -125,4 +125,53 @@
 | Regresiones finales | `npm run typecheck`, `npm run build` y `npm run verify:anon` correctos; TP-14 y TP-17 permanecen aprobadas y los datos no cambiaron |
 | Activación del candidato | Se usó un deploy hook temporal para construir el HEAD ya publicado sin commit ni push adicionales; el hook fue eliminado después del despliegue |
 | Estado de producción | Sin despliegue de producción; no se fusionó ni convirtió la rama feature en producción |
-| TP-20 | Pendiente para H6 |
+| TP-20 | Pendiente de validación humana H1; las pruebas completas en dispositivos corresponden a H6 |
+
+## T-15 — Consolidación técnica previa a TP-20
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Responsable | Frankz Camasca |
+| Commit HEAD auditado | `cbc1b3e` (`feat: t14`) |
+| Rama y remoto | `feature/h1-TechnicalBasis`, sincronizada con `origin/feature/h1-TechnicalBasis` antes de los cambios T-15 |
+| Aclaración de nombres | Producto y proyecto Cloudflare Pages: `mikuyapp`; repositorio GitHub oficial: `fcamasca/mikuyapp-restaurant-ops`. Es una corrección de nomenclatura, no de arquitectura. |
+| TP-10 dinámica | Aprobada mediante `supabase/tests/tp10_constraints.sql`, ejecutada por `supabase db query --linked` dentro de `BEGIN`/`ROLLBACK` |
+| Rechazos TP-10 | Rol, mesa, pedido, historial y medio de pago inválidos; cantidad fraccionaria (`22P02`), cero y negativa; precios negativos; importes cero y negativo; código duplicado y FK inexistente |
+| Catálogos TP-10 | 9 UNIQUE exactos y 12 índices adicionales exactos de D-08 |
+| Snapshot anterior | 4 roles, 1 local, 6 mesas, 5 categorías, 10 productos; 0 perfiles, pedidos, detalles, historiales, pagos y usuarios Auth |
+| Snapshot posterior | Conteos idénticos al snapshot anterior |
+| Huella demo | 26 pares ordenados; SHA-256 `d670493ae6c47501ad886a939daea69ab62c7c4fd785d7dc1d3c61c443cee12e` antes y después |
+| Historial de migraciones | Local y remoto: única versión `20260823235106`; sin cambios |
+| Entorno | Node.js `22.12.0`; npm `10.9.0`; Supabase CLI `2.115.0` |
+| Lockfile | SHA-256 `4D802301CF095FFAC5B55F578512F234F4288B4B728E2962C5E9D988B1EFC66E` antes y después de `npm ci` |
+| Regresiones | `npm ci`, `npm run typecheck`, `npm run build` y `npm run verify:anon` correctos |
+| Base de datos | `supabase db lint --linked`: `No schema errors found`; TP-09/TP-11 y TP-12 ejecutadas por consultas SQL sin reaplicar migración ni seed |
+| Preview revisado | <https://c3cb696e.mikuyapp.pages.dev/>: HTTP 200, React y Supabase comprensibles, local demo y conteos 6/5/10 visibles, 0 errores propios de MikuyApp |
+| Auditoría de secretos | 41 archivos versionados/build revisados; `.env.local` no versionado; 0 credenciales privadas; una Publishable key en el bundle, permitida y sin registrar su valor |
+| Estado de T-15 | En progreso; pendiente exclusivamente de TP-20 y aceptación humana |
+
+### Matriz consolidada TP-01–TP-20
+
+| Prueba | Estado | Evidencia actual | Fecha/entorno |
+|---|---|---|---|
+| TP-01 | Aprobada | Git, remoto `fcamasca/mikuyapp-restaurant-ops`, rama feature y archivos ignorados verificados | 2026-08-23 / Git local y GitHub |
+| TP-02 | Aprobada | `npm ci` finalizó sin errores y el lockfile no cambió | 2026-08-23 / Windows x64 |
+| TP-03 | Aprobada | Node `22.12.0`, npm `10.9.0`, `.nvmrc`, `engines` y lockfile consistentes | 2026-08-23 / Windows x64 |
+| TP-04 | Aprobada | `npm run typecheck` terminó con código 0 | 2026-08-23 / local |
+| TP-05 | Aprobada | Evidencia T-13 de arranque local y página técnica; Preview vigente carga React | 2026-08-23 / local y Preview |
+| TP-06 | Aprobada | 4 roles, 4 estados de mesa, 8 de pedido, 4 medios y flujo declarativo exactos | 2026-08-23 / fuentes TypeScript y D-06 |
+| TP-07 | Aprobada | Estructura D-02 presente; sin router, Realtime, Auth funcional ni módulos operativos | 2026-08-23 / árbol versionado |
+| TP-08 | Aprobada | Build Vite correcto; CSS contiene utilidades Tailwind y breakpoints `sm`/`lg` | 2026-08-23 / `dist` local |
+| TP-09 | Aprobada | Una migración aplicada y única versión local/remota `20260823235106` | 2026-08-23 / Supabase vinculado |
+| TP-10 | Aprobada | Prueba dinámica transaccional: SQLSTATE/restricciones esperados, 9 UNIQUE y 12 índices; `ROLLBACK` | 2026-08-23 / Supabase vinculado |
+| TP-11 | Aprobada | `tp09_tp11_schema.sql` confirmó tablas, columnas, PK, FK, nulabilidad, identity, ON DELETE y RLS | 2026-08-23 / Supabase vinculado |
+| TP-12 | Aprobada | Consulta actual: 4 roles, 1 local, 6 mesas, 5 categorías y 10 productos; cero filas no permitidas | 2026-08-23 / Supabase vinculado |
+| TP-13 | Aprobada | Evidencia de dos seeds conservada; huella actual de los mismos 26 identificadores permanece estable | 2026-08-23 / Supabase vinculado |
+| TP-14 | Aprobada | Lectura anónima 1/6/5/10 y tabla `pedido` rechazada | 2026-08-23 / API pública Supabase |
+| TP-15 | Aprobada | Evidencia T-13 de `loading`, `success` y `empty` controlado | 2026-08-23 / local |
+| TP-16 | Aprobada | Evidencia T-13 de configuración ausente y fallo de conexión controlados, sin credenciales | 2026-08-23 / local |
+| TP-17 | Aprobada | `INSERT`, `UPDATE` y `DELETE` anónimos rechazados; comparación anterior/posterior sin cambios | 2026-08-23 / API pública Supabase |
+| TP-18 | Aprobada | Preview HTTP 200, React/Supabase correctos y datos demo 6/5/10 visibles | 2026-08-23 / Cloudflare Pages Preview |
+| TP-19 | Aprobada | Git, build, configuración y evidencia sin secretos privados; solo variables públicas aprobadas | 2026-08-23 / local y Cloudflare Pages |
+| TP-20 | Pendiente humana | Debe ejecutarse sobre la URL Preview final posterior al commit autorizado de T-15 | Pendiente / usuario |
