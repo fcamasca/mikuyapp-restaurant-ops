@@ -75,3 +75,28 @@
 | Build | Correcto mediante `npm run build` |
 | TP-19 — alcance local | Variables locales ignoradas y plantilla sin valores; queda pendiente la revisión del despliegue en Cloudflare Pages |
 | Revisión de secretos | Sin credenciales privadas en archivos versionables, build o reporte |
+
+## T-13 — Página técnica y estados
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Responsable | Frankz Camasca |
+| Commit HEAD | `ec357c0a64bcf2a7cd095532b5c8cc343e16ad5f` |
+| Implementación | Página técnica React conectada exclusivamente a `demoCatalogService` |
+| Estados implementados | `loading`, `success`, `empty`, `configuration-error` y `connection-error` |
+| TP-05 | Aprobada: HTTP 200, página técnica visible, sin módulos operativos ni errores de consola |
+| TP-15 — loading | Observado con mensaje de conexión y `aria-busy` |
+| TP-15 — success | Observado con local `MikuyApp Demo`, código `MIKUY-DEMO` y datos remotos |
+| TP-15 — empty | Observado mediante carga controlada sin modificar Supabase |
+| TP-16 — configuración | Observada con variables ausentes controladas; mensaje accionable sin valores ni error crudo |
+| TP-16 — conexión | Observada mediante fallo controlado; reintento recuperó el estado `success` |
+| Conteos visibles | 6 mesas, 5 categorías y 10 productos activos |
+| Responsive estrecho | 390 px: una columna, contenido legible y sin desbordamiento horizontal |
+| Responsive amplio | 1280 px: resúmenes en tres columnas, secciones principales en dos y productos en tres; sin desbordamiento horizontal |
+| Typecheck | Correcto mediante `npm run typecheck` |
+| Build | Correcto mediante `npm run build` |
+| Acceso anónimo | `npm run verify:anon` conserva TP-14 y TP-17 aprobadas; datos sin cambios |
+| Pruebas controladas | `App.tsx` restaurado al SHA-256 original después de observar los estados |
+| Revisión de secretos | Sin credenciales privadas en archivos versionables, bundle o logs; `.env.local` permanece ignorado |
+| Defectos | Sin defectos funcionales pendientes; el escenario temporal de reintento se ajustó para React Strict Mode y fue retirado |
