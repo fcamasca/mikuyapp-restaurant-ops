@@ -7,7 +7,10 @@ La estimación total es 240 minutos. Es un límite de planificación, no autoriz
 - [x] T-01 — Repositorio existente verificado en `feature/h1-TechnicalBasis` y vinculado con `origin`.
 - [x] T-02 — Node.js `22.12.0`, npm `10.9.0`, configuración y lockfile verificados mediante `npm ci`.
 - [x] T-03 — Proyecto mínimo Vite + React + TypeScript validado mediante TypeScript, build y arranque local.
-- [ ] T-04–T-15 — Pendientes.
+- [x] T-08 — Migración de las diez tablas aplicada y validada sobre la base remota vacía.
+- [x] T-09 — Restricciones, índices y acciones `ON DELETE RESTRICT` aplicados y validados.
+- [x] T-10 — Privilegios y RLS anónimos mínimos aplicados y validados.
+- [ ] T-04–T-07 y T-11–T-15 — Pendientes.
 
 | ID | Min | Objetivo | Dependencias | Resultado verificable | Pruebas |
 |---|---:|---|---|---|---|

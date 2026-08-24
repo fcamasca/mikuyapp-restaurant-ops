@@ -33,3 +33,22 @@
 | TP-11 | Aprobada mediante `supabase/tests/tp09_tp11_schema.sql` |
 | Lint | Correcto: `No schema errors found` |
 | Credenciales o secretos registrados | Ninguno |
+
+## T-11 — Seed demo idempotente
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Responsable | Frankz Camasca |
+| Commit HEAD | `6984f4c495e39a470e5159f21358ac320612b550` |
+| Proyecto | `mikuyapp` (`ibfrrifvhvtgcxfxuinf`) |
+| Ejecución 1 del seed | Correcta mediante `supabase/seed.sql` |
+| TP-12 | Aprobada mediante `supabase/tests/tp12_tp13_seed.sql` |
+| Conteos tras ejecución 1 | 4 roles, 1 local, 6 mesas, 5 categorías y 10 productos |
+| Ejecución 2 del seed | Correcta mediante `supabase/seed.sql` |
+| Conteos tras ejecución 2 | 4 roles, 1 local, 6 mesas, 5 categorías y 10 productos |
+| Comparación de identificadores | Huellas SHA-256 iguales sobre 26 pares ordenados de código e identificador |
+| TP-13 | Aprobada: conteos, códigos e identificadores estables, sin duplicados |
+| Usuarios y perfiles | 0 usuarios Auth y 0 perfiles |
+| Datos transaccionales | 0 pedidos, 0 detalles, 0 historiales y 0 pagos |
+| Credenciales, secretos o UUID registrados | Ninguno |
