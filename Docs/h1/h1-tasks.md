@@ -18,7 +18,9 @@ La estimación total es 240 minutos. Es un límite de planificación, no autoriz
 - [x] T-12 — Cliente público Supabase y acceso anónimo validados.
 - [x] T-13 — Página técnica y estados aprobados.
 - [x] T-14 — Preview de Cloudflare Pages aprobado con TP-18 y TP-19.
-- [ ] T-15 — En progreso; pendiente exclusivamente de TP-20 y aceptación humana.
+- [x] T-15 — Pruebas TP-01–TP-20 consolidadas y aceptación humana registrada.
+
+**Estado de H1:** técnicamente construido y validado. Permanecen pendientes la fusión a `main` y la comprobación del despliegue de producción.
 
 | ID | Min | Objetivo | Dependencias | Resultado verificable | Pruebas |
 |---|---:|---|---|---|---|

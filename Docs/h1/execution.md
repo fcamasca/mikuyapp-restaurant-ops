@@ -147,9 +147,11 @@
 | Lockfile | SHA-256 `4D802301CF095FFAC5B55F578512F234F4288B4B728E2962C5E9D988B1EFC66E` antes y después de `npm ci` |
 | Regresiones | `npm ci`, `npm run typecheck`, `npm run build` y `npm run verify:anon` correctos |
 | Base de datos | `supabase db lint --linked`: `No schema errors found`; TP-09/TP-11 y TP-12 ejecutadas por consultas SQL sin reaplicar migración ni seed |
-| Preview revisado | <https://c3cb696e.mikuyapp.pages.dev/>: HTTP 200, React y Supabase comprensibles, local demo y conteos 6/5/10 visibles, 0 errores propios de MikuyApp |
+| Preview final revisado | <https://1c1020bb.mikuyapp.pages.dev/> asociado a `a3f9949`: despliegue exitoso, HTTP 200, React y Supabase comprensibles, local demo y conteos 6/5/10 visibles, 0 errores propios de MikuyApp |
 | Auditoría de secretos | 41 archivos versionados/build revisados; `.env.local` no versionado; 0 credenciales privadas; una Publishable key en el bundle, permitida y sin registrar su valor |
-| Estado de T-15 | En progreso; pendiente exclusivamente de TP-20 y aceptación humana |
+| TP-20 | Aprobada por Frankz Camasca sobre el Preview final: vista amplia y vista móvil `390 × 844`, sin desbordamiento horizontal crítico, aplicación y conexión comprensibles, local `MIKUY-DEMO` y datos 6/5/10 visibles |
+| Resultado consolidado | TP-01–TP-20 aprobadas |
+| Estado de T-15 | Completada con validación técnica y humana |
 
 ### Matriz consolidada TP-01–TP-20
 
@@ -174,4 +176,19 @@
 | TP-17 | Aprobada | `INSERT`, `UPDATE` y `DELETE` anónimos rechazados; comparación anterior/posterior sin cambios | 2026-08-23 / API pública Supabase |
 | TP-18 | Aprobada | Preview HTTP 200, React/Supabase correctos y datos demo 6/5/10 visibles | 2026-08-23 / Cloudflare Pages Preview |
 | TP-19 | Aprobada | Git, build, configuración y evidencia sin secretos privados; solo variables públicas aprobadas | 2026-08-23 / local y Cloudflare Pages |
-| TP-20 | Pendiente humana | Debe ejecutarse sobre la URL Preview final posterior al commit autorizado de T-15 | Pendiente / usuario |
+| TP-20 | Aprobada | Frankz Camasca aprobó vista amplia y móvil `390 × 844`, sin desbordamiento crítico; aplicación, conexión, local y datos resultaron visibles y comprensibles | 2026-08-23 / <https://1c1020bb.mikuyapp.pages.dev/> |
+
+## Aprobación humana de H1
+
+| Campo | Resultado |
+|---|---|
+| Fecha | 2026-08-23 |
+| Responsable humano | Frankz Camasca |
+| SHA evaluado | `a3f9949c01ec83ae2d56ddbff31d36bb748cd4e9` (`a3f9949`) |
+| URL evaluada | <https://1c1020bb.mikuyapp.pages.dev/> |
+| Dimensiones | Vista amplia y vista móvil `390 × 844` |
+| Resultado visual | Presentación comprensible y sin desbordamiento horizontal crítico |
+| Contenido validado | Aplicación cargada, conexión Supabase correcta, local `MIKUY-DEMO`, 6 mesas, 5 categorías y 10 productos visibles |
+| Resultado de pruebas | TP-01–TP-20 aprobadas |
+| Estado del hito | H1 técnicamente construido, validado y aceptado |
+| Pendiente posterior | Fusionar a `main` y comprobar el despliegue de producción |
