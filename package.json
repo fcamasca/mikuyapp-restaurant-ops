@@ -13,6 +13,7 @@
     "build": "tsc --noEmit && vite build",
     "test:auth": "node --experimental-strip-types --test tests/authSession.test.mjs",
     "test:catalog": "node --experimental-strip-types --test tests/catalogService.test.mjs",
+    "test:categories": "node --experimental-strip-types --test tests/categoryAdministration.test.mjs",
     "test:profile": "node --experimental-strip-types --test tests/profileContext.test.mjs",
     "test:routes": "node --experimental-strip-types --test tests/appRoutes.test.mjs",
     "typecheck": "tsc --noEmit",

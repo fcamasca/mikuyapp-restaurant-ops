@@ -13,6 +13,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T07 — Privilegios PostgreSQL aplicados y verificados; INSERT y UPDATE limitados a columnas autorizadas, sin acceso a secuencias ni tablas transaccionales.
 - [x] T08 — Políticas RLS por rol, local y operación aplicadas y verificadas; la validación real con los cuatro roles corresponde a T19.
 - [x] T09 — Consultas administrativas y operativas de categorías/productos implementadas y verificadas; validaciones reales pendientes en T19 y validaciones visuales pendientes en T13, T17 y T21.
+- [x] T10 — Administración completa de categorías implementada y verificada; creación, edición, activación, desactivación y eliminación confirmada disponibles.
 
 ## Tareas planificadas
 

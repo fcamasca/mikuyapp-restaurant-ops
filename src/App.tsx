@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AuthProvider, useAuthentication } from './components/AuthProvider'
+import CategoryAdministrationPage from './pages/CategoryAdministrationPage'
 import LoginPage from './pages/LoginPage'
 import VerificationPage from './pages/VerificationPage'
 import { getRoleDestination, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
@@ -101,6 +102,21 @@ function ApplicationRouter() {
     return <LoadingScreen context />
   }
 
+  if (resolution.pathname === '/admin/catalogo') {
+    if (!profileContext.context) {
+      return <LoadingScreen context />
+    }
+
+    return (
+      <CategoryAdministrationPage
+        context={profileContext.context}
+        isSigningOut={isSigningOut}
+        onNavigateToTechnical={() => navigate('/tecnica')}
+        onSignOut={() => { void signOut() }}
+      />
+    )
+  }
+
   if (resolution.pathname === '/tecnica') {
     return (
       <>
@@ -130,9 +146,7 @@ function ApplicationRouter() {
   const isForbidden = resolution.pathname === '/403'
   const title = isForbidden
     ? 'Acceso no autorizado'
-    : resolution.pathname === '/admin/catalogo'
-      ? 'Catálogo administrativo'
-      : 'Tablero de mesas'
+    : 'Tablero de mesas'
   const description = isForbidden
     ? 'Tu cuenta no tiene permiso para acceder a esta sección.'
     : 'Esta sección está disponible y sus funciones se incorporarán en tareas posteriores.'

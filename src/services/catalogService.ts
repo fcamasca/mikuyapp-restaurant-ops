@@ -34,9 +34,27 @@ export interface OperationalCatalog {
 }
 
 export interface CatalogError {
-  readonly kind: 'connection-error' | 'authorization-error'
+  readonly kind:
+    | 'connection-error'
+    | 'authorization-error'
+    | 'validation-error'
+    | 'duplicate-category-code'
+    | 'category-has-products'
   readonly message: string
   readonly recoverable: boolean
+}
+
+export interface CategoryInput {
+  readonly codigo: string
+  readonly nombre: string
+  readonly orden: number
+  readonly activo: boolean
+}
+
+export interface CategoryMutation {
+  readonly status: 'completed' | 'cancelled'
+  readonly catalog: AdministrativeCatalog | null
+  readonly message: string
 }
 
 export type CatalogResult<T> =
@@ -50,6 +68,25 @@ export interface CatalogService {
   readonly getOperationalCatalog: (
     context: ValidatedProfileContext,
   ) => Promise<CatalogResult<OperationalCatalog>>
+  readonly createCategory: (
+    context: ValidatedProfileContext,
+    input: CategoryInput,
+  ) => Promise<CatalogResult<CategoryMutation>>
+  readonly updateCategory: (
+    context: ValidatedProfileContext,
+    categoryId: string,
+    input: CategoryInput,
+  ) => Promise<CatalogResult<CategoryMutation>>
+  readonly setCategoryActive: (
+    context: ValidatedProfileContext,
+    categoryId: string,
+    active: boolean,
+  ) => Promise<CatalogResult<CategoryMutation>>
+  readonly deleteCategory: (
+    context: ValidatedProfileContext,
+    categoryId: string,
+    confirmed: boolean,
+  ) => Promise<CatalogResult<CategoryMutation>>
 }
 
 type CatalogClient = Pick<SupabaseClient, 'from'>
@@ -59,6 +96,9 @@ const productColumns = 'id,categoria_id,codigo,nombre,precio,activo'
 const connectionErrorMessage =
   'No pudimos cargar el catálogo. Revisa tu conexión e intenta nuevamente.'
 const authorizationErrorMessage = 'No tienes autorización para consultar el catálogo administrativo.'
+const categoryAuthorizationMessage = 'La operación no está permitida para tu cuenta.'
+const categoryMutationErrorMessage =
+  'No pudimos completar la operación de categoría. Intenta nuevamente.'
 
 const nameCollator = new Intl.Collator('es', {
   numeric: true,
@@ -69,6 +109,90 @@ function connectionError(): CatalogError {
   return {
     kind: 'connection-error',
     message: connectionErrorMessage,
+    recoverable: true,
+  }
+}
+
+function categoryAuthorizationError(): CatalogError {
+  return {
+    kind: 'authorization-error',
+    message: categoryAuthorizationMessage,
+    recoverable: false,
+  }
+}
+
+function validateCategoryInput(input: CategoryInput): CatalogResult<CategoryInput> {
+  const codigo = input.codigo.trim()
+  const nombre = input.nombre.trim()
+
+  if (!codigo) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Ingresa el código de la categoría.',
+        recoverable: true,
+      },
+    }
+  }
+
+  if (!nombre) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Ingresa el nombre de la categoría.',
+        recoverable: true,
+      },
+    }
+  }
+
+  if (!Number.isInteger(input.orden) || input.orden < 0) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'El orden debe ser un número entero mayor o igual que cero.',
+        recoverable: true,
+      },
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      codigo,
+      nombre,
+      orden: input.orden,
+      activo: input.activo,
+    },
+  }
+}
+
+function categoryMutationError(error: { readonly code?: string }): CatalogError {
+  if (error.code === '23505') {
+    return {
+      kind: 'duplicate-category-code',
+      message: 'Ya existe una categoría con ese código.',
+      recoverable: true,
+    }
+  }
+
+  if (error.code === '23503') {
+    return {
+      kind: 'category-has-products',
+      message: 'No se puede eliminar la categoría porque tiene productos relacionados; puedes desactivarla.',
+      recoverable: true,
+    }
+  }
+
+  if (error.code === '42501' || error.code === 'PGRST301') {
+    return categoryAuthorizationError()
+  }
+
+  return {
+    kind: 'connection-error',
+    message: categoryMutationErrorMessage,
     recoverable: true,
   }
 }
@@ -175,6 +299,44 @@ export function createCatalogService(client: CatalogClient): CatalogService {
     }
   }
 
+  async function completeCategoryMutation(
+    context: ValidatedProfileContext,
+    operation: PromiseLike<{
+      readonly error: { readonly code?: string } | null
+    }>,
+    successMessage: string,
+  ): Promise<CatalogResult<CategoryMutation>> {
+    try {
+      const result = await operation
+      if (result.error) {
+        return { ok: false, error: categoryMutationError(result.error) }
+      }
+
+      const catalog = await queryCatalog(context, false)
+      if (!catalog.ok) {
+        return catalog
+      }
+
+      return {
+        ok: true,
+        data: {
+          status: 'completed',
+          catalog: catalog.data,
+          message: successMessage,
+        },
+      }
+    } catch {
+      return {
+        ok: false,
+        error: {
+          kind: 'connection-error',
+          message: categoryMutationErrorMessage,
+          recoverable: true,
+        },
+      }
+    }
+  }
+
   return {
     async getAdministrativeCatalog(context) {
       if (context.role.codigo !== 'ADMINISTRADOR') {
@@ -201,6 +363,100 @@ export function createCatalogService(client: CatalogClient): CatalogService {
         ok: true,
         data: { groups: result.data.groups },
       }
+    },
+
+    async createCategory(context, input) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      const validated = validateCategoryInput(input)
+      if (!validated.ok) {
+        return validated
+      }
+
+      return completeCategoryMutation(
+        context,
+        client.from('categoria').insert({
+          local_id: context.local.id,
+          codigo: validated.data.codigo,
+          nombre: validated.data.nombre,
+          orden: validated.data.orden,
+          activo: validated.data.activo,
+        }),
+        'La categoría se creó correctamente.',
+      )
+    },
+
+    async updateCategory(context, categoryId, input) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      const validated = validateCategoryInput(input)
+      if (!validated.ok) {
+        return validated
+      }
+
+      return completeCategoryMutation(
+        context,
+        client
+          .from('categoria')
+          .update({
+            codigo: validated.data.codigo,
+            nombre: validated.data.nombre,
+            orden: validated.data.orden,
+            activo: validated.data.activo,
+          })
+          .eq('id', categoryId)
+          .eq('local_id', context.local.id),
+        'La categoría se actualizó correctamente.',
+      )
+    },
+
+    async setCategoryActive(context, categoryId, active) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      return completeCategoryMutation(
+        context,
+        client
+          .from('categoria')
+          .update({ activo: active })
+          .eq('id', categoryId)
+          .eq('local_id', context.local.id),
+        active
+          ? 'La categoría se activó correctamente.'
+          : 'La categoría se desactivó correctamente.',
+      )
+    },
+
+    async deleteCategory(context, categoryId, confirmed) {
+      if (!confirmed) {
+        return {
+          ok: true,
+          data: {
+            status: 'cancelled',
+            catalog: null,
+            message: 'La eliminación de la categoría fue cancelada.',
+          },
+        }
+      }
+
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      return completeCategoryMutation(
+        context,
+        client
+          .from('categoria')
+          .delete()
+          .eq('id', categoryId)
+          .eq('local_id', context.local.id),
+        'La categoría se eliminó correctamente.',
+      )
     },
   }
 }
