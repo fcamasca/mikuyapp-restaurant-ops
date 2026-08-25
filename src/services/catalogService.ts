@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ValidatedProfileContext } from './profileContext'
+import type { TableStatusCode } from '../types/operations'
 
 export interface CatalogCategory {
   readonly id: string
@@ -15,6 +16,14 @@ export interface CatalogProduct {
   readonly codigo: string
   readonly nombre: string
   readonly precio: number
+  readonly activo: boolean
+}
+
+export interface CatalogTable {
+  readonly id: string
+  readonly codigo: string
+  readonly nombre: string
+  readonly estado: TableStatusCode
   readonly activo: boolean
 }
 
@@ -43,6 +52,9 @@ export interface CatalogError {
     | 'duplicate-product-code'
     | 'product-has-history'
     | 'invalid-product-category'
+    | 'duplicate-table-code'
+    | 'table-has-orders'
+    | 'table-not-free'
   readonly message: string
   readonly recoverable: boolean
 }
@@ -74,6 +86,18 @@ export interface ProductMutation {
   readonly message: string
 }
 
+export interface TableInput {
+  readonly codigo: string
+  readonly nombre: string
+  readonly activo: boolean
+}
+
+export interface TableMutation {
+  readonly status: 'completed' | 'cancelled'
+  readonly tables: readonly CatalogTable[] | null
+  readonly message: string
+}
+
 export type CatalogResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly error: CatalogError }
@@ -85,6 +109,9 @@ export interface CatalogService {
   readonly getOperationalCatalog: (
     context: ValidatedProfileContext,
   ) => Promise<CatalogResult<OperationalCatalog>>
+  readonly getAdministrativeTables: (
+    context: ValidatedProfileContext,
+  ) => Promise<CatalogResult<readonly CatalogTable[]>>
   readonly createCategory: (
     context: ValidatedProfileContext,
     input: CategoryInput,
@@ -125,12 +152,32 @@ export interface CatalogService {
     productId: string,
     confirmed: boolean,
   ) => Promise<CatalogResult<ProductMutation>>
+  readonly createTable: (
+    context: ValidatedProfileContext,
+    input: TableInput,
+  ) => Promise<CatalogResult<TableMutation>>
+  readonly updateTable: (
+    context: ValidatedProfileContext,
+    table: CatalogTable,
+    input: TableInput,
+  ) => Promise<CatalogResult<TableMutation>>
+  readonly setTableActive: (
+    context: ValidatedProfileContext,
+    table: CatalogTable,
+    active: boolean,
+  ) => Promise<CatalogResult<TableMutation>>
+  readonly deleteTable: (
+    context: ValidatedProfileContext,
+    table: CatalogTable,
+    confirmed: boolean,
+  ) => Promise<CatalogResult<TableMutation>>
 }
 
 type CatalogClient = Pick<SupabaseClient, 'from'>
 
 const categoryColumns = 'id,codigo,nombre,orden,activo'
 const productColumns = 'id,categoria_id,codigo,nombre,precio,activo'
+const tableColumns = 'id,codigo,nombre,estado,activo'
 const connectionErrorMessage =
   'No pudimos cargar el catálogo. Revisa tu conexión e intenta nuevamente.'
 const authorizationErrorMessage = 'No tienes autorización para consultar el catálogo administrativo.'
@@ -139,6 +186,8 @@ const categoryMutationErrorMessage =
   'No pudimos completar la operación de categoría. Intenta nuevamente.'
 const productMutationErrorMessage =
   'No pudimos completar la operación de producto. Intenta nuevamente.'
+const tableMutationErrorMessage =
+  'No pudimos completar la operación de mesa. Intenta nuevamente.'
 
 const nameCollator = new Intl.Collator('es', {
   numeric: true,
@@ -357,6 +406,80 @@ function productMutationError(
   }
 }
 
+function tableNotFreeError(): CatalogError {
+  return {
+    kind: 'table-not-free',
+    message: 'Solo puedes desactivar mesas libres.',
+    recoverable: true,
+  }
+}
+
+function validateTableInput(input: TableInput): CatalogResult<TableInput> {
+  const codigo = input.codigo.trim()
+  const nombre = input.nombre.trim()
+
+  if (!codigo) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Ingresa el código de la mesa.',
+        recoverable: true,
+      },
+    }
+  }
+
+  if (!nombre) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Ingresa el nombre de la mesa.',
+        recoverable: true,
+      },
+    }
+  }
+
+  return {
+    ok: true,
+    data: { codigo, nombre, activo: input.activo },
+  }
+}
+
+function tableMutationError(
+  error: { readonly code?: string },
+  table: CatalogTable | null,
+  deactivating: boolean,
+): CatalogError {
+  if (error.code === '23505') {
+    return {
+      kind: 'duplicate-table-code',
+      message: 'Ya existe una mesa con ese código.',
+      recoverable: true,
+    }
+  }
+
+  if (error.code === '23503') {
+    return {
+      kind: 'table-has-orders',
+      message: table?.estado === 'LIBRE'
+        ? 'No se puede eliminar la mesa porque tiene pedidos relacionados; puedes desactivarla.'
+        : 'No se puede eliminar la mesa porque tiene pedidos relacionados.',
+      recoverable: true,
+    }
+  }
+
+  if (error.code === '42501' || error.code === 'PGRST301') {
+    return deactivating ? tableNotFreeError() : categoryAuthorizationError()
+  }
+
+  return {
+    kind: 'connection-error',
+    message: tableMutationErrorMessage,
+    recoverable: true,
+  }
+}
+
 function compareNames(
   left: Pick<CatalogCategory | CatalogProduct, 'nombre' | 'codigo'>,
   right: Pick<CatalogCategory | CatalogProduct, 'nombre' | 'codigo'>,
@@ -459,6 +582,46 @@ export function createCatalogService(client: CatalogClient): CatalogService {
     }
   }
 
+  async function queryAdministrativeTables(
+    context: ValidatedProfileContext,
+  ): Promise<CatalogResult<readonly CatalogTable[]>> {
+    if (context.role.codigo !== 'ADMINISTRADOR') {
+      return { ok: false, error: categoryAuthorizationError() }
+    }
+
+    try {
+      const result = await client
+        .from('mesa')
+        .select(tableColumns)
+        .eq('local_id', context.local.id)
+        .order('codigo', { ascending: true })
+        .order('nombre', { ascending: true })
+        .returns<CatalogTable[]>()
+
+      if (result.error) {
+        return {
+          ok: false,
+          error: {
+            kind: 'connection-error',
+            message: 'No pudimos cargar las mesas. Revisa tu conexión e intenta nuevamente.',
+            recoverable: true,
+          },
+        }
+      }
+
+      return { ok: true, data: result.data ?? [] }
+    } catch {
+      return {
+        ok: false,
+        error: {
+          kind: 'connection-error',
+          message: 'No pudimos cargar las mesas. Revisa tu conexión e intenta nuevamente.',
+          recoverable: true,
+        },
+      }
+    }
+  }
+
   async function completeCategoryMutation(
     context: ValidatedProfileContext,
     operation: PromiseLike<{
@@ -536,6 +699,61 @@ export function createCatalogService(client: CatalogClient): CatalogService {
     }
   }
 
+  async function completeTableMutation(
+    context: ValidatedProfileContext,
+    operation: PromiseLike<{
+      readonly error: { readonly code?: string } | null
+    }>,
+    successMessage: string,
+    table: CatalogTable | null,
+    deactivating = false,
+    createdCode: string | null = null,
+  ): Promise<CatalogResult<TableMutation>> {
+    try {
+      const result = await operation
+      if (result.error) {
+        return { ok: false, error: tableMutationError(result.error, table, deactivating) }
+      }
+
+      const tables = await queryAdministrativeTables(context)
+      if (!tables.ok) {
+        return tables
+      }
+
+      if (createdCode) {
+        const createdTable = tables.data.find((item) => item.codigo === createdCode)
+        if (!createdTable || createdTable.estado !== 'LIBRE') {
+          return {
+            ok: false,
+            error: {
+              kind: 'table-not-free',
+              message: 'No pudimos confirmar que la nueva mesa esté libre.',
+              recoverable: true,
+            },
+          }
+        }
+      }
+
+      return {
+        ok: true,
+        data: {
+          status: 'completed',
+          tables: tables.data,
+          message: successMessage,
+        },
+      }
+    } catch {
+      return {
+        ok: false,
+        error: {
+          kind: 'connection-error',
+          message: tableMutationErrorMessage,
+          recoverable: true,
+        },
+      }
+    }
+  }
+
   return {
     async getAdministrativeCatalog(context) {
       if (context.role.codigo !== 'ADMINISTRADOR') {
@@ -563,6 +781,8 @@ export function createCatalogService(client: CatalogClient): CatalogService {
         data: { groups: result.data.groups },
       }
     },
+
+    getAdministrativeTables: queryAdministrativeTables,
 
     async createCategory(context, input) {
       if (context.role.codigo !== 'ADMINISTRADOR') {
@@ -752,6 +972,114 @@ export function createCatalogService(client: CatalogClient): CatalogService {
           .eq('local_id', context.local.id),
         'El producto se eliminó correctamente.',
         true,
+      )
+    },
+
+    async createTable(context, input) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      const validated = validateTableInput(input)
+      if (!validated.ok) {
+        return validated
+      }
+
+      return completeTableMutation(
+        context,
+        client.from('mesa').insert({
+          local_id: context.local.id,
+          codigo: validated.data.codigo,
+          nombre: validated.data.nombre,
+          activo: validated.data.activo,
+        }),
+        'La mesa se creó correctamente en estado libre.',
+        null,
+        false,
+        validated.data.codigo,
+      )
+    },
+
+    async updateTable(context, table, input) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      const validated = validateTableInput(input)
+      if (!validated.ok) {
+        return validated
+      }
+
+      if (!validated.data.activo && table.estado !== 'LIBRE') {
+        return { ok: false, error: tableNotFreeError() }
+      }
+
+      return completeTableMutation(
+        context,
+        client
+          .from('mesa')
+          .update({
+            codigo: validated.data.codigo,
+            nombre: validated.data.nombre,
+            activo: validated.data.activo,
+          })
+          .eq('id', table.id)
+          .eq('local_id', context.local.id),
+        'La mesa se actualizó correctamente.',
+        table,
+        !validated.data.activo,
+      )
+    },
+
+    async setTableActive(context, table, active) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      if (!active && table.estado !== 'LIBRE') {
+        return { ok: false, error: tableNotFreeError() }
+      }
+
+      return completeTableMutation(
+        context,
+        client
+          .from('mesa')
+          .update({ activo: active })
+          .eq('id', table.id)
+          .eq('local_id', context.local.id),
+        active
+          ? 'La mesa se activó correctamente.'
+          : 'La mesa se desactivó correctamente.',
+        table,
+        !active,
+      )
+    },
+
+    async deleteTable(context, table, confirmed) {
+      if (!confirmed) {
+        return {
+          ok: true,
+          data: {
+            status: 'cancelled',
+            tables: null,
+            message: 'La eliminación de la mesa fue cancelada.',
+          },
+        }
+      }
+
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      return completeTableMutation(
+        context,
+        client
+          .from('mesa')
+          .delete()
+          .eq('id', table.id)
+          .eq('local_id', context.local.id),
+        'La mesa se eliminó correctamente.',
+        table,
       )
     },
   }

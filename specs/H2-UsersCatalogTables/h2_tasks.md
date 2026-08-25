@@ -15,6 +15,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T09 — Consultas administrativas y operativas de categorías/productos implementadas y verificadas; validaciones reales pendientes en T19 y validaciones visuales pendientes en T13, T17 y T21.
 - [x] T10 — Administración completa de categorías implementada y verificada; creación, edición, activación, desactivación y eliminación confirmada disponibles.
 - [x] T11 — Administración completa de productos implementada y verificada; creación, edición, activación, desactivación, reactivación y eliminación confirmada disponibles.
+- [x] T12 — Administración completa de mesas implementada y verificada; altas en estado LIBRE, edición sin modificación de estado, activación, desactivación restringida y eliminación confirmada disponibles.
 
 ## Tareas planificadas
 
