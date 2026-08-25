@@ -17,6 +17,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T11 — Administración completa de productos implementada y verificada; creación, edición, activación, desactivación, reactivación y eliminación confirmada disponibles.
 - [x] T12 — Administración completa de mesas implementada y verificada; altas en estado LIBRE, edición sin modificación de estado, activación, desactivación restringida y eliminación confirmada disponibles.
 - [x] T13 — Carta operativa agrupada y tablero de mesas activas del mozo implementados y verificados; las comprobaciones reales de RLS corresponden a T19.
+- [x] T14 — Validaciones de categorías, productos y mesas consolidadas y verificadas; campos obligatorios, valores numéricos, códigos duplicados, formularios y columnas permitidas cubiertos.
 
 ## Tareas planificadas
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { createCatalogService } from '../src/services/catalogService.ts'
 
@@ -306,7 +307,10 @@ test('rechaza nombres vacíos o compuestos únicamente por espacios', async () =
 })
 
 test('rechaza precios negativos, no numéricos, NaN e infinitos', async () => {
-  for (const precio of [-1, '12', Number.NaN, Number.POSITIVE_INFINITY]) {
+  for (const precio of [
+    -1, '', '   ', '12', 'texto', null, undefined,
+    Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY,
+  ]) {
     const fixture = createClient()
     const result = await createCatalogService(fixture.client)
       .createProduct(createContext(), createInput({ precio }), fixture.categories)
@@ -315,6 +319,36 @@ test('rechaza precios negativos, no numéricos, NaN e infinitos', async () => {
     assert.match(result.error.message, /precio/)
     assert.deepEqual(fixture.calls, [])
   }
+})
+
+test('rechaza precio vacío antes de convertirlo accidentalmente en cero', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('function submitProduct(')
+  const end = source.indexOf('function toggleProduct(', start)
+  const submit = source.slice(start, end)
+
+  assert.match(submit, /if \(!productForm\.precio\.trim\(\)\)/)
+  assert.match(submit, /setProductError\('Ingresa el precio del producto\.'\)/)
+  assert.ok(submit.indexOf('!productForm.precio.trim()') < submit.indexOf('Number(productForm.precio)'))
+})
+
+test('conserva el formulario de productos ante error y bloquea envíos duplicados', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('async function runProductMutation(')
+  const end = source.indexOf('function submitProduct(', start)
+  const mutation = source.slice(start, end)
+
+  assert.match(mutation, /if \(mutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /mutationPending\.current = true/)
+  assert.match(mutation, /if \(!result\.ok\) \{\s*setProductError\(result\.error\.message\)\s*return\s*\}/)
+  assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetProductForm()'))
+  assert.match(mutation, /finally \{\s*mutationPending\.current = false/)
 })
 
 test('acepta un precio numérico igual a cero', async () => {

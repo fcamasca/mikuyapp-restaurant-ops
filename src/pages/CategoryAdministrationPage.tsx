@@ -240,6 +240,12 @@ export default function CategoryAdministrationPage({
       return
     }
 
+    if (!form.orden.trim()) {
+      setError('Ingresa el orden de la categoría.')
+      setMessage(null)
+      return
+    }
+
     const input = {
       codigo: form.codigo,
       nombre: form.nombre,
@@ -325,6 +331,12 @@ export default function CategoryAdministrationPage({
   function submitProduct(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
     if (!service || saving || mutationPending.current) {
+      return
+    }
+
+    if (!productForm.precio.trim()) {
+      setProductError('Ingresa el precio del producto.')
+      setProductMessage(null)
       return
     }
 

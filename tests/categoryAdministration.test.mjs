@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { createCatalogService } from '../src/services/catalogService.ts'
 
@@ -345,7 +346,10 @@ test('rechaza nombres vacíos o compuestos únicamente por espacios', async () =
 })
 
 test('rechaza orden negativo, decimal o no numérico sin invocar Supabase', async () => {
-  for (const orden of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+  for (const orden of [
+    -1, 1.5, '', '   ', 'texto', null, undefined,
+    Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY,
+  ]) {
     const fixture = createClient()
     const result = await createCatalogService(fixture.client)
       .createCategory(createContext(), createInput({ orden }))
@@ -355,6 +359,36 @@ test('rechaza orden negativo, decimal o no numérico sin invocar Supabase', asyn
     assert.match(result.error.message, /entero mayor o igual que cero/)
     assert.deepEqual(fixture.calls, [])
   }
+})
+
+test('rechaza orden vacío antes de convertirlo accidentalmente en cero', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('function submitCategory(')
+  const end = source.indexOf('function toggleCategory(', start)
+  const submit = source.slice(start, end)
+
+  assert.match(submit, /if \(!form\.orden\.trim\(\)\)/)
+  assert.match(submit, /setError\('Ingresa el orden de la categoría\.'\)/)
+  assert.ok(submit.indexOf('!form.orden.trim()') < submit.indexOf('Number(form.orden)'))
+})
+
+test('conserva el formulario de categorías ante error y bloquea envíos duplicados', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('async function runCategoryMutation(')
+  const end = source.indexOf('function submitCategory(', start)
+  const mutation = source.slice(start, end)
+
+  assert.match(mutation, /if \(mutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /mutationPending\.current = true/)
+  assert.match(mutation, /if \(!result\.ok\) \{\s*setError\(result\.error\.message\)\s*return\s*\}/)
+  assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetForm()'))
+  assert.match(mutation, /finally \{\s*mutationPending\.current = false/)
 })
 
 test('acepta orden cero como valor entero válido', async () => {

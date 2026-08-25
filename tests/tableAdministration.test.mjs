@@ -316,25 +316,29 @@ test('traduce el código duplicado sin revelar detalles internos', async () => {
 })
 
 test('rechaza código vacío sin ejecutar consultas', async () => {
-  const fixture = createClient()
-  const result = await createCatalogService(fixture.client)
-    .createTable(createContext(), createInput({ codigo: '   ' }))
+  for (const codigo of ['', '   ']) {
+    const fixture = createClient()
+    const result = await createCatalogService(fixture.client)
+      .createTable(createContext(), createInput({ codigo }))
 
-  assert.equal(result.ok, false)
-  assert.equal(result.error.kind, 'validation-error')
-  assert.match(result.error.message, /código/)
-  assert.deepEqual(fixture.calls, [])
+    assert.equal(result.ok, false)
+    assert.equal(result.error.kind, 'validation-error')
+    assert.match(result.error.message, /código/)
+    assert.deepEqual(fixture.calls, [])
+  }
 })
 
 test('rechaza nombre vacío sin ejecutar consultas', async () => {
-  const fixture = createClient()
-  const result = await createCatalogService(fixture.client)
-    .updateTable(createContext(), createTable(), createInput({ nombre: '   ' }))
+  for (const nombre of ['', '   ']) {
+    const fixture = createClient()
+    const result = await createCatalogService(fixture.client)
+      .updateTable(createContext(), createTable(), createInput({ nombre }))
 
-  assert.equal(result.ok, false)
-  assert.equal(result.error.kind, 'validation-error')
-  assert.match(result.error.message, /nombre/)
-  assert.deepEqual(fixture.calls, [])
+    assert.equal(result.ok, false)
+    assert.equal(result.error.kind, 'validation-error')
+    assert.match(result.error.message, /nombre/)
+    assert.deepEqual(fixture.calls, [])
+  }
 })
 
 test('conserva mayúsculas, minúsculas y espacios interiores', async () => {
@@ -435,4 +439,20 @@ test('el formulario administrativo no incorpora controles para cambiar estado', 
   assert.match(form, /type="checkbox"/)
   assert.doesNotMatch(form, /id="table-(?:state|status|estado)"|name="estado"|<select/)
   assert.match(source, /disabled=\{saving \|\| \(table\.activo && table\.estado !== 'LIBRE'\)\}/)
+})
+
+test('conserva el formulario de mesas ante error y bloquea envíos duplicados', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('async function runTableMutation(')
+  const end = source.indexOf('function submitTable(', start)
+  const mutation = source.slice(start, end)
+
+  assert.match(mutation, /if \(mutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /mutationPending\.current = true/)
+  assert.match(mutation, /if \(!result\.ok\) \{\s*setTableError\(result\.error\.message\)\s*return\s*\}/)
+  assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetTableForm()'))
+  assert.match(mutation, /finally \{\s*mutationPending\.current = false/)
 })
