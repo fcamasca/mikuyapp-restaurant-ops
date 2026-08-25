@@ -1,6 +1,13 @@
 # MikuyApp — Hito H2: Tareas
 
-La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba **240 minutos (4 horas)** a los días 3 y 4; la desviación es **+300 minutos (+5 horas)**. El MVP completo pasa de **24 a 29 horas**, sin recortar H3–H6 ni reducir seguridad, privilegios, integridad o pruebas. Ninguna tarea se considera ejecutada y la construcción requiere autorización humana expresa.
+La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba **240 minutos (4 horas)** a los días 3 y 4; la desviación es **+300 minutos (+5 horas)**. El MVP completo pasa de **24 a 29 horas**, sin recortar H3–H6 ni reducir seguridad, privilegios, integridad o pruebas. La construcción se ejecuta únicamente para las tareas autorizadas expresamente.
+
+## Estado de ejecución
+
+- [x] T01 — Alcance H2, base H1, variables públicas y acceso administrativo verificados.
+- [x] T02 — Autenticación, login/logout, persistencia y ocho pruebas automatizadas verificadas.
+
+## Tareas planificadas
 
 | ID | Min | Tarea | Dependencias | Resultado verificable | Pruebas asociadas |
 |---|---:|---|---|---|---|

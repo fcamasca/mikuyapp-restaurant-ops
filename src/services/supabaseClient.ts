@@ -65,13 +65,7 @@ export function getSupabaseClient(): SupabaseClientResult {
   }
 
   try {
-    client = createClient(url, publishableKey, {
-      auth: {
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-        persistSession: false,
-      },
-    })
+    client = createClient(url, publishableKey)
     return { ok: true, client }
   } catch {
     return {
