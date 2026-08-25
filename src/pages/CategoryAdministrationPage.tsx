@@ -278,7 +278,7 @@ export default function CategoryAdministrationPage({
     }
 
     const confirmed = window.confirm(
-      `¿Eliminar definitivamente la categoría «${category.nombre}»? Esta acción no se puede deshacer.`,
+      `¿Eliminar definitivamente la categoría «${category.nombre}» (${category.codigo})? Esta acción no se puede deshacer.`,
     )
 
     void runCategoryMutation(
@@ -374,7 +374,7 @@ export default function CategoryAdministrationPage({
     }
 
     const confirmed = window.confirm(
-      `¿Eliminar definitivamente el producto «${product.nombre}»? Esta acción no se puede deshacer.`,
+      `¿Eliminar definitivamente el producto «${product.nombre}» (${product.codigo})? Esta acción no se puede deshacer.`,
     )
 
     void runProductMutation(
@@ -467,7 +467,7 @@ export default function CategoryAdministrationPage({
     }
 
     const confirmed = window.confirm(
-      `¿Eliminar definitivamente la mesa «${table.nombre}»? Esta acción no se puede deshacer.`,
+      `¿Eliminar definitivamente la mesa «${table.nombre}» (${table.codigo})? Esta acción no se puede deshacer.`,
     )
 
     void runTableMutation(

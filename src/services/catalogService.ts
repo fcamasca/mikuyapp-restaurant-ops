@@ -466,7 +466,7 @@ function tableMutationError(
     return {
       kind: 'table-has-orders',
       message: table?.estado === 'LIBRE'
-        ? 'No se puede eliminar la mesa porque tiene pedidos relacionados; puedes desactivarla.'
+        ? 'No se puede eliminar la mesa porque tiene pedidos relacionados; puedes desactivarla si está libre.'
         : 'No se puede eliminar la mesa porque tiene pedidos relacionados.',
       recoverable: true,
     }

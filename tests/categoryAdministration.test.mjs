@@ -301,6 +301,86 @@ test('traduce la eliminación rechazada por productos relacionados sin revelar r
   assert.equal(fixture.calls.length, 1)
 })
 
+test('la confirmación de categoría identifica nombre y código y bloquea duplicados', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('function deleteCategory(')
+  const end = source.indexOf('async function runProductMutation(', start)
+  const deletion = source.slice(start, end)
+
+  assert.match(deletion, /if \(!service \|\| saving \|\| mutationPending\.current\)/)
+  assert.match(deletion, /window\.confirm\(/)
+  assert.match(deletion, /categoría «\$\{category\.nombre\}» \(\$\{category\.codigo\}\)/)
+  assert.match(deletion, /service\.deleteCategory\(context, category\.id, confirmed\)/)
+})
+
+test('elimina únicamente la categoría seleccionada y conserva el resto del catálogo', async () => {
+  const fixture = createClient({
+    categories: [
+      createCategory(),
+      createCategory({ id: 'category-other', codigo: 'Other', nombre: 'Otra categoría' }),
+    ],
+    products: [createProduct({ categoria_id: 'category-other' })],
+  })
+  const result = await createCatalogService(fixture.client)
+    .deleteCategory(createContext(), 'category-main', true)
+
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.data.catalog.categories.map((category) => category.id), ['category-other'])
+  assert.deepEqual(result.data.catalog.products.map((product) => product.id), ['product-main'])
+  assert.deepEqual(fixture.calls.filter((call) => call.operation === 'delete').map((call) => call.table), [
+    'categoria',
+  ])
+  assert.equal(fixture.calls.some((call) => call.operation === 'update'), false)
+})
+
+test('conserva categoría y productos tras rechazo de dependencia sin eliminar ni desactivar otros', async () => {
+  const fixture = createClient({ mutationError: { code: '23503', message: 'private SQL constraint' } })
+  const service = createCatalogService(fixture.client)
+  const rejected = await service.deleteCategory(createContext(), 'category-main', true)
+  const catalog = await service.getAdministrativeCatalog(createContext())
+
+  assert.equal(rejected.ok, false)
+  assert.equal(catalog.ok, true)
+  assert.deepEqual(catalog.data.categories.map((category) => category.id), ['category-main'])
+  assert.equal(catalog.data.categories[0].activo, true)
+  assert.deepEqual(catalog.data.products.map((product) => product.id), ['product-main'])
+  assert.deepEqual(fixture.calls.filter((call) => call.operation === 'delete').map((call) => call.table), [
+    'categoria',
+  ])
+  assert.equal(fixture.calls.some((call) => call.operation === 'update'), false)
+})
+
+test('traduce denegaciones de eliminación de categoría sin revelar detalles internos', async () => {
+  for (const code of ['42501', 'PGRST301']) {
+    const fixture = createClient({ mutationError: { code, message: 'private SQL internal-token' } })
+    const result = await createCatalogService(fixture.client)
+      .deleteCategory(createContext(), 'category-main', true)
+
+    assert.equal(result.ok, false)
+    assert.equal(result.error.kind, 'authorization-error')
+    assert.match(result.error.message, /operación no está permitida/)
+    assert.doesNotMatch(result.error.message, /SQL|token/)
+    assert.equal(fixture.calls.length, 1)
+  }
+})
+
+test('traduce errores inesperados al eliminar una categoría sin desactivarla', async () => {
+  const fixture = createClient({ mutationError: {
+    code: 'XX000', message: 'private SQL constraint internal-token',
+  } })
+  const result = await createCatalogService(fixture.client)
+    .deleteCategory(createContext(), 'category-main', true)
+
+  assert.equal(result.ok, false)
+  assert.equal(result.error.recoverable, true)
+  assert.doesNotMatch(result.error.message, /SQL|constraint|token/)
+  assert.equal(fixture.calls.length, 1)
+  assert.equal(fixture.calls[0].operation, 'delete')
+})
+
 test('traduce un código de categoría duplicado sin revelar restricciones internas', async () => {
   const fixture = createClient({
     mutationError: {

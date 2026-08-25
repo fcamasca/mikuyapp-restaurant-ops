@@ -289,7 +289,7 @@ test('una mesa LIBRE con pedidos relacionados recomienda desactivación', async 
 
   assert.equal(result.ok, false)
   assert.equal(result.error.kind, 'table-has-orders')
-  assert.match(result.error.message, /pedidos relacionados.*desactivarla/)
+  assert.match(result.error.message, /pedidos relacionados.*desactivarla si está libre/)
   assert.doesNotMatch(result.error.message, /constraint|SQL|token/)
 })
 
@@ -301,6 +301,96 @@ test('una mesa no LIBRE con pedidos relacionados no recomienda desactivación', 
   assert.equal(result.ok, false)
   assert.equal(result.error.kind, 'table-has-orders')
   assert.doesNotMatch(result.error.message, /desactiv/)
+})
+
+test('la confirmación de mesa identifica nombre y código y bloquea duplicados', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('function deleteTable(')
+  const end = source.indexOf('\n  return (', start)
+  const deletion = source.slice(start, end)
+
+  assert.match(deletion, /if \(!service \|\| saving \|\| mutationPending\.current\)/)
+  assert.match(deletion, /window\.confirm\(/)
+  assert.match(deletion, /mesa «\$\{table\.nombre\}» \(\$\{table\.codigo\}\)/)
+  assert.match(deletion, /service\.deleteTable\(context, table, confirmed\)/)
+})
+
+test('elimina únicamente la mesa seleccionada y conserva las demás', async () => {
+  const fixture = createClient({
+    tables: [
+      createTable(),
+      createTable({ id: 'table-other', codigo: 'Mesa-02', nombre: 'Otra mesa' }),
+    ],
+  })
+  const result = await createCatalogService(fixture.client)
+    .deleteTable(createContext(), createTable(), true)
+
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.data.tables.map((table) => table.id), ['table-other'])
+  assert.deepEqual(fixture.calls.filter((call) => call.operation === 'delete').map((call) => call.table), [
+    'mesa',
+  ])
+  assert.equal(fixture.calls.some((call) => call.operation === 'update'), false)
+})
+
+test('conserva la mesa tras rechazo por pedidos sin eliminar dependencias ni desactivarla', async () => {
+  const fixture = createClient({ mutationError: { code: '23503', message: 'private SQL constraint' } })
+  const service = createCatalogService(fixture.client)
+  const rejected = await service.deleteTable(createContext(), createTable(), true)
+  const tables = await service.getAdministrativeTables(createContext())
+
+  assert.equal(rejected.ok, false)
+  assert.equal(tables.ok, true)
+  assert.deepEqual(tables.data.map((table) => table.id), ['table-main'])
+  assert.equal(tables.data[0].activo, true)
+  assert.deepEqual(fixture.calls.filter((call) => call.operation === 'delete').map((call) => call.table), [
+    'mesa',
+  ])
+  assert.equal(fixture.calls.some((call) => call.operation === 'update'), false)
+  assert.equal(fixture.calls.some((call) => call.table === 'pedido'), false)
+})
+
+test('traduce denegaciones de eliminación de mesa sin revelar detalles internos', async () => {
+  for (const code of ['42501', 'PGRST301']) {
+    const fixture = createClient({ mutationError: { code, message: 'private SQL internal-token' } })
+    const result = await createCatalogService(fixture.client)
+      .deleteTable(createContext(), createTable(), true)
+
+    assert.equal(result.ok, false)
+    assert.equal(result.error.kind, 'authorization-error')
+    assert.match(result.error.message, /operación no está permitida/)
+    assert.doesNotMatch(result.error.message, /SQL|token/)
+    assert.equal(fixture.calls.length, 1)
+  }
+})
+
+test('traduce errores inesperados al eliminar una mesa sin desactivarla', async () => {
+  const fixture = createClient({ mutationError: {
+    code: 'XX000', message: 'private SQL constraint internal-token',
+  } })
+  const result = await createCatalogService(fixture.client)
+    .deleteTable(createContext(), createTable(), true)
+
+  assert.equal(result.ok, false)
+  assert.equal(result.error.recoverable, true)
+  assert.doesNotMatch(result.error.message, /SQL|constraint|token/)
+  assert.equal(fixture.calls.length, 1)
+  assert.equal(fixture.calls[0].operation, 'delete')
+})
+
+test('traduce error de conexión al eliminar una mesa sin mostrar detalles sensibles', async () => {
+  const fixture = createClient({ rejection: new Error('private SQL internal-token') })
+  const result = await createCatalogService(fixture.client)
+    .deleteTable(createContext(), createTable(), true)
+
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'connection-error')
+  assert.equal(result.error.recoverable, true)
+  assert.doesNotMatch(result.error.message, /SQL|token/)
+  assert.equal(fixture.calls.length, 1)
 })
 
 test('traduce el código duplicado sin revelar detalles internos', async () => {

@@ -269,6 +269,85 @@ test('traduce historial de pedidos y recomienda desactivar el producto', async (
   assert.doesNotMatch(result.error.message, /fk_|SQL|private-token/i)
 })
 
+test('la confirmación de producto identifica nombre y código y bloquea duplicados', () => {
+  const source = readFileSync(
+    new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url),
+    'utf8',
+  )
+  const start = source.indexOf('function deleteProduct(')
+  const end = source.indexOf('async function runTableMutation(', start)
+  const deletion = source.slice(start, end)
+
+  assert.match(deletion, /if \(!service \|\| saving \|\| mutationPending\.current\)/)
+  assert.match(deletion, /window\.confirm\(/)
+  assert.match(deletion, /producto «\$\{product\.nombre\}» \(\$\{product\.codigo\}\)/)
+  assert.match(deletion, /service\.deleteProduct\(context, product\.id, confirmed\)/)
+})
+
+test('elimina únicamente el producto elegido y conserva categorías y otros productos', async () => {
+  const fixture = createClient({
+    products: [
+      createProduct(),
+      createProduct({ id: 'product-other', codigo: 'Other', nombre: 'Otro producto' }),
+    ],
+  })
+  const result = await createCatalogService(fixture.client)
+    .deleteProduct(createContext(), 'product-main', true)
+
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.data.catalog.products.map((product) => product.id), ['product-other'])
+  assert.deepEqual(result.data.catalog.categories.map((category) => category.id), ['category-main'])
+  assert.deepEqual(fixture.calls.filter((call) => call.operation === 'delete').map((call) => call.table), [
+    'producto',
+  ])
+  assert.equal(fixture.calls.some((call) => call.operation === 'update'), false)
+})
+
+test('conserva el producto tras rechazo por historial sin eliminar detalles ni desactivarlo', async () => {
+  const fixture = createClient({ mutationError: { code: '23503', message: 'private SQL constraint' } })
+  const service = createCatalogService(fixture.client)
+  const rejected = await service.deleteProduct(createContext(), 'product-main', true)
+  const catalog = await service.getAdministrativeCatalog(createContext())
+
+  assert.equal(rejected.ok, false)
+  assert.equal(catalog.ok, true)
+  assert.deepEqual(catalog.data.products.map((product) => product.id), ['product-main'])
+  assert.equal(catalog.data.products[0].activo, true)
+  assert.deepEqual(fixture.calls.filter((call) => call.operation === 'delete').map((call) => call.table), [
+    'producto',
+  ])
+  assert.equal(fixture.calls.some((call) => call.operation === 'update'), false)
+  assert.equal(fixture.calls.some((call) => call.table === 'detalle_pedido'), false)
+})
+
+test('traduce denegaciones de eliminación de producto sin revelar detalles internos', async () => {
+  for (const code of ['42501', 'PGRST301']) {
+    const fixture = createClient({ mutationError: { code, message: 'private SQL internal-token' } })
+    const result = await createCatalogService(fixture.client)
+      .deleteProduct(createContext(), 'product-main', true)
+
+    assert.equal(result.ok, false)
+    assert.equal(result.error.kind, 'authorization-error')
+    assert.match(result.error.message, /operación no está permitida/)
+    assert.doesNotMatch(result.error.message, /SQL|token/)
+    assert.equal(fixture.calls.length, 1)
+  }
+})
+
+test('traduce errores inesperados al eliminar un producto sin desactivarlo', async () => {
+  const fixture = createClient({ mutationError: {
+    code: 'XX000', message: 'private SQL constraint internal-token',
+  } })
+  const result = await createCatalogService(fixture.client)
+    .deleteProduct(createContext(), 'product-main', true)
+
+  assert.equal(result.ok, false)
+  assert.equal(result.error.recoverable, true)
+  assert.doesNotMatch(result.error.message, /SQL|constraint|token/)
+  assert.equal(fixture.calls.length, 1)
+  assert.equal(fixture.calls[0].operation, 'delete')
+})
+
 test('traduce códigos duplicados de productos sin revelar constraints', async () => {
   const fixture = createClient({ mutationError: {
     code: '23505', message: 'uq_producto_local_id_codigo SQL private-token',
