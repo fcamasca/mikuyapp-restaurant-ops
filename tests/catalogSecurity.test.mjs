@@ -368,5 +368,5 @@ test('servicio y formularios no propagan objetos de entrada a INSERT o UPDATE', 
   const end = administrativePage.indexOf('</form>', start)
   const tableForm = administrativePage.slice(start, end)
   assert.doesNotMatch(tableForm, /id="table-(?:state|status|estado)"|name="estado"|<select/)
-  assert.match(administrativePage, /disabled=\{saving \|\| \(table\.activo && table\.estado !== 'LIBRE'\)\}/)
+  assert.match(administrativePage, /disabled=\{tableSaving \|\| \(table\.activo && table\.estado !== 'LIBRE'\)\}/)
 })

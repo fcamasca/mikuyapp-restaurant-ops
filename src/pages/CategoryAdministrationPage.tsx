@@ -68,7 +68,7 @@ const priceFormatter = new Intl.NumberFormat('es-PE', {
 })
 
 const inputClassName =
-  'mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-stone-900 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-stone-100'
+  'mt-2 min-h-12 w-full min-w-0 rounded-xl border border-stone-300 bg-white px-4 py-3 text-base text-stone-900 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-stone-100'
 
 export default function CategoryAdministrationPage({
   context,
@@ -89,58 +89,85 @@ export default function CategoryAdministrationPage({
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [editingTableId, setEditingTableId] = useState<string | null>(null)
   const [tables, setTables] = useState<readonly CatalogTable[] | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [tablesLoading, setTablesLoading] = useState(true)
+  const [categorySaving, setCategorySaving] = useState(false)
+  const [productSaving, setProductSaving] = useState(false)
+  const [tableSaving, setTableSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [productMessage, setProductMessage] = useState<string | null>(null)
   const [productError, setProductError] = useState<string | null>(null)
   const [tableMessage, setTableMessage] = useState<string | null>(null)
   const [tableError, setTableError] = useState<string | null>(null)
-  const mutationPending = useRef(false)
+  const [catalogAttempt, setCatalogAttempt] = useState(0)
+  const [tablesAttempt, setTablesAttempt] = useState(0)
+  const categoryMutationPending = useRef(false)
+  const productMutationPending = useRef(false)
+  const tableMutationPending = useRef(false)
 
   useEffect(() => {
     let cancelled = false
 
     async function loadCatalog(): Promise<void> {
       if (!service) {
-        setLoading(false)
+        setCatalogLoading(false)
         setError('No pudimos establecer la conexión con el catálogo.')
+        setProductError('No pudimos establecer la conexión con el catálogo.')
         return
       }
 
-      setLoading(true)
-      const [result, tableResult] = await Promise.all([
-        service.getAdministrativeCatalog(context),
-        service.getAdministrativeTables(context),
-      ])
+      setCatalogLoading(true)
+      const result = await service.getAdministrativeCatalog(context)
       if (cancelled) {
         return
       }
 
-      setLoading(false)
+      setCatalogLoading(false)
       if (!result.ok) {
         setError(result.error.message)
+        setProductError(result.error.message)
         return
       }
 
       setCatalog(result.data)
       setError(null)
-
-      if (!tableResult.ok) {
-        setTableError(tableResult.error.message)
-        return
-      }
-
-      setTables(tableResult.data)
-      setTableError(null)
+      setProductError(null)
     }
 
     void loadCatalog()
     return () => {
       cancelled = true
     }
-  }, [context, service])
+  }, [catalogAttempt, context, service])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadTables(): Promise<void> {
+      if (!service) {
+        setTablesLoading(false)
+        setTableError('No pudimos establecer la conexión con las mesas.')
+        return
+      }
+
+      setTablesLoading(true)
+      const result = await service.getAdministrativeTables(context)
+      if (cancelled) return
+
+      setTablesLoading(false)
+      if (!result.ok) {
+        setTableError(result.error.message)
+        return
+      }
+
+      setTables(result.data)
+      setTableError(null)
+    }
+
+    void loadTables()
+    return () => { cancelled = true }
+  }, [context, service, tablesAttempt])
 
   function resetForm(): void {
     setForm(emptyCategoryForm)
@@ -197,12 +224,12 @@ export default function CategoryAdministrationPage({
     operation: () => Promise<CatalogResult<CategoryMutation>>,
     resetAfterSuccess: boolean,
   ): Promise<void> {
-    if (mutationPending.current) {
+    if (categoryMutationPending.current) {
       return
     }
 
-    mutationPending.current = true
-    setSaving(true)
+    categoryMutationPending.current = true
+    setCategorySaving(true)
     setError(null)
     setMessage(null)
 
@@ -229,14 +256,14 @@ export default function CategoryAdministrationPage({
     } catch {
       setError('No pudimos completar la operación. Intenta nuevamente.')
     } finally {
-      mutationPending.current = false
-      setSaving(false)
+      categoryMutationPending.current = false
+      setCategorySaving(false)
     }
   }
 
   function submitCategory(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    if (!service || saving || mutationPending.current) {
+    if (!service || categorySaving || categoryMutationPending.current) {
       return
     }
 
@@ -262,7 +289,7 @@ export default function CategoryAdministrationPage({
   }
 
   function toggleCategory(category: CatalogCategory): void {
-    if (!service || saving || mutationPending.current) {
+    if (!service || categorySaving || categoryMutationPending.current) {
       return
     }
 
@@ -273,7 +300,7 @@ export default function CategoryAdministrationPage({
   }
 
   function deleteCategory(category: CatalogCategory): void {
-    if (!service || saving || mutationPending.current) {
+    if (!service || categorySaving || categoryMutationPending.current) {
       return
     }
 
@@ -291,12 +318,12 @@ export default function CategoryAdministrationPage({
     operation: () => Promise<CatalogResult<ProductMutation>>,
     resetAfterSuccess: boolean,
   ): Promise<void> {
-    if (mutationPending.current) {
+    if (productMutationPending.current) {
       return
     }
 
-    mutationPending.current = true
-    setSaving(true)
+    productMutationPending.current = true
+    setProductSaving(true)
     setProductError(null)
     setProductMessage(null)
 
@@ -323,14 +350,14 @@ export default function CategoryAdministrationPage({
     } catch {
       setProductError('No pudimos completar la operación del producto. Intenta nuevamente.')
     } finally {
-      mutationPending.current = false
-      setSaving(false)
+      productMutationPending.current = false
+      setProductSaving(false)
     }
   }
 
   function submitProduct(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    if (!service || saving || mutationPending.current) {
+    if (!service || productSaving || productMutationPending.current) {
       return
     }
 
@@ -358,7 +385,7 @@ export default function CategoryAdministrationPage({
   }
 
   function toggleProduct(product: CatalogProduct): void {
-    if (!service || saving || mutationPending.current) {
+    if (!service || productSaving || productMutationPending.current) {
       return
     }
 
@@ -369,7 +396,7 @@ export default function CategoryAdministrationPage({
   }
 
   function deleteProduct(product: CatalogProduct): void {
-    if (!service || saving || mutationPending.current) {
+    if (!service || productSaving || productMutationPending.current) {
       return
     }
 
@@ -387,12 +414,12 @@ export default function CategoryAdministrationPage({
     operation: () => Promise<CatalogResult<TableMutation>>,
     resetAfterSuccess: boolean,
   ): Promise<void> {
-    if (mutationPending.current) {
+    if (tableMutationPending.current) {
       return
     }
 
-    mutationPending.current = true
-    setSaving(true)
+    tableMutationPending.current = true
+    setTableSaving(true)
     setTableError(null)
     setTableMessage(null)
 
@@ -419,14 +446,14 @@ export default function CategoryAdministrationPage({
     } catch {
       setTableError('No pudimos completar la operación de mesa. Intenta nuevamente.')
     } finally {
-      mutationPending.current = false
-      setSaving(false)
+      tableMutationPending.current = false
+      setTableSaving(false)
     }
   }
 
   function submitTable(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    if (!service || saving || mutationPending.current) {
+    if (!service || tableSaving || tableMutationPending.current) {
       return
     }
 
@@ -451,7 +478,7 @@ export default function CategoryAdministrationPage({
   }
 
   function toggleTable(table: CatalogTable): void {
-    if (!service || saving || mutationPending.current) {
+    if (!service || tableSaving || tableMutationPending.current) {
       return
     }
 
@@ -462,7 +489,7 @@ export default function CategoryAdministrationPage({
   }
 
   function deleteTable(table: CatalogTable): void {
-    if (!service || saving || mutationPending.current) {
+    if (!service || tableSaving || tableMutationPending.current) {
       return
     }
 
@@ -477,22 +504,22 @@ export default function CategoryAdministrationPage({
   }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-8 text-stone-900 sm:px-8">
+    <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 sm:py-8 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <header className="flex flex-col gap-5 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <header className="flex min-w-0 flex-col gap-5 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
               MikuyApp · Administración
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">Catálogo administrativo</h1>
+            <h1 className="mt-2 break-words text-2xl font-bold tracking-tight sm:text-3xl">Catálogo administrativo</h1>
             <p className="mt-2 text-sm text-stone-600">
               Gestiona las categorías, los productos y las mesas de tu local.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full flex-wrap gap-3 sm:w-auto">
             <button
-              className="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-800 hover:bg-stone-50"
+              className="min-h-11 flex-1 rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-800 hover:bg-stone-50 sm:flex-none"
               onClick={onNavigateToTechnical}
               type="button"
             >
@@ -500,7 +527,7 @@ export default function CategoryAdministrationPage({
             </button>
             <button
               aria-busy={isSigningOut}
-              className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
+              className="min-h-11 flex-1 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70 sm:flex-none"
               disabled={isSigningOut}
               onClick={onSignOut}
               type="button"
@@ -510,8 +537,8 @@ export default function CategoryAdministrationPage({
           </div>
         </header>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-          <article className="self-start rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+          <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
               {editingCategoryId ? 'Editar categoría' : 'Nueva categoría'}
             </h2>
@@ -527,7 +554,7 @@ export default function CategoryAdministrationPage({
                 <input
                   autoComplete="off"
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={categorySaving}
                   id="category-code"
                   onChange={(event) => setForm((current) => ({
                     ...current,
@@ -544,7 +571,7 @@ export default function CategoryAdministrationPage({
                 <input
                   autoComplete="off"
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={categorySaving}
                   id="category-name"
                   onChange={(event) => setForm((current) => ({
                     ...current,
@@ -560,7 +587,7 @@ export default function CategoryAdministrationPage({
                 Orden
                 <input
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={categorySaving}
                   id="category-order"
                   min="0"
                   onChange={(event) => setForm((current) => ({
@@ -578,7 +605,7 @@ export default function CategoryAdministrationPage({
                 <input
                   checked={form.activo}
                   className="size-4 rounded border-stone-300 accent-emerald-700"
-                  disabled={saving}
+                  disabled={categorySaving}
                   onChange={(event) => setForm((current) => ({
                     ...current,
                     activo: event.target.checked,
@@ -588,14 +615,14 @@ export default function CategoryAdministrationPage({
                 Categoría activa
               </label>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-3 sm:flex sm:flex-wrap">
                 <button
-                  aria-busy={saving}
-                  className="rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
-                  disabled={saving || !service}
+                  aria-busy={categorySaving}
+                  className="min-h-11 w-full rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70 sm:w-auto"
+                  disabled={categorySaving || !service}
                   type="submit"
                 >
-                  {saving
+                  {categorySaving
                     ? 'Guardando…'
                     : editingCategoryId
                       ? 'Guardar cambios'
@@ -604,8 +631,8 @@ export default function CategoryAdministrationPage({
 
                 {editingCategoryId && (
                   <button
-                    className="rounded-xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50"
-                    disabled={saving}
+                    className="min-h-11 w-full rounded-xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50 sm:w-auto"
+                    disabled={categorySaving}
                     onClick={resetForm}
                     type="button"
                   >
@@ -616,7 +643,7 @@ export default function CategoryAdministrationPage({
             </form>
           </article>
 
-          <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold">Categorías</h2>
@@ -632,9 +659,17 @@ export default function CategoryAdministrationPage({
             </div>
 
             {error && (
-              <p className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
-                {error}
-              </p>
+              <div className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <p role="alert">{error}</p>
+                <button
+                  className="mt-3 min-h-11 w-full rounded-lg border border-rose-200 bg-white px-4 py-2 font-semibold hover:bg-rose-100 disabled:opacity-60 sm:w-auto"
+                  disabled={catalogLoading}
+                  onClick={() => setCatalogAttempt((current) => current + 1)}
+                  type="button"
+                >
+                  Reintentar catálogo
+                </button>
+              </div>
             )}
 
             {message && (
@@ -643,7 +678,7 @@ export default function CategoryAdministrationPage({
               </p>
             )}
 
-            {loading ? (
+            {catalogLoading ? (
               <p aria-busy="true" className="mt-8 text-sm text-stone-600">
                 Cargando categorías…
               </p>
@@ -655,7 +690,7 @@ export default function CategoryAdministrationPage({
               <ul className="mt-6 space-y-4">
                 {catalog.categories.map((category) => (
                   <li
-                    className="rounded-2xl border border-stone-200 p-4"
+                    className="min-w-0 break-words rounded-2xl border border-stone-200 p-4"
                     key={category.id}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -676,26 +711,26 @@ export default function CategoryAdministrationPage({
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="grid gap-2 sm:flex sm:flex-wrap">
                       <button
-                        className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60"
-                        disabled={saving}
+                        className="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
+                        disabled={categorySaving}
                         onClick={() => editCategory(category)}
                         type="button"
                       >
                         Editar
                       </button>
                       <button
-                        className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60"
-                        disabled={saving}
+                        className="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
+                        disabled={categorySaving}
                         onClick={() => toggleCategory(category)}
                         type="button"
                       >
                         {category.activo ? 'Desactivar' : 'Activar'}
                       </button>
                       <button
-                        className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60"
-                        disabled={saving}
+                        className="min-h-11 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60 sm:w-auto"
+                        disabled={categorySaving}
                         onClick={() => deleteCategory(category)}
                         type="button"
                       >
@@ -709,8 +744,8 @@ export default function CategoryAdministrationPage({
           </article>
         </section>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-          <article className="self-start rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+          <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
               {editingProductId ? 'Editar producto' : 'Nuevo producto'}
             </h2>
@@ -725,7 +760,7 @@ export default function CategoryAdministrationPage({
                 Categoría
                 <select
                   className={inputClassName}
-                  disabled={saving || !catalog?.categories.length}
+                  disabled={productSaving || !catalog?.categories.length}
                   id="product-category"
                   onChange={(event) => setProductForm((current) => ({
                     ...current,
@@ -748,7 +783,7 @@ export default function CategoryAdministrationPage({
                 <input
                   autoComplete="off"
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={productSaving}
                   id="product-code"
                   onChange={(event) => setProductForm((current) => ({
                     ...current,
@@ -765,7 +800,7 @@ export default function CategoryAdministrationPage({
                 <input
                   autoComplete="off"
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={productSaving}
                   id="product-name"
                   onChange={(event) => setProductForm((current) => ({
                     ...current,
@@ -781,7 +816,7 @@ export default function CategoryAdministrationPage({
                 Precio
                 <input
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={productSaving}
                   id="product-price"
                   min="0"
                   onChange={(event) => setProductForm((current) => ({
@@ -799,7 +834,7 @@ export default function CategoryAdministrationPage({
                 <input
                   checked={productForm.activo}
                   className="size-4 rounded border-stone-300 accent-emerald-700"
-                  disabled={saving}
+                  disabled={productSaving}
                   onChange={(event) => setProductForm((current) => ({
                     ...current,
                     activo: event.target.checked,
@@ -809,14 +844,14 @@ export default function CategoryAdministrationPage({
                 Producto activo
               </label>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-3 sm:flex sm:flex-wrap">
                 <button
-                  aria-busy={saving}
-                  className="rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
-                  disabled={saving || !service || !catalog?.categories.length}
+                  aria-busy={productSaving}
+                  className="min-h-11 w-full rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70 sm:w-auto"
+                  disabled={productSaving || !service || !catalog?.categories.length}
                   type="submit"
                 >
-                  {saving
+                  {productSaving
                     ? 'Guardando…'
                     : editingProductId
                       ? 'Guardar producto'
@@ -825,8 +860,8 @@ export default function CategoryAdministrationPage({
 
                 {editingProductId && (
                   <button
-                    className="rounded-xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50"
-                    disabled={saving}
+                    className="min-h-11 w-full rounded-xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50 sm:w-auto"
+                    disabled={productSaving}
                     onClick={resetProductForm}
                     type="button"
                   >
@@ -837,7 +872,7 @@ export default function CategoryAdministrationPage({
             </form>
           </article>
 
-          <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold">Productos</h2>
@@ -853,9 +888,17 @@ export default function CategoryAdministrationPage({
             </div>
 
             {productError && (
-              <p className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
-                {productError}
-              </p>
+              <div className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <p role="alert">{productError}</p>
+                <button
+                  className="mt-3 min-h-11 w-full rounded-lg border border-rose-200 bg-white px-4 py-2 font-semibold hover:bg-rose-100 disabled:opacity-60 sm:w-auto"
+                  disabled={catalogLoading}
+                  onClick={() => setCatalogAttempt((current) => current + 1)}
+                  type="button"
+                >
+                  Reintentar catálogo
+                </button>
+              </div>
             )}
 
             {productMessage && (
@@ -864,7 +907,7 @@ export default function CategoryAdministrationPage({
               </p>
             )}
 
-            {loading ? (
+            {catalogLoading ? (
               <p aria-busy="true" className="mt-8 text-sm text-stone-600">
                 Cargando productos…
               </p>
@@ -878,7 +921,7 @@ export default function CategoryAdministrationPage({
                   const category = catalog.categories.find((item) => item.id === product.categoria_id)
 
                   return (
-                    <li className="rounded-2xl border border-stone-200 p-4" key={product.id}>
+                    <li className="min-w-0 break-words rounded-2xl border border-stone-200 p-4" key={product.id}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -901,26 +944,26 @@ export default function CategoryAdministrationPage({
                         </span>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="grid gap-2 sm:flex sm:flex-wrap">
                         <button
-                          className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60"
-                          disabled={saving}
+                          className="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
+                          disabled={productSaving}
                           onClick={() => editProduct(product)}
                           type="button"
                         >
                           Editar
                         </button>
                         <button
-                          className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60"
-                          disabled={saving}
+                          className="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
+                          disabled={productSaving}
                           onClick={() => toggleProduct(product)}
                           type="button"
                         >
                           {product.activo ? 'Desactivar' : 'Reactivar'}
                         </button>
                         <button
-                          className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60"
-                          disabled={saving}
+                          className="min-h-11 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60 sm:w-auto"
+                          disabled={productSaving}
                           onClick={() => deleteProduct(product)}
                           type="button"
                         >
@@ -935,8 +978,8 @@ export default function CategoryAdministrationPage({
           </article>
         </section>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-          <article className="self-start rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+        <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+          <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
               {editingTableId ? 'Editar mesa' : 'Nueva mesa'}
             </h2>
@@ -952,7 +995,7 @@ export default function CategoryAdministrationPage({
                 <input
                   autoComplete="off"
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={tableSaving}
                   id="table-code"
                   onChange={(event) => setTableForm((current) => ({
                     ...current,
@@ -969,7 +1012,7 @@ export default function CategoryAdministrationPage({
                 <input
                   autoComplete="off"
                   className={inputClassName}
-                  disabled={saving}
+                  disabled={tableSaving}
                   id="table-name"
                   onChange={(event) => setTableForm((current) => ({
                     ...current,
@@ -985,7 +1028,7 @@ export default function CategoryAdministrationPage({
                 <input
                   checked={tableForm.activo}
                   className="size-4 rounded border-stone-300 accent-emerald-700"
-                  disabled={saving || Boolean(
+                  disabled={tableSaving || Boolean(
                     editingTableId
                     && tables?.find((table) => table.id === editingTableId)?.estado !== 'LIBRE',
                   )}
@@ -998,14 +1041,14 @@ export default function CategoryAdministrationPage({
                 Mesa activa
               </label>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-3 sm:flex sm:flex-wrap">
                 <button
-                  aria-busy={saving}
-                  className="rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
-                  disabled={saving || !service}
+                  aria-busy={tableSaving}
+                  className="min-h-11 w-full rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70 sm:w-auto"
+                  disabled={tableSaving || !service}
                   type="submit"
                 >
-                  {saving
+                  {tableSaving
                     ? 'Guardando…'
                     : editingTableId
                       ? 'Guardar mesa'
@@ -1014,8 +1057,8 @@ export default function CategoryAdministrationPage({
 
                 {editingTableId && (
                   <button
-                    className="rounded-xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50"
-                    disabled={saving}
+                    className="min-h-11 w-full rounded-xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-50 sm:w-auto"
+                    disabled={tableSaving}
                     onClick={resetTableForm}
                     type="button"
                   >
@@ -1026,7 +1069,7 @@ export default function CategoryAdministrationPage({
             </form>
           </article>
 
-          <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <article className="min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold">Mesas</h2>
@@ -1042,9 +1085,17 @@ export default function CategoryAdministrationPage({
             </div>
 
             {tableError && (
-              <p className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
-                {tableError}
-              </p>
+              <div className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <p role="alert">{tableError}</p>
+                <button
+                  className="mt-3 min-h-11 w-full rounded-lg border border-rose-200 bg-white px-4 py-2 font-semibold hover:bg-rose-100 disabled:opacity-60 sm:w-auto"
+                  disabled={tablesLoading}
+                  onClick={() => setTablesAttempt((current) => current + 1)}
+                  type="button"
+                >
+                  Reintentar mesas
+                </button>
+              </div>
             )}
 
             {tableMessage && (
@@ -1053,7 +1104,7 @@ export default function CategoryAdministrationPage({
               </p>
             )}
 
-            {loading ? (
+            {tablesLoading ? (
               <p aria-busy="true" className="mt-8 text-sm text-stone-600">
                 Cargando mesas…
               </p>
@@ -1064,7 +1115,7 @@ export default function CategoryAdministrationPage({
             ) : (
               <ul className="mt-6 space-y-4">
                 {tables.map((table) => (
-                  <li className="rounded-2xl border border-stone-200 p-4" key={table.id}>
+                  <li className="min-w-0 break-words rounded-2xl border border-stone-200 p-4" key={table.id}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1084,18 +1135,18 @@ export default function CategoryAdministrationPage({
                       </span>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="grid gap-2 sm:flex sm:flex-wrap">
                       <button
-                        className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60"
-                        disabled={saving}
+                        className="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
+                        disabled={tableSaving}
                         onClick={() => editTable(table)}
                         type="button"
                       >
                         Editar
                       </button>
                       <button
-                        className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60"
-                        disabled={saving || (table.activo && table.estado !== 'LIBRE')}
+                        className="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
+                        disabled={tableSaving || (table.activo && table.estado !== 'LIBRE')}
                         onClick={() => toggleTable(table)}
                         title={table.activo && table.estado !== 'LIBRE'
                           ? 'Solo puedes desactivar mesas libres.'
@@ -1105,8 +1156,8 @@ export default function CategoryAdministrationPage({
                         {table.activo ? 'Desactivar' : 'Reactivar'}
                       </button>
                       <button
-                        className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60"
-                        disabled={saving}
+                        className="min-h-11 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60 sm:w-auto"
+                        disabled={tableSaving}
                         onClick={() => deleteTable(table)}
                         type="button"
                       >

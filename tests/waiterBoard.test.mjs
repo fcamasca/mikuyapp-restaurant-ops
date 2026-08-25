@@ -197,7 +197,7 @@ test('representa los cuatro estados operativos con etiquetas textuales y leyenda
 })
 
 test('el tablero muestra texto de estado además de su diferenciación visual', () => {
-  assert.match(pageSource, /className=\{`rounded-2xl border p-4 \$\{status\.className\}`\}/)
+  assert.match(pageSource, /className=\{`min-w-0 break-words rounded-2xl border p-4 \$\{status\.className\}`\}/)
   assert.match(pageSource, /Estado: \{status\.label\}/)
   assert.match(pageSource, /\{status\.description\}/)
 })

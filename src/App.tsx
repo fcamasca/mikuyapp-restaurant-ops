@@ -168,15 +168,15 @@ function ApplicationRouter() {
     : 'Esta sección está disponible y sus funciones se incorporarán en tareas posteriores.'
 
   return (
-    <main className="grid min-h-screen place-items-center bg-stone-100 px-4 text-stone-900">
-      <section className="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-7 shadow-sm">
+    <main className="grid min-h-screen place-items-center overflow-x-hidden bg-stone-100 px-3 py-6 text-stone-900 sm:px-4">
+      <section className="w-full min-w-0 max-w-md rounded-3xl border border-stone-200 bg-white p-5 shadow-sm sm:p-7">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">MikuyApp</p>
         <h1 className="mt-3 text-2xl font-bold">{title}</h1>
         <p className="mt-2 text-stone-600">{description}</p>
         {state.message && <p className="mt-4 text-sm text-rose-800" role="alert">{state.message}</p>}
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <button
-            className="rounded-xl border border-stone-300 px-4 py-3 font-semibold text-stone-800"
+            className="min-h-12 rounded-xl border border-stone-300 px-4 py-3 font-semibold text-stone-800"
             onClick={() => navigate(isForbidden ? getRoleDestination(role) : '/tecnica')}
             type="button"
           >
@@ -184,7 +184,7 @@ function ApplicationRouter() {
           </button>
           <button
             aria-busy={isSigningOut}
-            className="rounded-xl bg-emerald-800 px-4 py-3 font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
+            className="min-h-12 rounded-xl bg-emerald-800 px-4 py-3 font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
             disabled={isSigningOut}
             onClick={() => { void signOut() }}
             type="button"

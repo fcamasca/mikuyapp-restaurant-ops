@@ -278,7 +278,7 @@ test('la confirmación de producto identifica nombre y código y bloquea duplica
   const end = source.indexOf('async function runTableMutation(', start)
   const deletion = source.slice(start, end)
 
-  assert.match(deletion, /if \(!service \|\| saving \|\| mutationPending\.current\)/)
+  assert.match(deletion, /if \(!service \|\| productSaving \|\| productMutationPending\.current\)/)
   assert.match(deletion, /window\.confirm\(/)
   assert.match(deletion, /producto «\$\{product\.nombre\}» \(\$\{product\.codigo\}\)/)
   assert.match(deletion, /service\.deleteProduct\(context, product\.id, confirmed\)/)
@@ -423,11 +423,11 @@ test('conserva el formulario de productos ante error y bloquea envíos duplicado
   const end = source.indexOf('function submitProduct(', start)
   const mutation = source.slice(start, end)
 
-  assert.match(mutation, /if \(mutationPending\.current\) \{\s*return\s*\}/)
-  assert.match(mutation, /mutationPending\.current = true/)
+  assert.match(mutation, /if \(productMutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /productMutationPending\.current = true/)
   assert.match(mutation, /if \(!result\.ok\) \{\s*setProductError\(result\.error\.message\)\s*return\s*\}/)
   assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetProductForm()'))
-  assert.match(mutation, /finally \{\s*mutationPending\.current = false/)
+  assert.match(mutation, /finally \{\s*productMutationPending\.current = false/)
 })
 
 test('acepta un precio numérico igual a cero', async () => {

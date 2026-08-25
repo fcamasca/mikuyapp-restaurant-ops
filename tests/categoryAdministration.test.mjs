@@ -310,7 +310,7 @@ test('la confirmación de categoría identifica nombre y código y bloquea dupli
   const end = source.indexOf('async function runProductMutation(', start)
   const deletion = source.slice(start, end)
 
-  assert.match(deletion, /if \(!service \|\| saving \|\| mutationPending\.current\)/)
+  assert.match(deletion, /if \(!service \|\| categorySaving \|\| categoryMutationPending\.current\)/)
   assert.match(deletion, /window\.confirm\(/)
   assert.match(deletion, /categoría «\$\{category\.nombre\}» \(\$\{category\.codigo\}\)/)
   assert.match(deletion, /service\.deleteCategory\(context, category\.id, confirmed\)/)
@@ -464,11 +464,11 @@ test('conserva el formulario de categorías ante error y bloquea envíos duplica
   const end = source.indexOf('function submitCategory(', start)
   const mutation = source.slice(start, end)
 
-  assert.match(mutation, /if \(mutationPending\.current\) \{\s*return\s*\}/)
-  assert.match(mutation, /mutationPending\.current = true/)
+  assert.match(mutation, /if \(categoryMutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /categoryMutationPending\.current = true/)
   assert.match(mutation, /if \(!result\.ok\) \{\s*setError\(result\.error\.message\)\s*return\s*\}/)
   assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetForm()'))
-  assert.match(mutation, /finally \{\s*mutationPending\.current = false/)
+  assert.match(mutation, /finally \{\s*categoryMutationPending\.current = false/)
 })
 
 test('acepta orden cero como valor entero válido', async () => {

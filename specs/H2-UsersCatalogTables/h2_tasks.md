@@ -20,6 +20,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T14 — Validaciones de categorías, productos y mesas consolidadas y verificadas; campos obligatorios, valores numéricos, códigos duplicados, formularios y columnas permitidas cubiertos.
 - [x] T15 — Confirmaciones de eliminación y dependencias de categorías, productos y mesas consolidadas y verificadas; cancelación, bloqueo de duplicados y ausencia de cascadas cubiertos.
 - [x] T16 — Columnas protegidas y rechazo de desactivación de mesas no libres reforzados y verificados; las validaciones autenticadas directas contra PostgreSQL permanecen asociadas a T19.
+- [x] T17 — Formularios, estados de interfaz y diseño responsive para celular y tablet ajustados y verificados técnicamente; la validación visual humana de TP-29 y TP-53 queda pendiente para T21.
 
 ## Tareas planificadas
 

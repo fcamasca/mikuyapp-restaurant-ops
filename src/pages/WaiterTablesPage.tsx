@@ -128,21 +128,21 @@ export default function WaiterTablesPage({
   }, [catalogAttempt, context, service])
 
   return (
-    <main className="min-h-screen bg-stone-100 px-4 py-8 text-stone-900 sm:px-8">
+    <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 sm:py-8 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+        <header className="flex min-w-0 flex-col items-start justify-between gap-4 sm:flex-row">
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
               MikuyApp · Atención de mesas
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">Mesas y carta disponible</h1>
+            <h1 className="mt-2 break-words text-2xl font-bold tracking-tight sm:text-3xl">Mesas y carta disponible</h1>
             <p className="mt-2 text-sm text-stone-600">
               Consulta las mesas activas y los productos disponibles de tu local.
             </p>
           </div>
-          <nav className="flex flex-wrap gap-3">
+          <nav className="flex w-full flex-wrap gap-3 sm:w-auto">
             <button
-              className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold"
+              className="min-h-11 flex-1 rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold sm:flex-none"
               onClick={onNavigateToTechnical}
               type="button"
             >
@@ -150,7 +150,7 @@ export default function WaiterTablesPage({
             </button>
             <button
               aria-busy={isSigningOut}
-              className="rounded-xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white disabled:opacity-70"
+              className="min-h-11 flex-1 rounded-xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white disabled:opacity-70 sm:flex-none"
               disabled={isSigningOut}
               onClick={onSignOut}
               type="button"
@@ -160,14 +160,14 @@ export default function WaiterTablesPage({
           </nav>
         </header>
 
-        <section aria-labelledby="waiter-tables-title" className="mt-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+        <section aria-labelledby="waiter-tables-title" className="mt-8 min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
           <h2 className="text-xl font-semibold" id="waiter-tables-title">Tablero de mesas</h2>
           <p className="mt-2 text-sm text-stone-600">Estados de las mesas activas de tu local.</p>
 
-          <ul aria-label="Leyenda de estados de mesas" className="mt-5 flex flex-wrap gap-3">
+          <ul aria-label="Leyenda de estados de mesas" className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {Object.entries(tableStatuses).map(([code, status]) => (
               <li
-                className={`rounded-xl border px-3 py-2 text-sm ${status.className}`}
+                className={`min-w-0 break-words rounded-xl border px-3 py-2 text-sm ${status.className}`}
                 key={code}
               >
                 <span className="font-semibold">{status.label}:</span> {status.description}
@@ -181,7 +181,7 @@ export default function WaiterTablesPage({
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4">
               <p className="text-sm text-rose-800" role="alert">{tablesError}</p>
               <button
-                className="mt-3 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-900"
+                className="mt-3 min-h-11 w-full rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-900 sm:w-auto"
                 onClick={() => setTablesAttempt((attempt) => attempt + 1)}
                 type="button"
               >
@@ -197,7 +197,7 @@ export default function WaiterTablesPage({
               {tables.map((table) => {
                 const status = tableStatuses[table.estado]
                 return (
-                  <li className={`rounded-2xl border p-4 ${status.className}`} key={table.id}>
+                  <li className={`min-w-0 break-words rounded-2xl border p-4 ${status.className}`} key={table.id}>
                     <p className="text-xs font-semibold uppercase tracking-wide">{table.codigo}</p>
                     <h3 className="mt-2 text-lg font-semibold">{table.nombre}</h3>
                     <p className="mt-3 text-sm font-medium">Estado: {status.label}</p>
@@ -208,7 +208,7 @@ export default function WaiterTablesPage({
           )}
         </section>
 
-        <section aria-labelledby="waiter-catalog-title" className="mt-6 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+        <section aria-labelledby="waiter-catalog-title" className="mt-6 min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
           <h2 className="text-xl font-semibold" id="waiter-catalog-title">Carta disponible</h2>
           <p className="mt-2 text-sm text-stone-600">Productos disponibles agrupados por categoría.</p>
 
@@ -218,7 +218,7 @@ export default function WaiterTablesPage({
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4">
               <p className="text-sm text-rose-800" role="alert">{catalogError}</p>
               <button
-                className="mt-3 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-900"
+                className="mt-3 min-h-11 w-full rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-900 sm:w-auto"
                 onClick={() => setCatalogAttempt((attempt) => attempt + 1)}
                 type="button"
               >
@@ -232,13 +232,13 @@ export default function WaiterTablesPage({
           ) : (
             <div className="mt-6 space-y-6">
               {catalog.groups.map((group) => (
-                <article className="rounded-2xl border border-stone-200 p-4" key={group.category.id}>
+                <article className="min-w-0 rounded-2xl border border-stone-200 p-4" key={group.category.id}>
                   <h3 className="text-lg font-semibold text-stone-900">{group.category.nombre}</h3>
                   <ul className="mt-4 divide-y divide-stone-200">
                     {group.products.map((product) => (
-                      <li className="flex flex-wrap items-center justify-between gap-3 py-3" key={product.id}>
-                        <span className="font-medium text-stone-800">{product.nombre}</span>
-                        <span className="font-semibold text-emerald-800">
+                      <li className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3" key={product.id}>
+                        <span className="min-w-0 break-words font-medium text-stone-800">{product.nombre}</span>
+                        <span className="shrink-0 font-semibold text-emerald-800">
                           {priceFormatter.format(product.precio)}
                         </span>
                       </li>
