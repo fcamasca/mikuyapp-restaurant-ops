@@ -214,6 +214,12 @@ function categoryAuthorizationError(): CatalogError {
 }
 
 function validateCategoryInput(input: CategoryInput): CatalogResult<CategoryInput> {
+  if (Object.keys(input).some((column) =>
+    !['codigo', 'nombre', 'orden', 'activo'].includes(column),
+  )) {
+    return { ok: false, error: categoryAuthorizationError() }
+  }
+
   const codigo = input.codigo.trim()
   const nombre = input.nombre.trim()
 
@@ -293,6 +299,12 @@ function validateProductInput(
   input: ProductInput,
   availableCategories: readonly CatalogCategory[],
 ): CatalogResult<ProductInput> {
+  if (Object.keys(input).some((column) =>
+    !['categoria_id', 'codigo', 'nombre', 'precio', 'activo'].includes(column),
+  )) {
+    return { ok: false, error: categoryAuthorizationError() }
+  }
+
   const codigo = input.codigo.trim()
   const nombre = input.nombre.trim()
   const categoryId = input.categoria_id.trim()
@@ -418,6 +430,12 @@ function tableNotFreeError(): CatalogError {
 }
 
 function validateTableInput(input: TableInput): CatalogResult<TableInput> {
+  if (Object.keys(input).some((column) =>
+    !['codigo', 'nombre', 'activo'].includes(column),
+  )) {
+    return { ok: false, error: categoryAuthorizationError() }
+  }
+
   const codigo = input.codigo.trim()
   const nombre = input.nombre.trim()
 

@@ -228,29 +228,27 @@ test('rechaza editar una mesa no LIBRE para dejarla inactiva', async () => {
   assert.deepEqual(fixture.calls, [])
 })
 
-test('ignora estado, identificadores y creado_en proporcionados en una inserción', async () => {
+test('rechaza estado, identificadores y creado_en proporcionados en una inserción', async () => {
   const fixture = createClient()
   const result = await createCatalogService(fixture.client).createTable(createContext(), createInput({
     id: 'injected-id', local_id: 'injected-local', estado: 'OCUPADA', creado_en: 'injected-date',
   }))
 
-  assert.equal(result.ok, true)
-  assert.deepEqual(Object.keys(findMutation(fixture.calls).payload), [
-    'local_id', 'codigo', 'nombre', 'activo',
-  ])
-  assert.equal(findMutation(fixture.calls).payload.local_id, 'test-local-own')
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'authorization-error')
+  assert.deepEqual(fixture.calls, [])
 })
 
-test('ignora estado, identificadores y creado_en proporcionados en una actualización', async () => {
+test('rechaza estado, identificadores y creado_en proporcionados en una actualización', async () => {
   const fixture = createClient()
   const result = await createCatalogService(fixture.client)
     .updateTable(createContext(), createTable(), createInput({
       id: 'injected-id', local_id: 'injected-local', estado: 'OCUPADA', creado_en: 'injected-date',
     }))
 
-  assert.equal(result.ok, true)
-  assert.deepEqual(Object.keys(findMutation(fixture.calls).payload), ['codigo', 'nombre', 'activo'])
-  assert.equal(result.data.tables[0].estado, 'LIBRE')
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'authorization-error')
+  assert.deepEqual(fixture.calls, [])
 })
 
 test('elimina una mesa confirmada, sin modificar estado ni pedidos, y recarga', async () => {
@@ -446,7 +444,7 @@ test('obtiene local_id exclusivamente del contexto validado en alta y filtros', 
   const context = createContext()
   const fixture = createClient()
   const result = await createCatalogService(fixture.client)
-    .createTable(context, createInput({ local_id: 'another-local' }))
+    .createTable(context, createInput())
 
   assert.equal(result.ok, true)
   assert.equal(findMutation(fixture.calls).payload.local_id, context.local.id)

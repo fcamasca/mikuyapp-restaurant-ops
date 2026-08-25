@@ -16,6 +16,7 @@
     "test:categories": "node --experimental-strip-types --test tests/categoryAdministration.test.mjs",
     "test:products": "node --experimental-strip-types --test tests/productAdministration.test.mjs",
     "test:tables": "node --experimental-strip-types --test tests/tableAdministration.test.mjs",
+    "test:security": "node --experimental-strip-types --test tests/catalogSecurity.test.mjs",
     "test:waiter": "node --experimental-strip-types --test tests/waiterBoard.test.mjs",
     "test:profile": "node --experimental-strip-types --test tests/profileContext.test.mjs",
     "test:routes": "node --experimental-strip-types --test tests/appRoutes.test.mjs",

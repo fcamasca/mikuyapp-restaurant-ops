@@ -476,7 +476,7 @@ test('traduce el rechazo de la FK compuesta como categoría inexistente o ajena'
   assert.doesNotMatch(result.error.message, /fk_|SQL|private-token/i)
 })
 
-test('obtiene local_id exclusivamente del contexto e ignora campos externos', async () => {
+test('rechaza completamente campos protegidos en una inserción manipulada', async () => {
   const fixture = createClient()
   const unsafeInput = {
     ...createInput(), local_id: 'test-local-foreign',
@@ -485,17 +485,12 @@ test('obtiene local_id exclusivamente del contexto e ignora campos externos', as
   const result = await createCatalogService(fixture.client)
     .createProduct(createContext(), unsafeInput, fixture.categories)
 
-  assert.equal(result.ok, true)
-  const payload = findMutation(fixture.calls).payload
-  assert.equal(payload.local_id, 'test-local-own')
-  assert.deepEqual(Object.keys(payload), [
-    'local_id', 'categoria_id', 'codigo', 'nombre', 'precio', 'activo',
-  ])
-  assert.equal('id' in payload, false)
-  assert.equal('creado_en' in payload, false)
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'authorization-error')
+  assert.deepEqual(fixture.calls, [])
 })
 
-test('descarta id, local_id y creado_en manipulados durante UPDATE', async () => {
+test('rechaza completamente id, local_id y creado_en manipulados durante UPDATE', async () => {
   const fixture = createClient()
   const unsafeInput = {
     ...createInput(), local_id: 'test-local-foreign',
@@ -504,12 +499,9 @@ test('descarta id, local_id y creado_en manipulados durante UPDATE', async () =>
   const result = await createCatalogService(fixture.client)
     .updateProduct(createContext(), 'product-main', unsafeInput, fixture.categories)
 
-  assert.equal(result.ok, true)
-  const payload = findMutation(fixture.calls).payload
-  assert.deepEqual(Object.keys(payload), ['categoria_id', 'codigo', 'nombre', 'precio', 'activo'])
-  assert.equal('id' in payload, false)
-  assert.equal('local_id' in payload, false)
-  assert.equal('creado_en' in payload, false)
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'authorization-error')
+  assert.deepEqual(fixture.calls, [])
 })
 
 test('recarga categorías, productos y agrupaciones después de modificar un producto', async () => {

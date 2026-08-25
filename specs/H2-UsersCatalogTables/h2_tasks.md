@@ -19,6 +19,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T13 — Carta operativa agrupada y tablero de mesas activas del mozo implementados y verificados; las comprobaciones reales de RLS corresponden a T19.
 - [x] T14 — Validaciones de categorías, productos y mesas consolidadas y verificadas; campos obligatorios, valores numéricos, códigos duplicados, formularios y columnas permitidas cubiertos.
 - [x] T15 — Confirmaciones de eliminación y dependencias de categorías, productos y mesas consolidadas y verificadas; cancelación, bloqueo de duplicados y ausencia de cascadas cubiertos.
+- [x] T16 — Columnas protegidas y rechazo de desactivación de mesas no libres reforzados y verificados; las validaciones autenticadas directas contra PostgreSQL permanecen asociadas a T19.
 
 ## Tareas planificadas
 

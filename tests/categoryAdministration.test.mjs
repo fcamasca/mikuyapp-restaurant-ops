@@ -481,7 +481,7 @@ test('acepta orden cero como valor entero válido', async () => {
   assert.equal(findMutation(fixture.calls).payload.orden, 0)
 })
 
-test('obtiene local_id exclusivamente del contexto e ignora propiedades externas', async () => {
+test('rechaza completamente propiedades protegidas en una inserción manipulada', async () => {
   const fixture = createClient()
   const unsafeInput = {
     ...createInput(),
@@ -493,15 +493,12 @@ test('obtiene local_id exclusivamente del contexto e ignora propiedades externas
   const result = await createCatalogService(fixture.client)
     .createCategory(createContext(), unsafeInput)
 
-  assert.equal(result.ok, true)
-  const payload = findMutation(fixture.calls).payload
-  assert.equal(payload.local_id, 'test-local-own')
-  assert.equal('id' in payload, false)
-  assert.equal('creado_en' in payload, false)
-  assert.deepEqual(Object.keys(payload), ['local_id', 'codigo', 'nombre', 'orden', 'activo'])
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'authorization-error')
+  assert.deepEqual(fixture.calls, [])
 })
 
-test('descarta columnas protegidas y local_id enviados en una edición manipulada', async () => {
+test('rechaza completamente columnas protegidas y local_id en una edición manipulada', async () => {
   const fixture = createClient()
   const unsafeInput = {
     ...createInput(),
@@ -513,12 +510,9 @@ test('descarta columnas protegidas y local_id enviados en una edición manipulad
   const result = await createCatalogService(fixture.client)
     .updateCategory(createContext(), 'category-main', unsafeInput)
 
-  assert.equal(result.ok, true)
-  const payload = findMutation(fixture.calls).payload
-  assert.equal('id' in payload, false)
-  assert.equal('local_id' in payload, false)
-  assert.equal('creado_en' in payload, false)
-  assert.deepEqual(Object.keys(payload), ['codigo', 'nombre', 'orden', 'activo'])
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'authorization-error')
+  assert.deepEqual(fixture.calls, [])
 })
 
 test('recarga categorías, productos y agrupaciones tras una mutación exitosa', async () => {
