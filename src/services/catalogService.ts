@@ -112,6 +112,9 @@ export interface CatalogService {
   readonly getAdministrativeTables: (
     context: ValidatedProfileContext,
   ) => Promise<CatalogResult<readonly CatalogTable[]>>
+  readonly getOperationalTables: (
+    context: ValidatedProfileContext,
+  ) => Promise<CatalogResult<readonly CatalogTable[]>>
   readonly createCategory: (
     context: ValidatedProfileContext,
     input: CategoryInput,
@@ -622,6 +625,55 @@ export function createCatalogService(client: CatalogClient): CatalogService {
     }
   }
 
+  async function queryOperationalTables(
+    context: ValidatedProfileContext,
+  ): Promise<CatalogResult<readonly CatalogTable[]>> {
+    if (context.role.codigo !== 'MOZO') {
+      return { ok: false, error: categoryAuthorizationError() }
+    }
+
+    try {
+      const result = await client
+        .from('mesa')
+        .select(tableColumns)
+        .eq('local_id', context.local.id)
+        .eq('activo', true)
+        .order('codigo', { ascending: true })
+        .order('nombre', { ascending: true })
+        .returns<CatalogTable[]>()
+
+      if (result.error) {
+        return {
+          ok: false,
+          error: {
+            kind: 'connection-error',
+            message: 'No pudimos cargar las mesas. Revisa tu conexión e intenta nuevamente.',
+            recoverable: true,
+          },
+        }
+      }
+
+      return {
+        ok: true,
+        data: (result.data ?? [])
+          .filter((table) => table.activo)
+          .sort((left, right) =>
+            nameCollator.compare(left.codigo, right.codigo)
+            || nameCollator.compare(left.nombre, right.nombre),
+          ),
+      }
+    } catch {
+      return {
+        ok: false,
+        error: {
+          kind: 'connection-error',
+          message: 'No pudimos cargar las mesas. Revisa tu conexión e intenta nuevamente.',
+          recoverable: true,
+        },
+      }
+    }
+  }
+
   async function completeCategoryMutation(
     context: ValidatedProfileContext,
     operation: PromiseLike<{
@@ -783,6 +835,7 @@ export function createCatalogService(client: CatalogClient): CatalogService {
     },
 
     getAdministrativeTables: queryAdministrativeTables,
+    getOperationalTables: queryOperationalTables,
 
     async createCategory(context, input) {
       if (context.role.codigo !== 'ADMINISTRADOR') {

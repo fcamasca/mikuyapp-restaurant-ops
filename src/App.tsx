@@ -3,6 +3,7 @@ import { AuthProvider, useAuthentication } from './components/AuthProvider'
 import CategoryAdministrationPage from './pages/CategoryAdministrationPage'
 import LoginPage from './pages/LoginPage'
 import VerificationPage from './pages/VerificationPage'
+import WaiterTablesPage from './pages/WaiterTablesPage'
 import { getRoleDestination, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
 
 function LoadingScreen({ context = false }: { readonly context?: boolean }) {
@@ -109,6 +110,21 @@ function ApplicationRouter() {
 
     return (
       <CategoryAdministrationPage
+        context={profileContext.context}
+        isSigningOut={isSigningOut}
+        onNavigateToTechnical={() => navigate('/tecnica')}
+        onSignOut={() => { void signOut() }}
+      />
+    )
+  }
+
+  if (resolution.pathname === '/mozo/mesas') {
+    if (!profileContext.context) {
+      return <LoadingScreen context />
+    }
+
+    return (
+      <WaiterTablesPage
         context={profileContext.context}
         isSigningOut={isSigningOut}
         onNavigateToTechnical={() => navigate('/tecnica')}
