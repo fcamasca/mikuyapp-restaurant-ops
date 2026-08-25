@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test:auth": "node --experimental-strip-types --test tests/authSession.test.mjs",
+    "test:profile": "node --experimental-strip-types --test tests/profileContext.test.mjs",
     "typecheck": "tsc --noEmit",
     "verify:anon": "node --env-file=.env.local scripts/verifyAnonAccess.mjs",
     "preview": "vite preview"
