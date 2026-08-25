@@ -40,6 +40,9 @@ export interface CatalogError {
     | 'validation-error'
     | 'duplicate-category-code'
     | 'category-has-products'
+    | 'duplicate-product-code'
+    | 'product-has-history'
+    | 'invalid-product-category'
   readonly message: string
   readonly recoverable: boolean
 }
@@ -52,6 +55,20 @@ export interface CategoryInput {
 }
 
 export interface CategoryMutation {
+  readonly status: 'completed' | 'cancelled'
+  readonly catalog: AdministrativeCatalog | null
+  readonly message: string
+}
+
+export interface ProductInput {
+  readonly categoria_id: string
+  readonly codigo: string
+  readonly nombre: string
+  readonly precio: number
+  readonly activo: boolean
+}
+
+export interface ProductMutation {
   readonly status: 'completed' | 'cancelled'
   readonly catalog: AdministrativeCatalog | null
   readonly message: string
@@ -87,6 +104,27 @@ export interface CatalogService {
     categoryId: string,
     confirmed: boolean,
   ) => Promise<CatalogResult<CategoryMutation>>
+  readonly createProduct: (
+    context: ValidatedProfileContext,
+    input: ProductInput,
+    availableCategories: readonly CatalogCategory[],
+  ) => Promise<CatalogResult<ProductMutation>>
+  readonly updateProduct: (
+    context: ValidatedProfileContext,
+    productId: string,
+    input: ProductInput,
+    availableCategories: readonly CatalogCategory[],
+  ) => Promise<CatalogResult<ProductMutation>>
+  readonly setProductActive: (
+    context: ValidatedProfileContext,
+    productId: string,
+    active: boolean,
+  ) => Promise<CatalogResult<ProductMutation>>
+  readonly deleteProduct: (
+    context: ValidatedProfileContext,
+    productId: string,
+    confirmed: boolean,
+  ) => Promise<CatalogResult<ProductMutation>>
 }
 
 type CatalogClient = Pick<SupabaseClient, 'from'>
@@ -99,6 +137,8 @@ const authorizationErrorMessage = 'No tienes autorización para consultar el cat
 const categoryAuthorizationMessage = 'La operación no está permitida para tu cuenta.'
 const categoryMutationErrorMessage =
   'No pudimos completar la operación de categoría. Intenta nuevamente.'
+const productMutationErrorMessage =
+  'No pudimos completar la operación de producto. Intenta nuevamente.'
 
 const nameCollator = new Intl.Collator('es', {
   numeric: true,
@@ -193,6 +233,126 @@ function categoryMutationError(error: { readonly code?: string }): CatalogError 
   return {
     kind: 'connection-error',
     message: categoryMutationErrorMessage,
+    recoverable: true,
+  }
+}
+
+function validateProductInput(
+  input: ProductInput,
+  availableCategories: readonly CatalogCategory[],
+): CatalogResult<ProductInput> {
+  const codigo = input.codigo.trim()
+  const nombre = input.nombre.trim()
+  const categoryId = input.categoria_id.trim()
+
+  if (!codigo) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Ingresa el código del producto.',
+        recoverable: true,
+      },
+    }
+  }
+
+  if (!nombre) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Ingresa el nombre del producto.',
+        recoverable: true,
+      },
+    }
+  }
+
+  if (typeof input.precio !== 'number' || !Number.isFinite(input.precio) || input.precio < 0) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'El precio debe ser un número mayor o igual que cero.',
+        recoverable: true,
+      },
+    }
+  }
+
+  if (!categoryId) {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Selecciona una categoría para el producto.',
+        recoverable: true,
+      },
+    }
+  }
+
+  if (!availableCategories.some((category) => category.id === categoryId)) {
+    return {
+      ok: false,
+      error: {
+        kind: 'invalid-product-category',
+        message: 'La categoría seleccionada no está disponible para tu local.',
+        recoverable: true,
+      },
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      categoria_id: categoryId,
+      codigo,
+      nombre,
+      precio: input.precio,
+      activo: input.activo,
+    },
+  }
+}
+
+function productMutationError(
+  error: { readonly code?: string },
+  deleting: boolean,
+): CatalogError {
+  if (error.code === '23505') {
+    return {
+      kind: 'duplicate-product-code',
+      message: 'Ya existe un producto con ese código.',
+      recoverable: true,
+    }
+  }
+
+  if (error.code === '23503') {
+    return deleting
+      ? {
+        kind: 'product-has-history',
+        message: 'No se puede eliminar el producto porque tiene pedidos relacionados; puedes desactivarlo.',
+        recoverable: true,
+      }
+      : {
+        kind: 'invalid-product-category',
+        message: 'La categoría seleccionada no existe o no pertenece a tu local.',
+        recoverable: true,
+      }
+  }
+
+  if (error.code === '23514') {
+    return {
+      kind: 'validation-error',
+      message: 'El precio debe ser un número mayor o igual que cero.',
+      recoverable: true,
+    }
+  }
+
+  if (error.code === '42501' || error.code === 'PGRST301') {
+    return categoryAuthorizationError()
+  }
+
+  return {
+    kind: 'connection-error',
+    message: productMutationErrorMessage,
     recoverable: true,
   }
 }
@@ -337,6 +497,45 @@ export function createCatalogService(client: CatalogClient): CatalogService {
     }
   }
 
+  async function completeProductMutation(
+    context: ValidatedProfileContext,
+    operation: PromiseLike<{
+      readonly error: { readonly code?: string } | null
+    }>,
+    successMessage: string,
+    deleting = false,
+  ): Promise<CatalogResult<ProductMutation>> {
+    try {
+      const result = await operation
+      if (result.error) {
+        return { ok: false, error: productMutationError(result.error, deleting) }
+      }
+
+      const catalog = await queryCatalog(context, false)
+      if (!catalog.ok) {
+        return catalog
+      }
+
+      return {
+        ok: true,
+        data: {
+          status: 'completed',
+          catalog: catalog.data,
+          message: successMessage,
+        },
+      }
+    } catch {
+      return {
+        ok: false,
+        error: {
+          kind: 'connection-error',
+          message: productMutationErrorMessage,
+          recoverable: true,
+        },
+      }
+    }
+  }
+
   return {
     async getAdministrativeCatalog(context) {
       if (context.role.codigo !== 'ADMINISTRADOR') {
@@ -456,6 +655,103 @@ export function createCatalogService(client: CatalogClient): CatalogService {
           .eq('id', categoryId)
           .eq('local_id', context.local.id),
         'La categoría se eliminó correctamente.',
+      )
+    },
+
+    async createProduct(context, input, availableCategories) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      const validated = validateProductInput(input, availableCategories)
+      if (!validated.ok) {
+        return validated
+      }
+
+      return completeProductMutation(
+        context,
+        client.from('producto').insert({
+          local_id: context.local.id,
+          categoria_id: validated.data.categoria_id,
+          codigo: validated.data.codigo,
+          nombre: validated.data.nombre,
+          precio: validated.data.precio,
+          activo: validated.data.activo,
+        }),
+        'El producto se creó correctamente.',
+      )
+    },
+
+    async updateProduct(context, productId, input, availableCategories) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      const validated = validateProductInput(input, availableCategories)
+      if (!validated.ok) {
+        return validated
+      }
+
+      return completeProductMutation(
+        context,
+        client
+          .from('producto')
+          .update({
+            categoria_id: validated.data.categoria_id,
+            codigo: validated.data.codigo,
+            nombre: validated.data.nombre,
+            precio: validated.data.precio,
+            activo: validated.data.activo,
+          })
+          .eq('id', productId)
+          .eq('local_id', context.local.id),
+        'El producto se actualizó correctamente.',
+      )
+    },
+
+    async setProductActive(context, productId, active) {
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      return completeProductMutation(
+        context,
+        client
+          .from('producto')
+          .update({ activo: active })
+          .eq('id', productId)
+          .eq('local_id', context.local.id),
+        active
+          ? 'El producto se activó correctamente.'
+          : 'El producto se desactivó correctamente.',
+      )
+    },
+
+    async deleteProduct(context, productId, confirmed) {
+      if (!confirmed) {
+        return {
+          ok: true,
+          data: {
+            status: 'cancelled',
+            catalog: null,
+            message: 'La eliminación del producto fue cancelada.',
+          },
+        }
+      }
+
+      if (context.role.codigo !== 'ADMINISTRADOR') {
+        return { ok: false, error: categoryAuthorizationError() }
+      }
+
+      return completeProductMutation(
+        context,
+        client
+          .from('producto')
+          .delete()
+          .eq('id', productId)
+          .eq('local_id', context.local.id),
+        'El producto se eliminó correctamente.',
+        true,
       )
     },
   }
