@@ -19,6 +19,7 @@
     "test:security": "node --experimental-strip-types --test tests/catalogSecurity.test.mjs",
     "test:waiter": "node --experimental-strip-types --test tests/waiterBoard.test.mjs",
     "test:responsive": "node --test tests/responsiveInterface.test.mjs",
+    "test:technical": "node --experimental-strip-types --test tests/technicalPage.test.mjs",
     "test:profile": "node --experimental-strip-types --test tests/profileContext.test.mjs",
     "test:routes": "node --experimental-strip-types --test tests/appRoutes.test.mjs",
     "typecheck": "tsc --noEmit",

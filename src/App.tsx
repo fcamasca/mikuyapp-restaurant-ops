@@ -154,7 +154,7 @@ function ApplicationRouter() {
             Cerrar sesión
           </button>
         </nav>
-        <VerificationPage />
+        <VerificationPage role={role} />
       </>
     )
   }
