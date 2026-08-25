@@ -9,6 +9,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T03 — Perfil, rol y local validados con pruebas automatizadas; pruebas reales con usuarios y RLS pendientes de T05–T08.
 - [x] T04 — Rutas protegidas, guardas y destinos por rol verificados; validación real pendiente de T05–T08 y adaptación definitiva de `/tecnica` pendiente de T18.
 - [x] T05 — Cuatro cuentas Auth asociadas a perfiles activos; roles ADMINISTRADOR, MOZO, COCINA y CAJA y local MIKUY-DEMO confirmados administrativamente.
+- [x] T06 — Función `public.h2_auth_context()` implementada y aplicada; validación con usuarios autenticados pendiente hasta después de T08.
 
 ## Tareas planificadas
 
