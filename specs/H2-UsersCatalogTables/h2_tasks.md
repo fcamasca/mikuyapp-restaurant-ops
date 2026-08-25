@@ -6,6 +6,8 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 
 - [x] T01 — Alcance H2, base H1, variables públicas y acceso administrativo verificados.
 - [x] T02 — Autenticación, login/logout, persistencia y ocho pruebas automatizadas verificadas.
+- [x] T03 — Perfil, rol y local validados con pruebas automatizadas; pruebas reales con usuarios y RLS pendientes de T05–T08.
+- [x] T04 — Rutas protegidas, guardas y destinos por rol verificados; validación real pendiente de T05–T08 y adaptación definitiva de `/tecnica` pendiente de T18.
 
 ## Tareas planificadas
 

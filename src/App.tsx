@@ -1,36 +1,69 @@
+import { useEffect, useState } from 'react'
 import { AuthProvider, useAuthentication } from './components/AuthProvider'
 import LoginPage from './pages/LoginPage'
+import VerificationPage from './pages/VerificationPage'
+import { getRoleDestination, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
 
-function AuthenticationScreen() {
+function LoadingScreen({ context = false }: { readonly context?: boolean }) {
+  return (
+    <main className="grid min-h-screen place-items-center bg-stone-100 px-4 text-stone-900">
+      <section aria-busy="true" aria-live="polite" className="rounded-2xl bg-white p-7 shadow-sm">
+        <h1 className="text-xl font-semibold">
+          {context ? 'Verificando tu acceso…' : 'Restaurando tu sesión…'}
+        </h1>
+        <p className="mt-2 text-stone-600">
+          {context ? 'Estamos comprobando tu cuenta autorizada.' : 'Estamos comprobando la conexión con Supabase.'}
+        </p>
+      </section>
+    </main>
+  )
+}
+
+function ApplicationRouter() {
   const { state, profileContext, retryProfileContext, signOut } = useAuthentication()
+  const [pathname, setPathname] = useState(() => window.location.pathname)
+  const role = profileContext.context?.role.codigo ?? null
+  const resolution = resolveApplicationRoute({
+    pathname,
+    authenticationStatus: state.status,
+    contextStatus: profileContext.status,
+    role,
+  })
 
-  if (state.status === 'loading') {
-    return (
-      <main className="grid min-h-screen place-items-center bg-stone-100 px-4 text-stone-900">
-        <section aria-busy="true" aria-live="polite" className="rounded-2xl bg-white p-7 shadow-sm">
-          <h1 className="text-xl font-semibold">Restaurando tu sesión…</h1>
-          <p className="mt-2 text-stone-600">Estamos comprobando la conexión con Supabase.</p>
-        </section>
-      </main>
-    )
+  useEffect(() => {
+    function updatePathname(): void {
+      setPathname(window.location.pathname)
+    }
+
+    window.addEventListener('popstate', updatePathname)
+    return () => {
+      window.removeEventListener('popstate', updatePathname)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (resolution.status === 'redirect' && pathname !== resolution.pathname) {
+      window.history.replaceState(null, '', resolution.pathname)
+      setPathname(resolution.pathname)
+    }
+  }, [pathname, resolution])
+
+  function navigate(nextPathname: ApplicationRoute): void {
+    if (nextPathname !== pathname) {
+      window.history.pushState(null, '', nextPathname)
+      setPathname(nextPathname)
+    }
   }
 
-  if (state.status !== 'authenticated') {
+  if (resolution.status === 'loading' || resolution.status === 'redirect') {
+    return <LoadingScreen context={state.status === 'authenticated'} />
+  }
+
+  if (resolution.status === 'allowed' && resolution.pathname === '/login') {
     return <LoginPage />
   }
 
-  if (profileContext.status === 'idle' || profileContext.status === 'loading') {
-    return (
-      <main className="grid min-h-screen place-items-center bg-stone-100 px-4 text-stone-900">
-        <section aria-busy="true" aria-live="polite" className="rounded-2xl bg-white p-7 shadow-sm">
-          <h1 className="text-xl font-semibold">Verificando tu acceso…</h1>
-          <p className="mt-2 text-stone-600">Estamos comprobando tu cuenta autorizada.</p>
-        </section>
-      </main>
-    )
-  }
-
-  if (profileContext.status === 'invalid' || profileContext.status === 'error') {
+  if (resolution.status === 'invalid-context' || resolution.status === 'recoverable-error') {
     return (
       <main className="grid min-h-screen place-items-center bg-stone-100 px-4 text-stone-900">
         <section className="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-7 shadow-sm">
@@ -64,22 +97,71 @@ function AuthenticationScreen() {
 
   const isSigningOut = state.operation === 'signing-out'
 
+  if (resolution.status !== 'allowed' || !role) {
+    return <LoadingScreen context />
+  }
+
+  if (resolution.pathname === '/tecnica') {
+    return (
+      <>
+        <nav className="flex items-center justify-end gap-3 bg-stone-100 px-4 pt-4 sm:px-8">
+          {role !== 'COCINA' && role !== 'CAJA' && (
+            <button
+              className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-800"
+              onClick={() => navigate(getRoleDestination(role))}
+              type="button"
+            >
+              Volver
+            </button>
+          )}
+          <button
+            className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white"
+            onClick={() => { void signOut() }}
+            type="button"
+          >
+            Cerrar sesión
+          </button>
+        </nav>
+        <VerificationPage />
+      </>
+    )
+  }
+
+  const isForbidden = resolution.pathname === '/403'
+  const title = isForbidden
+    ? 'Acceso no autorizado'
+    : resolution.pathname === '/admin/catalogo'
+      ? 'Catálogo administrativo'
+      : 'Tablero de mesas'
+  const description = isForbidden
+    ? 'Tu cuenta no tiene permiso para acceder a esta sección.'
+    : 'Esta sección está disponible y sus funciones se incorporarán en tareas posteriores.'
+
   return (
     <main className="grid min-h-screen place-items-center bg-stone-100 px-4 text-stone-900">
       <section className="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-7 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">MikuyApp</p>
-        <h1 className="mt-3 text-2xl font-bold">Acceso verificado</h1>
-        <p className="mt-2 text-stone-600">Tu sesión y cuenta autorizada están disponibles.</p>
+        <h1 className="mt-3 text-2xl font-bold">{title}</h1>
+        <p className="mt-2 text-stone-600">{description}</p>
         {state.message && <p className="mt-4 text-sm text-rose-800" role="alert">{state.message}</p>}
-        <button
-          aria-busy={isSigningOut}
-          className="mt-6 rounded-xl bg-emerald-800 px-4 py-3 font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
-          disabled={isSigningOut}
-          onClick={() => { void signOut() }}
-          type="button"
-        >
-          {isSigningOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
-        </button>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            className="rounded-xl border border-stone-300 px-4 py-3 font-semibold text-stone-800"
+            onClick={() => navigate(isForbidden ? getRoleDestination(role) : '/tecnica')}
+            type="button"
+          >
+            {isForbidden ? 'Volver a mi sección' : 'Verificación técnica'}
+          </button>
+          <button
+            aria-busy={isSigningOut}
+            className="rounded-xl bg-emerald-800 px-4 py-3 font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
+            disabled={isSigningOut}
+            onClick={() => { void signOut() }}
+            type="button"
+          >
+            {isSigningOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
+          </button>
+        </div>
       </section>
     </main>
   )
@@ -88,7 +170,7 @@ function AuthenticationScreen() {
 function App() {
   return (
     <AuthProvider>
-      <AuthenticationScreen />
+      <ApplicationRouter />
     </AuthProvider>
   )
 }
