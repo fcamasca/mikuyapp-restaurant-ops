@@ -25,10 +25,10 @@ El nombre oficial de la aplicación será **MikuyApp**.
 
 | Condición | Definición |
 |---|---|
-| Duración | 2 semanas |
+| Duración | 2 semanas más 3 jornadas adicionales, manteniendo 2 horas máximas por jornada |
 | Días de trabajo | Lunes a sábado |
 | Dedicación diaria | 2 horas |
-| Esfuerzo total | 24 horas |
+| Esfuerzo total | 29 horas; H2 requiere 9 horas (540 minutos) en lugar de las 4 inicialmente previstas |
 | Locales incluidos | 1 |
 | Mozos considerados | 2 |
 | Estaciones | Cocina y caja |
@@ -41,7 +41,7 @@ Construir y desplegar un MVP que permita registrar, preparar, entregar y cobrar 
 
 ### Resultado esperado
 
-Al finalizar las dos semanas:
+Al finalizar las 15 jornadas de trabajo, correspondientes a dos semanas de lunes a sábado más tres jornadas adicionales:
 
 1. El trabajador inicia sesión.
 2. El mozo selecciona una mesa.
@@ -60,9 +60,9 @@ Al finalizar las dos semanas:
 
 ### Administrador
 
-- Gestiona productos y categorías.
-- Configura mesas.
-- Activa o desactiva productos.
+- Crea, edita, elimina, activa y desactiva categorías, productos y mesas de su local.
+- Consulta registros activos e inactivos; respeta dependencias históricas y restricciones de eliminación.
+- Configura mesas sin modificar manualmente sus estados operativos.
 - Consulta ventas.
 - Exporta información.
 - Accede a todas las funciones.
@@ -110,11 +110,15 @@ Al finalizar las dos semanas:
 - Nombre y precio del producto.
 - Estado disponible/no disponible.
 - Visualización agrupada por categoría.
-- Administración básica de productos.
+- Administración de categorías: creación, edición de código/nombre/orden, activación, desactivación y eliminación solo cuando no tengan productos relacionados.
+- Administración de productos: creación, edición de código/nombre/precio/categoría, activación, desactivación y eliminación solo cuando no tengan detalles de pedidos relacionados.
+- Las categorías inactivas, sus productos y los productos inactivos no aparecen en la carta operativa.
 
 ### 4.3 Mesas
 
 - Registro inicial de mesas.
+- Administración de mesas: creación en estado libre, edición de código/nombre, activación, desactivación y eliminación solo cuando no tengan pedidos relacionados.
+- Una mesa no libre no puede desactivarse; el estado operativo no se edita administrativamente.
 - Estados: libre, ocupada, pedido listo y pendiente de pago.
 - Selección de mesa por el mozo.
 - Liberación automática después del pago.
@@ -270,18 +274,18 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 | Hito | Fecha | Resultado verificable |
 |---|---:|---|
-| H1. Base técnica | Día 2 | Aplicación desplegada y conectada |
-| H2. Usuarios, carta y mesas | Día 4 | Acceso por roles y catálogos operativos |
-| H3. Flujo del mozo | Día 6 | Pedido registrado y enviado |
-| H4. Cocina en tiempo real | Día 8 | Cocina recibe y actualiza pedidos |
-| H5. Caja e impresión | Día 10 | Pedido cobrado y ticket impreso |
-| H6. MVP liberado | Día 12 | Flujo completo probado en dispositivos |
+| H1. Base técnica | Jornada 2 | Aplicación desplegada y conectada |
+| H2. Usuarios, carta y mesas | Jornada 7 | Acceso por roles y administración completa de categorías, productos y mesas con integridad y RLS |
+| H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado |
+| H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos |
+| H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso |
+| H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos |
 
 ## 9. Plan de trabajo
 
-### Semana 1
+### Semanas 1 y 2 — Jornadas 1 a 12
 
-#### Día 1 — Proyecto y reglas (2 horas)
+#### Jornada 1 — Proyecto y reglas (2 horas)
 
 - Crear repositorio y proyecto React/TypeScript.
 - Configurar la estructura inicial.
@@ -291,7 +295,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** aplicación funcionando localmente.
 
-#### Día 2 — Supabase y base de datos (2 horas)
+#### Jornada 2 — Supabase y base de datos (2 horas)
 
 - Crear proyecto Supabase Free.
 - Crear tablas, claves y relaciones.
@@ -302,7 +306,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** aplicación conectada y publicada. **Hito H1.**
 
-#### Día 3 — Autenticación y roles (2 horas)
+#### Jornada 3 — Autenticación y roles (2 horas)
 
 - Implementar inicio de sesión.
 - Crear perfiles y usuarios de prueba.
@@ -311,16 +315,20 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** acceso diferenciado para administrador, mozo, cocina y caja.
 
-#### Día 4 — Carta y mesas (2 horas)
+#### Jornadas 4 a 7 — Carta y mesas (7 horas en total; máximo 2 horas por jornada)
 
-- Crear pantalla de categorías y productos.
-- Habilitar y deshabilitar productos.
-- Crear tablero de mesas y estados visuales.
-- Adaptar la interfaz para celular y tablet.
+- Crear pantallas administrativas de categorías, productos y mesas.
+- Implementar creación, edición, eliminación confirmada, activación y desactivación de los tres catálogos.
+- Respetar `ON DELETE RESTRICT`, conflictos de unicidad, separación por local y visibilidad de registros activos/inactivos.
+- Crear tablero de mesas y estados visuales sin permitir editar manualmente el estado operativo.
+- Proteger todas las mutaciones administrativas con privilegios PostgreSQL y RLS.
+- Adaptar formularios y tableros para celular/tablet y planificar pruebas de integridad y seguridad.
 
-**Resultado:** carta y mesas operativas. **Hito H2.**
+**Resultado:** acceso por roles y categorías, productos y mesas administrables con eliminación restringida e integridad verificada. **Hito H2.**
 
-#### Día 5 — Creación del pedido (2 horas)
+**Replanificación:** H2 requiere 9 horas (540 minutos): 2 horas de autenticación/roles y 7 horas de catálogos, seguridad y pruebas. Frente a las 4 horas originales agrega 5 horas. Los hitos H3–H6 conservan íntegramente su esfuerzo; manteniendo un máximo de 2 horas por jornada, el proyecto pasa de 12 a 15 jornadas y de 24 a 29 horas efectivas.
+
+#### Jornada 8 — Creación del pedido (2 horas)
 
 - Seleccionar mesa y crear pedido.
 - Agregar productos y modificar cantidades.
@@ -329,7 +337,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** el mozo puede preparar un pedido completo.
 
-#### Día 6 — Confirmación del pedido (2 horas)
+#### Jornada 9 — Confirmación del pedido (2 horas)
 
 - Crear función transaccional.
 - Guardar cabecera y detalle.
@@ -340,9 +348,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** pedido registrado correctamente. **Hito H3.**
 
-### Semana 2
-
-#### Día 7 — Pantalla de cocina (2 horas)
+#### Jornada 10 — Pantalla de cocina (2 horas)
 
 - Crear tablero de cocina.
 - Mostrar y ordenar pedidos por antigüedad.
@@ -351,7 +357,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** cocina visualiza los pedidos pendientes.
 
-#### Día 8 — Tiempo real (2 horas)
+#### Jornada 11 — Tiempo real (2 horas)
 
 - Configurar Supabase Realtime.
 - Recibir pedidos sin actualizar la pantalla.
@@ -361,7 +367,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** comunicación en tiempo real. **Hito H4.**
 
-#### Día 9 — Entrega y caja (2 horas)
+#### Jornada 12 — Entrega y caja (2 horas)
 
 - Mostrar pedidos listos al mozo.
 - Marcar pedidos como entregados.
@@ -371,7 +377,9 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** pedido disponible para cobro.
 
-#### Día 10 — Cobro e impresión (2 horas)
+### Jornadas adicionales — Jornadas 13 a 15
+
+#### Jornada 13 — Cobro e impresión (2 horas)
 
 - Registrar la forma de pago.
 - Crear función transaccional de cobro.
@@ -381,7 +389,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** pedido cobrado e imprimible. **Hito H5.**
 
-#### Día 11 — Reportes, respaldo y seguridad (2 horas)
+#### Jornada 14 — Reportes, respaldo y seguridad (2 horas)
 
 - Mostrar ventas del día y resumen por forma de pago.
 - Exportar ventas y productos a CSV.
@@ -391,7 +399,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** versión candidata para producción.
 
-#### Día 12 — Instalación y liberación (2 horas)
+#### Jornada 15 — Instalación y liberación (2 horas)
 
 - Configurar dominio e instalar la PWA.
 - Configurar tablet y celulares.
@@ -451,8 +459,8 @@ Referencia: Samsung Galaxy Tab A9 4/64 GB, aproximadamente S/621.
 
 | Concepto | Cantidad | Unitario | Subtotal |
 |---|---:|---:|---:|
-| Desarrollo del MVP | 24 horas | S/70 | S/1,680 |
-| Contingencia de desarrollo | 15% | — | S/252 |
+| Desarrollo del MVP | 29 horas | S/70 | S/2,030 |
+| Contingencia de desarrollo | 15% | — | S/304.50 |
 | Tablet de cocina | 1 | S/621 | S/621 |
 | Celulares para mozos | 2 | S/450 | S/900 |
 | Impresora térmica | 1 | S/337 | S/337 |
@@ -461,7 +469,7 @@ Referencia: Samsung Galaxy Tab A9 4/64 GB, aproximadamente S/621.
 | Fundas, soportes y cargadores | — | — | S/180 |
 | Papel térmico inicial | 10 rollos | — | S/60 |
 | Contingencia de hardware | — | — | S/240 |
-| **Total estimado** | | | **S/4,581** |
+| **Total estimado** | | | **S/4,983.50** |
 
 Los precios son referenciales y deberán confirmarse antes de la compra.
 
@@ -469,12 +477,12 @@ Los precios son referenciales y deberán confirmarse antes de la compra.
 
 | Escenario | Desembolso |
 |---|---:|
-| Desarrollo contratado y equipos completos | **S/4,581** |
-| Reutilizando celulares de los mozos | **S/3,681** |
+| Desarrollo contratado y equipos completos | **S/4,983.50** |
+| Reutilizando celulares de los mozos | **S/4,083.50** |
 | Desarrollo propio y equipos completos | **S/2,649** |
 | Desarrollo propio y celulares existentes | **S/1,749** |
 
-El desarrollo propio conserva un valor técnico estimado de S/1,932, incluida la contingencia.
+El desarrollo propio conserva un valor técnico estimado de S/2,334.50, incluida la contingencia.
 
 ## 12. Gastos posteriores
 
@@ -522,6 +530,7 @@ No se registrará una tarjeta para habilitar ampliaciones automáticas en Supaba
 El MVP se considerará terminado si:
 
 - Los cuatro roles pueden iniciar sesión.
+- El administrador puede crear, editar, activar, desactivar y eliminar categorías, productos y mesas sin vulnerar dependencias históricas ni estados operativos.
 - Cada rol solamente accede a sus funciones.
 - El mozo puede abrir una mesa y registrar productos y observaciones.
 - Cocina recibe el pedido sin refrescar la pantalla.
@@ -610,8 +619,8 @@ La primera versión tendrá:
 - Un router 4G prepago.
 - Dominio propio.
 - Renta tecnológica mensual fija de S/0.
-- Inversión inicial completa aproximada de S/4,581.
-- Duración de dos semanas y 24 horas de desarrollo.
+- Inversión inicial completa aproximada de S/4,983.50.
+- Duración de dos semanas más tres jornadas adicionales y 29 horas de desarrollo.
 - Repositorio denominado `mikuyapp`.
 
 El alcance está concentrado en terminar correctamente el circuito de atención y cobro. Inventario, SUNAT, carta QR e integraciones de pago se implementarán después de validar el MVP.
