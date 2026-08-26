@@ -272,14 +272,14 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 ## 8. Hitos
 
-| Hito | Fecha | Resultado verificable |
-|---|---:|---|
-| H1. Base técnica | Jornada 2 | Aplicación desplegada y conectada |
-| H2. Usuarios, carta y mesas | Jornada 7 | Acceso por roles y administración completa de categorías, productos y mesas con integridad y RLS |
-| H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado |
-| H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos |
-| H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso |
-| H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos |
+| Hito | Fecha | Resultado verificable | Estado |
+|---|---:|---|---|
+| H1. Base técnica | Jornada 2 | Aplicación desplegada y conectada | Completado y aceptado |
+| H2. Usuarios, carta y mesas | Jornada 7 | Acceso por roles y administración completa de categorías, productos y mesas con integridad y RLS | Completado y aceptado |
+| H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado | No iniciado |
+| H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos | Pendiente |
+| H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso | Pendiente |
+| H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos | Pendiente |
 
 ## 9. Plan de trabajo
 

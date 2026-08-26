@@ -6,9 +6,11 @@
 
 Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedido → cocina → entrega → pago**.
 
-**Estado actual:** Hito H1 aceptado, cerrado y desplegado en producción.
+**Estado actual:** hitos H1 y H2 completados y aceptados. H3 todavía no ha sido iniciado.
 
 **Producción:** <https://mikuyapp.pages.dev/>
+
+**Preview H2:** <https://feature-h2-usuarioscartamesa.mikuyapp.pages.dev/>
 
 ## Problema y objetivo
 
@@ -16,32 +18,47 @@ La operación de un restaurante requiere coordinar a mozos, cocina y caja. Cuand
 
 MikuyApp busca centralizar mesas, carta, pedidos, estados operativos y pagos para reducir esos problemas. El alcance inicial está diseñado para un solo local.
 
-H1 establece únicamente la base técnica verificable del producto. El flujo operativo completo todavía no está implementado.
+H1 establece la base técnica verificable y H2 incorpora autenticación, roles, carta y mesas. El flujo de pedidos comienza en H3 y todavía no está implementado.
 
 ## Estado del proyecto
 
 | Hito | Resultado | Estado |
 |---|---|---|
 | H1 | Base técnica, Supabase y despliegue | Aceptado |
-| H2 | Usuarios, carta y mesas | No iniciado |
-| H3 | Flujo del mozo | Pendiente |
+| H2 | Usuarios, carta y mesas | Aceptado |
+| H3 | Flujo del mozo | No iniciado |
 | H4 | Cocina en tiempo real | Pendiente |
 | H5 | Caja e impresión | Pendiente |
 | H6 | MVP liberado | Pendiente |
 
-## Demo H1
+## Funcionalidades disponibles
 
-La aplicación desplegada en producción permite comprobar:
+La aplicación permite comprobar:
 
 - URL productiva: <https://mikuyapp.pages.dev/>;
+- Preview validado de H2: <https://feature-h2-usuarioscartamesa.mikuyapp.pages.dev/>;
 - local demo `MIKUY-DEMO`;
-- 6 mesas activas;
-- 5 categorías activas;
-- 10 productos activos;
-- conexión real de lectura con Supabase;
-- presentación responsive validada en vista amplia y en `390 × 844`.
+- autenticación, restauración de sesión y cierre de sesión;
+- contexto propio de perfil, rol y local;
+- rutas protegidas y destinos por rol;
+- carta operativa agrupada por categorías activas;
+- tablero de mesas activas para el mozo con los cuatro estados operativos;
+- administración completa de categorías, productos y mesas;
+- página técnica autenticada para los cuatro roles;
+- presentación responsive validada en celular, tablet y escritorio.
 
-El visitante puede verificar que React cargó, que Supabase está conectado y que los datos demo se consultan correctamente. Todavía no puede iniciar sesión, crear pedidos, enviar comandas a cocina ni registrar pagos.
+H2 no incluye todavía creación de pedidos, comandas de cocina, Realtime, cobro ni pagos. Esas capacidades corresponden a H3–H5.
+
+## Roles y rutas
+
+| Rol | Destino después del login | Accesos H2 |
+|---|---|---|
+| `ADMINISTRADOR` | `/admin/catalogo` | Administración de categorías, productos y mesas; acceso a `/tecnica` |
+| `MOZO` | `/mozo/mesas` | Carta operativa, tablero de mesas y acceso a `/tecnica` |
+| `COCINA` | `/tecnica` | Página técnica autenticada |
+| `CAJA` | `/tecnica` | Página técnica autenticada |
+
+Las rutas protegidas requieren sesión y contexto válidos. Un acceso de rol no autorizado se dirige a `/403`; una sesión ausente se dirige a `/login`.
 
 ## Arquitectura
 
@@ -74,23 +91,26 @@ flowchart TB
 | Paquetes | npm `10.9.0` | Instalación reproducible mediante lockfile |
 | Hosting | Cloudflare Pages | Publicación del frontend estático |
 
-## Alcance implementado en H1
+## Alcance implementado en H1 y H2
 
 - Proyecto Vite con React y TypeScript.
 - Tailwind CSS con comportamiento responsive.
-- Cliente Supabase tipado y limitado a lectura pública.
-- Página técnica con estados `loading`, `success`, `empty`, `configuration-error` y `connection-error`.
+- Cliente Supabase tipado con lecturas públicas H1 y acceso autenticado protegido.
+- Login, logout, persistencia de sesión y contexto de autorización.
+- Rutas y guardas por rol.
+- Página técnica autenticada.
 - Esquema PostgreSQL inicial.
 - Seed demo idempotente.
 - Permisos PostgreSQL y RLS para el acceso anónimo mínimo.
+- Privilegios por columna y políticas RLS para usuarios autenticados.
+- Carta agrupada y tablero de mesas del mozo.
+- CRUD administrativo de categorías, productos y mesas.
 - Pruebas SQL de esquema, restricciones y seed.
-- Pruebas automatizadas de lectura y rechazo de escrituras anónimas.
-- Producción publicada en Cloudflare Pages.
+- 212 pruebas automatizadas y verificaciones reales con los cuatro roles.
+- Producción H1 y Preview H2 publicados en Cloudflare Pages.
 
-### Fuera del alcance actual
+### Fuera del alcance implementado
 
-- Autenticación.
-- Usuarios funcionales.
 - Registro y gestión operativa de pedidos.
 - Flujo de cocina.
 - Caja y pagos.
@@ -130,7 +150,8 @@ La definición completa se encuentra en el [diseño técnico de H1](specs/H1-Tec
 | Mesas | 6 |
 | Categorías | 5 |
 | Productos | 10 |
-| Usuarios, perfiles y filas transaccionales | 0 |
+| Cuentas Auth y perfiles H2 | 4 |
+| Filas transaccionales permanentes | 0 |
 
 El seed usa códigos naturales, es idempotente y conservó los mismos 26 identificadores en ejecuciones repetidas.
 
@@ -145,9 +166,11 @@ El seed usa códigos naturales, es idempotente y conservó los mismos 26 identif
 - La Publishable key es pública y apta para su uso en el frontend.
 - La clave `service_role` está prohibida en el cliente, Git, bundle y logs.
 - `.env.local` está ignorado y no se versiona.
-- TP-14 validó las lecturas públicas permitidas.
-- TP-17 validó el rechazo de escrituras anónimas.
-- TP-19 confirmó la ausencia de secretos privados.
+- `authenticated` obtiene únicamente los privilegios por tabla y columna necesarios.
+- RLS restringe perfil, rol, local y catálogos según usuario, rol, local y estado activo.
+- Las tablas transaccionales permanecen inaccesibles durante H2.
+- Las pruebas reales confirmaron aislamiento, rechazo de elevación y ausencia de cambios parciales.
+- La auditoría final confirmó que no existen credenciales, tokens ni UUID Auth en Git, `dist` o logs.
 - Ningún secreto privado debe llegar a Git, al bundle compilado ni a los logs.
 
 ## Inicio rápido
@@ -190,7 +213,20 @@ npm run dev
 | `npm run dev` | Iniciar Vite en desarrollo |
 | `npm run typecheck` | Validar TypeScript sin emitir archivos |
 | `npm run build` | Generar el artefacto `dist` |
+| `npm run test:auth` | Probar sesión, login y logout |
+| `npm run test:profile` | Probar perfil, rol y local |
+| `npm run test:routes` | Probar rutas y guardas |
+| `npm run test:catalog` | Probar consultas administrativas y operativas |
+| `npm run test:categories` | Probar administración de categorías |
+| `npm run test:products` | Probar administración de productos |
+| `npm run test:tables` | Probar administración de mesas |
+| `npm run test:security` | Probar columnas protegidas e integridad |
+| `npm run test:waiter` | Probar carta y tablero del mozo |
+| `npm run test:responsive` | Probar contratos responsive y estados de interfaz |
+| `npm run test:technical` | Probar la página técnica autenticada |
 | `npm run verify:anon` | Validar lecturas permitidas y escrituras anónimas rechazadas |
+| `npm run verify:h2-authenticated` | Ejecutar comprobaciones autenticadas reales cuando existan variables locales seguras y fixtures requeridos |
+| `npm run preview` | Servir localmente el build generado |
 
 ## Estructura del repositorio
 
@@ -228,7 +264,7 @@ Recursos de base de datos:
 | Pruebas SQL | Esquema, constraints, índices, seed e idempotencia |
 | GitHub Actions | Instalación limpia, typecheck y build en cada cambio relevante |
 
-H1 cerró con TP-01–TP-20 aprobadas. La evidencia reproducible está en [execution.md](specs/H1-TechnicalBasis/execution.md) y la decisión humana en [acceptance.md](specs/H1-TechnicalBasis/acceptance.md).
+H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, verificaciones reales con cuatro roles y TP-01–TP-53 conformes.
 
 ## Documentación
 
@@ -241,10 +277,15 @@ H1 cerró con TP-01–TP-20 aprobadas. La evidencia reproducible está en [execu
 - [Plan de pruebas de H1](specs/H1-TechnicalBasis/test-plan.md)
 - [Evidencia de ejecución de H1](specs/H1-TechnicalBasis/execution.md)
 - [Aceptación de H1](specs/H1-TechnicalBasis/acceptance.md)
+- [Spec H2](specs/H2-UsersCatalogTables/h2_requirements.md)
+- [Diseño H2](specs/H2-UsersCatalogTables/h2_design.md)
+- [Tareas H2](specs/H2-UsersCatalogTables/h2_tasks.md)
+- [Plan de pruebas H2](specs/H2-UsersCatalogTables/h2_test-plan.md)
+- [Aceptación de H2](specs/H2-UsersCatalogTables/h2_acceptance.md)
 
 ## Siguiente etapa
 
-H2 contempla autenticación, usuarios, carta y mesas. Todavía no ha sido iniciado.
+H3 contempla el flujo del mozo: seleccionar mesa, crear el pedido, agregar productos y confirmar su envío. Todavía no ha sido iniciado.
 
 ## Licencia
 
