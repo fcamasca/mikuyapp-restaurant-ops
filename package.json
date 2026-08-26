@@ -24,6 +24,7 @@
     "test:routes": "node --experimental-strip-types --test tests/appRoutes.test.mjs",
     "typecheck": "tsc --noEmit",
     "verify:anon": "node --env-file=.env.local scripts/verifyAnonAccess.mjs",
+    "verify:h2-authenticated": "node --env-file=.env.local scripts/h2_verify_authenticated_access.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -22,6 +22,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T16 — Columnas protegidas y rechazo de desactivación de mesas no libres reforzados y verificados; las validaciones autenticadas directas contra PostgreSQL permanecen asociadas a T19.
 - [x] T17 — Formularios, estados de interfaz y diseño responsive para celular y tablet ajustados y verificados técnicamente; la validación visual humana de TP-29 y TP-53 queda pendiente para T21.
 - [x] T18 — Página `/tecnica` autenticada integrada para los cuatro roles y regresión funcional H1 verificada; la validación autenticada directa de TP-19 corresponde a T19.
+- [x] T19 — Pruebas autenticadas reales aprobadas; TP-16, TP-19–TP-23, TP-34, TP-40, TP-43, TP-46 y TP-48–TP-50 conformes, con 0 fallos y 0 pruebas pendientes; fixtures y sesiones limpiados correctamente.
 
 ## Tareas planificadas
 
