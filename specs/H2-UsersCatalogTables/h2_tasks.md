@@ -24,6 +24,7 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 - [x] T18 — Página `/tecnica` autenticada integrada para los cuatro roles y regresión funcional H1 verificada; la validación autenticada directa de TP-19 corresponde a T19.
 - [x] T19 — Pruebas autenticadas reales aprobadas; TP-16, TP-19–TP-23, TP-34, TP-40, TP-43, TP-46 y TP-48–TP-50 conformes, con 0 fallos y 0 pruebas pendientes; fixtures y sesiones limpiados correctamente.
 - [x] T20 — Validación integral aprobada con 212 pruebas; `verify:anon`, TypeScript y build conformes, TP-25 y TP-28 aprobadas, 0 coincidencias sensibles en Git, staging, `dist` y logs, y `.env.local` ignorado y no versionado.
+- [x] T21 — Validación técnica final y Preview de Cloudflare conformes; TP-29, TP-30 y TP-53 aprobadas mediante validación humana de 15 puntos: administración completa de categorías, productos y mesas; limpieza de temporales; flujo y carta del mozo; cuatro estados de mesa; accesos de cocina y caja; restricciones de rutas; cierre de sesión; responsive en celular y tablet; y ausencia de desbordamientos o controles ilegibles.
 
 ## Tareas planificadas
 
@@ -51,4 +52,4 @@ La estimación revisada es **540 minutos (9 horas)**. El plan original asignaba 
 | T20 | 20 | Validar build, TypeScript y ausencia de secretos | T18, T19 | Build/TypeScript correctos y bundle/logs sin secretos | TP-25, TP-28 |
 | T21 | 20 | Consolidar validación técnica y revisión humana responsive | T17, T20 | Evidencias, incidencias y revisión humana registradas sin anticipar aprobación | TP-29, TP-30, TP-53 |
 
-T02–T08 cubren autenticación, roles, privilegios y RLS. T09–T16 cubren carta y administración segura de categorías, productos y mesas. T17–T21 cubren responsive, regresión H1 y validación técnica/humana. La suma exacta de T01–T21 es 540 minutos. Este documento no aprueba el spec ni marca H2 como completado.
+T02–T08 cubren autenticación, roles, privilegios y RLS. T09–T16 cubren carta y administración segura de categorías, productos y mesas. T17–T21 cubren responsive, regresión H1 y validación técnica/humana. La suma exacta de T01–T21 es 540 minutos. Las 21 tareas quedaron completadas y su aceptación se registra en `h2_acceptance.md`.

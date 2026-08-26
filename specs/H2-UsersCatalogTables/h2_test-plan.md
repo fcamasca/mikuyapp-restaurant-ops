@@ -1,6 +1,17 @@
 # MikuyApp — Hito H2: Plan de pruebas
 
-Las pruebas están diseñadas, no ejecutadas. Cada ejecución futura registrará fecha, commit, entorno, responsable y evidencia. “Automatizada” produce aprobado/fallido por comando o script; “técnica manual” requiere inspección técnica; “humana” registra apreciación funcional de la persona responsable.
+Las pruebas TP-01 a TP-53 fueron ejecutadas y aprobadas. “Automatizada” produce aprobado/fallido por comando o script; “técnica manual” requiere inspección técnica o comprobación real controlada; “humana” registra la validación funcional y visual de la persona responsable.
+
+## Resultado consolidado
+
+| Evidencia | Resultado final |
+|---|---|
+| Pruebas automatizadas | 212 pruebas aprobadas, incluidas autenticación, contexto, rutas, catálogos, seguridad, RLS, privilegios por columna e integridad. |
+| Verificaciones técnicas manuales | Aprobadas para los cuatro roles, API real de Supabase, regresión anónima H1, TypeScript, build, Cloudflare Preview, rutas SPA, limpieza de fixtures y auditoría de secretos. |
+| Validaciones humanas | TP-29, TP-30 y TP-53 aprobadas en 15 puntos sobre CRUD, navegación por roles, carta y mesas, cierre de sesión y responsive en celular y tablet. |
+| Cobertura | TP-01 a TP-53 conformes, sin fallos, pendientes ni bloqueantes. |
+
+La evidencia técnica final corresponde a la rama `feature/H2-UsuariosCartaMesas`, commit `9e03aaa5f4957da5a13def1cb07767aa593352fd`, y al Preview validado `https://feature-h2-usuarioscartamesa.mikuyapp.pages.dev`.
 
 | ID | Precondiciones | Pasos | Resultado esperado | Tipo |
 |---|---|---|---|---|
@@ -58,6 +69,6 @@ Las pruebas están diseñadas, no ejecutadas. Cada ejecución futura registrará
 | TP-52 — Visibilidad encadenada de categorías/productos/mesas | Categoría con producto activo y mesa activa | Desactivar categoría, producto y mesa por separado; consultar como cada rol | Administrador conserva inactivos; carta excluye categoría/productos inactivos; mozo excluye mesas inactivas | Automatizada |
 | TP-53 — Mensajes y responsive administrativos | Formularios, listas, errores de dependencia y dispositivos/anchos representativos | Crear, editar, cancelar, confirmar y provocar errores en celular/tablet | Mensajes de éxito/error comprensibles; formularios utilizables sin desbordes | Humana |
 
-## Criterio de salida futuro
+## Criterio de salida cumplido
 
-La ejecución futura de TP-01–TP-29 y TP-31–TP-52 debe contar con evidencia favorable; TP-30 y TP-53 requieren registro humano. Un fallo de privilegios, RLS, integridad, aislamiento, protección de estado o secretos bloquea la aceptación futura del hito. Este documento no ejecuta pruebas, no crea `acceptance.md` y no declara aprobado ni completado el spec o H2.
+TP-01 a TP-53 cuentan con evidencia favorable. Las comprobaciones automatizadas y técnicas confirmaron privilegios, RLS, integridad, aislamiento, protección de estado, ausencia de secretos y compatibilidad del build. La validación humana confirmó TP-29, TP-30 y TP-53 en sus 15 puntos. No quedan pruebas pendientes ni bloqueantes para la aceptación de H2.
