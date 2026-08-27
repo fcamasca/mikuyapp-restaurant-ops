@@ -1,5 +1,18 @@
 # MikuyApp — H3 Flujo del mozo: tareas
 
+## Estado de ejecución
+
+- [x] H3-T01 — Cambio mínimo de modelo implementado, migrado y validado contra Supabase remoto.
+- [x] H3-T02 — Creación o recuperación transaccional del pedido implementada, validada y aprobada.
+- [x] H3-T03 — Alta segura de detalles implementada y validada; precio y estado controlados por PostgreSQL.
+- [ ] H3-T04 — Pendiente.
+- [ ] H3-T05 — Pendiente.
+- [ ] H3-T06 — Pendiente.
+- [ ] H3-T07 — Pendiente.
+- [ ] H3-T08 — Pendiente.
+- [ ] H3-T09 — Pendiente.
+- [ ] H3-T10 — Pendiente.
+
 ## 1. Plan de construcción posterior a la aprobación del Spec
 
 | ID | Trabajo | Diseño | Requisitos | Horas |
