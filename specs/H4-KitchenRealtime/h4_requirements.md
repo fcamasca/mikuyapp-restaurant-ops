@@ -2,7 +2,7 @@
 
 ## Estado del documento
 
-**BORRADOR PARA REVISIÓN HUMANA.** H4 no ha iniciado construcción. Este documento, `design.md`, `tasks.md` y `test-plan.md` deben aprobarse explícitamente antes de implementar código o migraciones.
+**CERRADO / VALIDADO / ACEPTADO.** El Spec fue aprobado antes de la construcción y H4 fue aceptado humanamente el 2026-08-27. La aceptación final se registra en `acceptance.md`.
 
 ## Objetivo
 

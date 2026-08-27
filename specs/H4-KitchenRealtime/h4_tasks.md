@@ -2,7 +2,7 @@
 
 ## Estado
 
-El Spec fue aprobado humanamente. H4-T01–H4-T09 están implementadas y validadas; H4-T10 permanece pendiente.
+El Spec fue aprobado humanamente. H4-T01–H4-T10 están implementadas, validadas y aceptadas; H4 está cerrado.
 
 ## Plan de construcción propuesto
 
@@ -17,7 +17,7 @@ El Spec fue aprobado humanamente. H4-T01–H4-T09 están implementadas y validad
 | [x] | H4-T07 | Integrar Realtime en cocina para nuevos detalles, actualizaciones, recarga autoritativa, errores y reconexión, evitando duplicados mediante reemplazo del snapshot. | H4-D06, H4-D07, H4-D09 | H4-R07, H4-R11–H4-R14 | 0.75 |
 | [x] | H4-T08 | Integrar señal/recarga Realtime en tablero y pedido del mozo para reflejar detalle, cabecera y mesa persistidos. | H4-D06, H4-D07 | H4-R09, H4-R11, H4-R12 | 0.50 |
 | [x] | H4-T09 | Ejecutar pruebas SQL, automatizadas, técnicas, concurrencia y regresión H1–H3; corregir únicamente defectos de H4. | H4-D01–H4-D10 | H4-R01–H4-R14 | 0.75 |
-| [ ] | H4-T10 | Ejecutar validación humana responsive y de dos dispositivos; consolidar evidencia de H4 sin crear aceptación. | H4-D02, H4-D06, H4-D09, H4-D10 | H4-R01–H4-R14 | 0.75 |
+| [x] | H4-T10 | Ejecutar validación humana responsive y de dos dispositivos; consolidar evidencia de H4 sin crear aceptación. | H4-D02, H4-D06, H4-D09, H4-D10 | H4-R01–H4-R14 | 0.75 |
 
 **Estimación revisada:** 8.5 horas. El ajuste de derivación y la simplificación de Realtime no cambian materialmente las tareas previstas.
 

@@ -2,7 +2,7 @@
 
 ## Estado y clasificación
 
-**BORRADOR PARA APROBACIÓN.** Las pruebas se separan en:
+**CERRADO / VALIDADO / ACEPTADO.** H4-TA, H4-TM y H4-TH01–H4-TH06 fueron aprobadas; la decisión final se registra en `acceptance.md`. Las pruebas se separan en:
 
 - **Automatizadas (H4-TA):** contratos de servicios/UI y SQL ejecutable en entorno controlado.
 - **Técnicas manuales (H4-TM):** inspección remota de esquema, privilegios, Realtime, concurrencia y recuperación.
