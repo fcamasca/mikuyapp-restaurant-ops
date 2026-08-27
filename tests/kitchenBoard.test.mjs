@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { createKitchenRealtimeService, formatKitchenAge, groupKitchenBoard, runKitchenDetailMutation } from '../src/services/kitchenRealtimeService.ts'
+import { createKitchenRealtimeService, formatKitchenAge, groupKitchenBoard, runKitchenDetailMutation, settleKitchenTransitionsFromSnapshot } from '../src/services/kitchenRealtimeService.ts'
 import { getRoleDestination, resolveApplicationRoute } from '../src/services/appRoutes.ts'
 
 const pageSource = readFileSync(new URL('../src/pages/KitchenBoardPage.tsx', import.meta.url), 'utf8')
@@ -90,13 +90,42 @@ test('H4-T06 transición usa RPC, conserva estados esperados y traduce conflicto
 })
 
 test('H4-T06 bloquea por detalle, muestra feedback y resincroniza tras éxito o conflicto', () => {
-  assert.match(pageSource, /pendingIds\.current\.has\(detail\.detalle_id\)/)
-  assert.match(pageSource, /pendingIds\.current\.add\(detail\.detalle_id\)/)
-  assert.match(pageSource, /pendingIds\.current\.delete\(detail\.detalle_id\)/)
+  assert.match(pageSource, /pendingTransitions\.current\.has\(detail\.detalle_id\)/)
+  assert.match(pageSource, /pendingTransitions\.current\.set\(detail\.detalle_id/)
+  assert.match(pageSource, /pendingTransitions\.current\.delete\(detail\.detalle_id\)/)
   assert.match(pageSource, /Actualizando…/)
   assert.match(pageSource, /runKitchenDetailMutation/)
   assert.match(pageSource, /detailMessages/)
   assert.doesNotMatch(pageSource, /setRows\([^)]*estado/)
+})
+
+test('H4-TH06 RPC pendiente + snapshot ganador libera Actualizando inmediatamente', async () => {
+  let resolveRpc
+  const rpcPending = new Promise((resolve) => { resolveRpc = resolve })
+  const token = Symbol('pending-rpc')
+  const pending = new Map([[101, { expectedStatus: 'RECIBIDO_COCINA', token }]])
+
+  let rpcFinished = false
+  void rpcPending.then(() => { rpcFinished = true })
+  const settled = settleKitchenTransitionsFromSnapshot(pending, [
+    detail({ detalle_id: 101, estado: 'EN_PREPARACION' }),
+  ])
+
+  assert.equal(rpcFinished, false)
+  assert.deepEqual(settled, [101])
+  assert.equal(pending.has(101), false)
+
+  resolveRpc({ ok: false, error: { kind: 'concurrent-conflict' } })
+  await rpcPending
+  assert.equal(pending.has(101), false)
+  assert.match(pageSource, /settleKitchenTransitionsFromSnapshot\(pendingTransitions\.current, snapshot\)/)
+  assert.match(pageSource, /setBusyIds\(\(current\) => current\.filter\(\(id\) => !settledIds\.includes\(id\)\)\)/)
+})
+
+test('H4-TH06 respuesta RPC tardía queda invalidada por token y no sobrescribe snapshot', () => {
+  assert.match(pageSource, /pendingTransitions\.current\.get\(detail\.detalle_id\)\?\.token !== operationToken/)
+  assert.match(pageSource, /onSnapshot\(snapshot\)[\s\S]*setRows\(snapshot\)/)
+  assert.doesNotMatch(pageSource, /setRows\([^)]*result|setRows\([^)]*next/)
 })
 
 test('H4-TH06 libera Actualizando al recibir 40001 aunque la resincronización siga pendiente', async () => {

@@ -5,6 +5,7 @@ import {
   formatKitchenAge,
   groupKitchenBoard,
   runKitchenDetailMutation,
+  settleKitchenTransitionsFromSnapshot,
   type KitchenBoardRow,
   type KitchenDetailStatus,
   type KitchenRealtimeHandle,
@@ -57,7 +58,7 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
     [clientResult],
   )
   const handleRef = useRef<KitchenRealtimeHandle | null>(null)
-  const pendingIds = useRef(new Set<number>())
+  const pendingTransitions = useRef(new Map<number, { expectedStatus: KitchenDetailStatus; token: symbol }>())
   const [rows, setRows] = useState<readonly KitchenBoardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -78,6 +79,10 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
     void service.start({
       onSnapshot(snapshot) {
         if (cancelled) return
+        const settledIds = settleKitchenTransitionsFromSnapshot(pendingTransitions.current, snapshot)
+        if (settledIds.length > 0) {
+          setBusyIds((current) => current.filter((id) => !settledIds.includes(id)))
+        }
         setRows(snapshot)
         setLoading(false)
         setError(null)
@@ -106,8 +111,12 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
   const groups = useMemo(() => groupKitchenBoard(rows), [rows])
 
   async function transition(detail: KitchenBoardRow, next: KitchenDetailStatus): Promise<void> {
-    if (!service || pendingIds.current.has(detail.detalle_id)) return
-    pendingIds.current.add(detail.detalle_id)
+    if (!service || pendingTransitions.current.has(detail.detalle_id)) return
+    const operationToken = Symbol(`kitchen-detail-${detail.detalle_id}`)
+    pendingTransitions.current.set(detail.detalle_id, {
+      expectedStatus: detail.estado,
+      token: operationToken,
+    })
     setBusyIds((current) => [...current, detail.detalle_id])
     setDetailMessages((current) => {
       const nextMessages = { ...current }
@@ -117,12 +126,14 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
     await runKitchenDetailMutation({
       operation: () => service.transitionDetail(detail.detalle_id, detail.estado, next),
       onResult(result) {
+        if (pendingTransitions.current.get(detail.detalle_id)?.token !== operationToken) return
         if (!result.ok) {
           setDetailMessages((current) => ({ ...current, [detail.detalle_id]: result.error.message }))
         }
       },
       releasePending() {
-        pendingIds.current.delete(detail.detalle_id)
+        if (pendingTransitions.current.get(detail.detalle_id)?.token !== operationToken) return
+        pendingTransitions.current.delete(detail.detalle_id)
         setBusyIds((current) => current.filter((id) => id !== detail.detalle_id))
       },
       resync: async () => { await handleRef.current?.resync() },

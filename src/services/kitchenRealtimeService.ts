@@ -35,6 +35,27 @@ export interface KitchenOrderGroup {
   readonly oldestSentAt: string
 }
 
+export interface PendingKitchenTransition {
+  readonly expectedStatus: KitchenDetailStatus
+  readonly token: symbol
+}
+
+export function settleKitchenTransitionsFromSnapshot(
+  pending: Map<number, PendingKitchenTransition>,
+  snapshot: readonly KitchenBoardRow[],
+): readonly number[] {
+  const currentStatuses = new Map(snapshot.map((detail) => [detail.detalle_id, detail.estado] as const))
+  const settled: number[] = []
+  for (const [detailId, operation] of pending) {
+    const persistedStatus = currentStatuses.get(detailId)
+    if (persistedStatus === undefined || persistedStatus !== operation.expectedStatus) {
+      pending.delete(detailId)
+      settled.push(detailId)
+    }
+  }
+  return settled
+}
+
 export function groupKitchenBoard(rows: readonly KitchenBoardRow[]): readonly KitchenOrderGroup[] {
   const groups = new Map<number, KitchenBoardRow[]>()
   for (const row of rows) {
