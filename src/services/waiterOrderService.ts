@@ -13,6 +13,7 @@ export interface CurrentOrderSummary {
   readonly id: number
   readonly estado: OrderStatusCode
   readonly total: number
+  readonly creadorNombre: string
 }
 
 export interface WaiterTableBoardItem {
@@ -33,6 +34,10 @@ export interface WaiterOrderDetail {
   readonly precio_unitario: number
   readonly observacion: string | null
   readonly estado: OrderDetailStatus
+  readonly creado_por?: string
+  readonly creado_en?: string
+  readonly modificado_por?: string
+  readonly modificado_en?: string
 }
 
 export interface WaiterOrderReview {
@@ -46,8 +51,9 @@ export type WaiterOrderResult<T> =
   | { readonly ok: false; readonly error: { readonly kind: 'operation-error' | 'concurrent-conflict'; readonly message: string; readonly recoverable: true } }
 
 interface TableRow extends Omit<WaiterTableBoardItem, 'pedido'> { readonly activo: boolean }
-interface OrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
+interface OrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode; readonly creado_por: string }
 interface DetailRow { readonly pedido_id: number; readonly cantidad: number; readonly precio_unitario: number }
+interface OrderCreatorRow { readonly pedido_id: number; readonly creador_nombre: string }
 interface OpenOrderRow { readonly pedido_id: number; readonly fue_creado: boolean }
 interface AddedDetailRow extends WaiterOrderDetail { readonly detalle_id: number }
 interface ReviewOrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
@@ -100,7 +106,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         const [tablesResult, ordersResult] = await Promise.all([
           client.from('mesa').select('id,codigo,nombre,estado,activo')
             .eq('local_id', context.local.id).eq('activo', true).returns<TableRow[]>(),
-          client.from('pedido').select('id,mesa_id,estado')
+          client.from('pedido').select('id,mesa_id,estado,creado_por')
             .eq('local_id', context.local.id).in('estado', currentOrderStatuses).returns<OrderRow[]>(),
         ])
         if (tablesResult.error || ordersResult.error) {
@@ -111,11 +117,18 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         const orders = ordersResult.data ?? []
         const orderIds = orders.map((order) => order.id)
         let details: readonly DetailRow[] = []
+        let creators: readonly OrderCreatorRow[] = []
         if (orderIds.length > 0) {
-          const detailResult = await client.from('detalle_pedido')
-            .select('pedido_id,cantidad,precio_unitario').in('pedido_id', orderIds).returns<DetailRow[]>()
-          if (detailResult.error) return connectionError('No pudimos calcular los totales. Intenta nuevamente.')
+          const [detailResult, creatorResult] = await Promise.all([
+            client.from('detalle_pedido').select('pedido_id,cantidad,precio_unitario')
+              .in('pedido_id', orderIds).returns<DetailRow[]>(),
+            client.rpc('obtener_creadores_pedidos_vigentes', { p_pedido_ids: orderIds }),
+          ])
+          if (detailResult.error || creatorResult.error) {
+            return connectionError('No pudimos cargar los responsables y totales. Intenta nuevamente.')
+          }
           details = detailResult.data ?? []
+          creators = (creatorResult.data as OrderCreatorRow[] | null) ?? []
         }
 
         const totals = new Map<number, number>()
@@ -123,13 +136,19 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
           totals.set(detail.pedido_id, (totals.get(detail.pedido_id) ?? 0)
             + Number(detail.cantidad) * Number(detail.precio_unitario))
         }
+        const creatorsByOrder = new Map(creators.map((creator) => [creator.pedido_id, creator.creador_nombre]))
         const ordersByTable = new Map(orders.map((order) => [order.mesa_id, order]))
         const board = activeTables.map((table): WaiterTableBoardItem => {
           const currentOrder = ordersByTable.get(table.id)
           return {
             id: table.id, codigo: table.codigo, nombre: table.nombre, estado: table.estado,
             pedido: currentOrder
-              ? { id: currentOrder.id, estado: currentOrder.estado, total: totals.get(currentOrder.id) ?? 0 }
+              ? {
+                id: currentOrder.id,
+                estado: currentOrder.estado,
+                total: totals.get(currentOrder.id) ?? 0,
+                creadorNombre: creatorsByOrder.get(currentOrder.id) ?? 'Mozo no disponible',
+              }
               : null,
           }
         })
@@ -155,7 +174,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para consultar este pedido.')
       try {
         const result = await client.from('detalle_pedido')
-          .select('id,pedido_id,producto_id,cantidad,precio_unitario,observacion,estado')
+          .select('id,pedido_id,producto_id,cantidad,precio_unitario,observacion,estado,creado_por,creado_en,modificado_por,modificado_en')
           .eq('pedido_id', orderId).returns<WaiterOrderDetail[]>()
         if (result.error) return connectionError('No pudimos cargar los productos del pedido. Intenta nuevamente.')
         return { ok: true, data: result.data ?? [] }

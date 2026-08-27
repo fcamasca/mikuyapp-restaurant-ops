@@ -46,3 +46,11 @@ La construcción de H3 solo puede comenzar después de la aprobación humana exp
 ## 6. Trazabilidad
 
 La matriz completa y verificable se encuentra en `tasks.md`. Cada fila relaciona un requisito con decisiones de diseño, tareas y casos de prueba existentes.
+
+## 7. Evolución posterior al cierre
+
+### H3-ER01 — Auditoría de pedidos y detalles
+
+La evolución aprobada posterior a la aceptación conserva `pedido.creado_por/creado_en` como autoría original inmutable y añade `modificado_por/modificado_en`. Cada `detalle_pedido` registra creación y última modificación con usuario y fecha. La identidad se obtiene en PostgreSQL desde la sesión autenticada, nunca desde UUID enviados por React, y las FK a `perfil_usuario` usan `ON DELETE RESTRICT`.
+
+Las altas, consolidaciones, cambios de cantidad/observación y retiros actualizan la modificación comercial del pedido sin alterar su creador. Los cambios de estado del detalle actualizan su propia auditoría y no cambian necesariamente la modificación comercial de la cabecera. El responsable visible de una mesa se deriva del creador de su pedido vigente; no se añade responsable a `mesa`.

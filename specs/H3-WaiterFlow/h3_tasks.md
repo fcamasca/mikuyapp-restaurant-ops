@@ -14,6 +14,7 @@
 - [x] H3-T08 — Revisión completa y envío a cocina implementados y aprobados: separación de detalles, total persistido, envío seguro, recarga desde PostgreSQL y agregados posteriores.
 - [x] H3-T09 — Recuperación, errores, reintentos seguros, doble tap y concurrencia implementados y validados; los conflictos descartan borradores obsoletos y recuperan la versión confirmada por PostgreSQL.
 - [x] H3-T10 — Validación integral completada; pruebas automatizadas, técnicas y humanas consolidadas y aprobadas.
+- [x] H3-E01 — Evolución posterior al cierre: auditoría de pedido/detalle y creador visible en cards, implementada y validada técnica/automáticamente.
 
 ## 1. Plan de construcción posterior a la aprobación del Spec
 
@@ -50,6 +51,12 @@
 | H3-R10 | H3-D01, H3-D08 | H3-T01, H3-T08, H3-T09, H3-T10 | H3-TA13, H3-TA14, H3-TH08 |
 | H3-R11 | H3-D04, H3-D05, H3-D07, H3-D09 | H3-T02–H3-T05, H3-T09, H3-T10 | H3-TA05, H3-TA07, H3-TA11, H3-TA15, H3-TM03–H3-TM07 |
 | H3-R12 | H3-D11 | H3-T10 | H3-TA16, H3-TM08, H3-TH09 |
+
+## 4. Evolución posterior al cierre
+
+| Requisito | Diseño | Tarea | Pruebas |
+|---|---|---|---|
+| H3-ER01 | H3-ED01 | H3-E01 | H3-EA01–H3-EA05, H3-ETM01 |
 
 ## 4. Condición de inicio y cierre
 
