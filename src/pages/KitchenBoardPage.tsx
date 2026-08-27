@@ -4,6 +4,7 @@ import {
   createKitchenRealtimeService,
   formatKitchenAge,
   groupKitchenBoard,
+  runKitchenDetailMutation,
   type KitchenBoardRow,
   type KitchenDetailStatus,
   type KitchenRealtimeHandle,
@@ -113,16 +114,19 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
       delete nextMessages[detail.detalle_id]
       return nextMessages
     })
-    try {
-      const result = await service.transitionDetail(detail.detalle_id, detail.estado, next)
-      if (!result.ok) {
-        setDetailMessages((current) => ({ ...current, [detail.detalle_id]: result.error.message }))
-      }
-      await handleRef.current?.resync()
-    } finally {
-      pendingIds.current.delete(detail.detalle_id)
-      setBusyIds((current) => current.filter((id) => id !== detail.detalle_id))
-    }
+    await runKitchenDetailMutation({
+      operation: () => service.transitionDetail(detail.detalle_id, detail.estado, next),
+      onResult(result) {
+        if (!result.ok) {
+          setDetailMessages((current) => ({ ...current, [detail.detalle_id]: result.error.message }))
+        }
+      },
+      releasePending() {
+        pendingIds.current.delete(detail.detalle_id)
+        setBusyIds((current) => current.filter((id) => id !== detail.detalle_id))
+      },
+      resync: async () => { await handleRef.current?.resync() },
+    })
   }
 
   return (

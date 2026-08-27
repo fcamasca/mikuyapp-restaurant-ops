@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { createKitchenRealtimeService, formatKitchenAge, groupKitchenBoard } from '../src/services/kitchenRealtimeService.ts'
+import { createKitchenRealtimeService, formatKitchenAge, groupKitchenBoard, runKitchenDetailMutation } from '../src/services/kitchenRealtimeService.ts'
 import { getRoleDestination, resolveApplicationRoute } from '../src/services/appRoutes.ts'
 
 const pageSource = readFileSync(new URL('../src/pages/KitchenBoardPage.tsx', import.meta.url), 'utf8')
@@ -94,9 +94,53 @@ test('H4-T06 bloquea por detalle, muestra feedback y resincroniza tras éxito o 
   assert.match(pageSource, /pendingIds\.current\.add\(detail\.detalle_id\)/)
   assert.match(pageSource, /pendingIds\.current\.delete\(detail\.detalle_id\)/)
   assert.match(pageSource, /Actualizando…/)
-  assert.match(pageSource, /await handleRef\.current\?\.resync\(\)/)
+  assert.match(pageSource, /runKitchenDetailMutation/)
   assert.match(pageSource, /detailMessages/)
   assert.doesNotMatch(pageSource, /setRows\([^)]*estado/)
+})
+
+test('H4-TH06 libera Actualizando al recibir 40001 aunque la resincronización siga pendiente', async () => {
+  let resolveResync
+  let released = false
+  let observedResult = null
+  const pendingResync = new Promise((resolve) => { resolveResync = resolve })
+
+  const mutation = runKitchenDetailMutation({
+    operation: async () => ({
+      ok: false,
+      error: {
+        kind: 'concurrent-conflict',
+        message: 'Este producto fue actualizado desde otro dispositivo. Se cargó la versión más reciente.',
+      },
+    }),
+    onResult(result) { observedResult = result },
+    releasePending() { released = true },
+    resync: () => pendingResync,
+  })
+
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(released, true)
+  assert.equal(observedResult.error.kind, 'concurrent-conflict')
+
+  let completed = false
+  void mutation.then(() => { completed = true })
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(completed, false)
+
+  resolveResync()
+  await mutation
+  assert.equal(completed, true)
+})
+
+test('H4-TH06 libera guard también ante error y resincro refleja snapshot ganador', async () => {
+  const order = []
+  await runKitchenDetailMutation({
+    operation: async () => ({ ok: false, error: { kind: 'operation-error', message: 'Error recuperable' } }),
+    onResult() { order.push('result') },
+    releasePending() { order.push('released') },
+    async resync() { order.push('resynced') },
+  })
+  assert.deepEqual(order, ['result', 'released', 'resynced'])
 })
 
 test('H4-T06 incluye carga, vacío, error recuperable y responsive táctil', () => {

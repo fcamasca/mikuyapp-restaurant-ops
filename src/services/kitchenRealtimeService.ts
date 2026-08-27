@@ -92,6 +92,28 @@ export type KitchenTransitionResult =
     }
   }
 
+interface KitchenDetailMutationLifecycle {
+  readonly operation: () => Promise<KitchenTransitionResult>
+  readonly onResult: (result: KitchenTransitionResult) => void
+  readonly releasePending: () => void
+  readonly resync: () => Promise<void>
+}
+
+export async function runKitchenDetailMutation({
+  operation,
+  onResult,
+  releasePending,
+  resync,
+}: KitchenDetailMutationLifecycle): Promise<void> {
+  try {
+    const result = await operation()
+    onResult(result)
+  } finally {
+    releasePending()
+  }
+  await resync()
+}
+
 interface KitchenRealtimeOptions {
   readonly debounceMs?: number
   readonly setTimeoutFn?: typeof setTimeout
