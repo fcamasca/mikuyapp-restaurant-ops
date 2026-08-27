@@ -273,12 +273,17 @@ test('T09 conflicto descarta borrador, cierra Guardar y permite editar de nuevo'
   assert.match(orderPageSource, /Editar observación/)
 })
 
-test('T09 aviso ya recuperado no ofrece Reintentar y desaparece al volver a editar', () => {
-  assert.match(orderPageSource, /setConflictNotice\(mutationError\.kind === 'concurrent-conflict'\)/)
-  assert.match(orderPageSource, /\{!conflictNotice && <button/)
-  assert.match(orderPageSource, />Reintentar<\/button>\}/)
-  assert.match(orderPageSource, /function editObservation[\s\S]*?setConflictNotice\(false\); setError\(null\)/)
-  assert.doesNotMatch(orderPageSource, /Actualizar<\/button>|Entendido<\/button>/)
+test('T09 conflicto se asocia solo a la card afectada y desaparece al volver a editar', () => {
+  assert.match(orderPageSource, /Readonly<Record<number, string>>/)
+  assert.match(orderPageSource, /\{ \.\.\.current, \[detailId\]: 'Actualizado desde otro dispositivo\. Se cargó la versión más reciente\.' \}/)
+  assert.match(orderPageSource, /const detailConflict = detailConflicts\[detail\.id\]/)
+  assert.match(orderPageSource, /\{detailConflict && <p[^>]*role="status">\{detailConflict\}<\/p>\}/)
+  assert.match(orderPageSource, /function clearDetailConflict\(detailId: number\)/)
+  assert.match(orderPageSource, /function editObservation[\s\S]*?clearDetailConflict\(detail\.id\); setError\(null\)/)
+  assert.match(orderPageSource, /async function quantity[\s\S]*?clearDetailConflict\(detail\.id\)/)
+  assert.match(orderPageSource, /async function remove[\s\S]*?clearDetailConflict\(detail\.id\)/)
+  assert.match(orderPageSource, /\{error && <div[^>]*role="alert"[\s\S]*?>Reintentar<\/button>/)
+  assert.doesNotMatch(orderPageSource, /setError\(mutationError\.message\)[\s\S]{0,80}concurrent-conflict/)
 })
 
 test('T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controles táctiles', () => {

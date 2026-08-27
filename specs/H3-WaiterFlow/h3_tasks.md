@@ -10,7 +10,7 @@
 - [x] H3-T06 — Tablero operativo de mesas implementado y validado: cards táctiles, estados textuales, total vigente, filtros, orden y navegación al pedido.
 - [x] H3-T07 — Carta táctil y gestión de detalles implementadas y aprobadas: modos pedido/carta, consolidación segura de detalles `ABIERTO`, observaciones, edición, retiro confirmado y cards compactas.
 - [x] H3-T08 — Revisión completa y envío a cocina implementados y aprobados: separación de detalles, total persistido, envío seguro, recarga desde PostgreSQL y agregados posteriores.
-- [ ] H3-T09 — Pendiente.
+- [x] H3-T09 — Recuperación, errores, reintentos seguros, doble tap y concurrencia implementados y validados; los conflictos descartan borradores obsoletos y recuperan la versión confirmada por PostgreSQL.
 - [ ] H3-T10 — Pendiente.
 
 ## 1. Plan de construcción posterior a la aprobación del Spec
