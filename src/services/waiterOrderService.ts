@@ -35,6 +35,12 @@ export interface WaiterOrderDetail {
   readonly estado: OrderDetailStatus
 }
 
+export interface WaiterOrderReview {
+  readonly id: number
+  readonly estado: OrderStatusCode
+  readonly mesa: { readonly id: string; readonly codigo: string; readonly nombre: string }
+}
+
 export type WaiterOrderResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly error: { readonly message: string; readonly recoverable: true } }
@@ -44,6 +50,9 @@ interface OrderRow { readonly id: number; readonly mesa_id: string; readonly est
 interface DetailRow { readonly pedido_id: number; readonly cantidad: number; readonly precio_unitario: number }
 interface OpenOrderRow { readonly pedido_id: number; readonly fue_creado: boolean }
 interface AddedDetailRow extends WaiterOrderDetail { readonly detalle_id: number }
+interface ReviewOrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
+interface ReviewTableRow { readonly id: string; readonly codigo: string; readonly nombre: string }
+interface SentOrderRow { readonly pedido_id: number; readonly detalles_enviados: number }
 type WaiterOrderClient = Pick<SupabaseClient, 'from' | 'rpc'>
 
 const tableCollator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' })
@@ -143,6 +152,23 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       }
     },
 
+    async getOrderReview(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<WaiterOrderReview>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para consultar este pedido.')
+      try {
+        const orderResult = await client.from('pedido').select('id,mesa_id,estado')
+          .eq('id', orderId).eq('local_id', context.local.id).in('estado', currentOrderStatuses).returns<ReviewOrderRow[]>()
+        const order = orderResult.data?.[0]
+        if (orderResult.error || !order) return connectionError('No pudimos cargar el pedido vigente. Intenta nuevamente.')
+        const tableResult = await client.from('mesa').select('id,codigo,nombre')
+          .eq('id', order.mesa_id).eq('local_id', context.local.id).eq('activo', true).returns<ReviewTableRow[]>()
+        const table = tableResult.data?.[0]
+        if (tableResult.error || !table) return connectionError('No pudimos identificar la mesa del pedido.')
+        return { ok: true, data: { id: order.id, estado: order.estado, mesa: table } }
+      } catch {
+        return connectionError('No pudimos cargar el pedido vigente. Intenta nuevamente.')
+      }
+    },
+
     async addOrderDetail(context: ValidatedProfileContext, orderId: number, productId: string): Promise<WaiterOrderResult<WaiterOrderDetail>> {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para agregar productos.')
       try {
@@ -186,6 +212,18 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
+      }
+    },
+
+    async sendOrderToKitchen(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<{ detallesEnviados: number }>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para enviar pedidos.')
+      try {
+        const result = await client.rpc('enviar_pedido_cocina', { p_pedido_id: orderId })
+        const row = (result.data as SentOrderRow[] | null)?.[0]
+        if (result.error || !row) return connectionError('No pudimos enviar el pedido a cocina. Los productos permanecen por enviar.')
+        return { ok: true, data: { detallesEnviados: row.detalles_enviados } }
+      } catch {
+        return connectionError('No pudimos enviar el pedido a cocina. Los productos permanecen por enviar.')
       }
     },
   }

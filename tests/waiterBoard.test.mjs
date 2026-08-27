@@ -239,7 +239,7 @@ test('T07 confirma retiro, permite cancelar y muestra feedback local', () => {
   assert.match(orderPageSource, /setConfirmingRemoval\(detail\.id\)/)
   assert.match(orderPageSource, /setConfirmingRemoval\(null\)/)
   assert.match(orderPageSource, /⏳ Retirando…/)
-  assert.match(orderPageSource, /aria-busy=\{detailBusy\}/)
+  assert.match(orderPageSource, /aria-busy=\{detailBusy \|\| sending\}/)
 })
 
 test('T07 impide doble mutación por línea y no usa menos uno para eliminar', () => {
@@ -316,4 +316,57 @@ test('T07 usa card compacta ABIERTO y cantidad de solo lectura para enviados', (
   assert.match(orderPageSource, /!open && ` · Estado:/)
   assert.match(orderPageSource, /: <strong className="shrink-0">× \{detail\.cantidad\}<\/strong>/)
   assert.match(orderPageSource, /detail\.cantidad <= 1/)
+})
+
+test('T08 recupera mesa y cabecera vigente para la revisión', async () => {
+  const fixture = createClient({
+    tables: [{ id: 'table-1', codigo: 'M-01', nombre: 'Terraza' }],
+    orders: [{ id: 12, mesa_id: 'table-1', estado: 'EN_PREPARACION' }],
+  })
+  const result = await createWaiterOrderService(fixture.client).getOrderReview(context(), 12)
+  assert.deepEqual(result, { ok: true, data: { id: 12, estado: 'EN_PREPARACION', mesa: { id: 'table-1', codigo: 'M-01', nombre: 'Terraza' } } })
+})
+
+test('T08 envía exclusivamente mediante enviar_pedido_cocina', async () => {
+  const fixture = createClient({ rpcData: [{ pedido_id: 12, detalles_enviados: 3, cabecera_actualizada: true, pedido_estado: 'ENVIADO' }] })
+  const result = await createWaiterOrderService(fixture.client).sendOrderToKitchen(context(), 12)
+  assert.deepEqual(result, { ok: true, data: { detallesEnviados: 3 } })
+  assert.deepEqual(fixture.rpcCalls, [{ name: 'enviar_pedido_cocina', args: { p_pedido_id: 12 } }])
+  assert.doesNotMatch(serviceSource, /update\(\{\s*estado:/)
+})
+
+test('T08 revisión muestra mesa, pedido, grupos, importes y total persistido', () => {
+  assert.match(orderPageSource, /review\.mesa\.codigo/)
+  assert.match(orderPageSource, /Pedido #\{orderId\}/)
+  assert.match(orderPageSource, /Ya solicitado/)
+  assert.match(orderPageSource, /Por enviar/)
+  assert.match(orderPageSource, /detailAmount = detail\.cantidad \* Number\(detail\.precio_unitario\)/)
+  assert.match(orderPageSource, /total = details\.reduce/)
+  assert.match(orderPageSource, /Total \{money\.format\(total\)\}/)
+})
+
+test('T08 muestra envío solo con ABIERTO, feedback y bloqueo contra doble tap', () => {
+  assert.match(orderPageSource, /openDetails\.length > 0 && <button/)
+  assert.match(orderPageSource, /Enviar a cocina/)
+  assert.match(orderPageSource, /Enviando…/)
+  assert.match(orderPageSource, /sendingRef\.current/)
+  assert.match(orderPageSource, /if \(!orders \|\| sendingRef\.current \|\| openDetails\.length === 0\) return/)
+  assert.match(orderPageSource, /disabled=\{sending\}/)
+})
+
+test('T08 recarga PostgreSQL tras éxito o error y deriva los grupos del estado confirmado', () => {
+  assert.match(orderPageSource, /const result = await orders\.sendOrderToKitchen/)
+  assert.match(orderPageSource, /const refreshed = await reload\(\)/)
+  assert.match(orderPageSource, /if \(!result\.ok\) setError/)
+  assert.match(orderPageSource, /requestedDetails = details\.filter/)
+  assert.match(orderPageSource, /openDetails = details\.filter/)
+  assert.doesNotMatch(orderPageSource, /setDetails\([^\n]*estado/)
+})
+
+test('T08 conserva agregados posteriores en Por enviar hasta un nuevo envío', () => {
+  assert.match(orderPageSource, /setMode\('CATALOG'\)/)
+  assert.match(orderPageSource, /addOrderDetail/)
+  assert.match(orderPageSource, /else await reload\(\)/)
+  assert.match(orderPageSource, /detail\.estado === 'ABIERTO'/)
+  assert.match(serviceSource, /enviar_pedido_cocina/)
 })
