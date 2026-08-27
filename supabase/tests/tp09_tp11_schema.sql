@@ -84,6 +84,7 @@ begin
       ('detalle_pedido', 'cantidad', 'integer', true, null, ''),
       ('detalle_pedido', 'precio_unitario', 'numeric(10,2)', true, null, ''),
       ('detalle_pedido', 'observacion', 'text', false, null, ''),
+      ('detalle_pedido', 'estado', 'text', true, '''ABIERTO''::text', ''),
       ('historial_estado', 'id', 'bigint', true, null, 'a'),
       ('historial_estado', 'pedido_id', 'bigint', true, null, ''),
       ('historial_estado', 'estado_anterior', 'text', false, null, ''),
@@ -196,8 +197,8 @@ begin
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'c';
-  if actual_count <> 23 then
-    raise exception 'TP-11: expected 23 CHECK constraints, found %', actual_count;
+  if actual_count <> 24 then
+    raise exception 'TP-11: expected 24 CHECK constraints, found %', actual_count;
   end if;
 
   select count(*), array_agg(index_name order by index_name)
@@ -216,9 +217,10 @@ begin
         'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago'
       )
   ) indexes;
-  if actual_count <> 12 or actual_names <> array[
+  if actual_count <> 14 or actual_names <> array[
     'idx_categoria_local_id_activo_orden',
     'idx_detalle_pedido_pedido_id',
+    'idx_detalle_pedido_pedido_id_estado',
     'idx_detalle_pedido_producto_id',
     'idx_historial_estado_pedido_id_creado_en',
     'idx_mesa_local_id_estado',
@@ -228,9 +230,10 @@ begin
     'idx_perfil_usuario_local_id',
     'idx_perfil_usuario_rol_id',
     'idx_producto_categoria_id_activo',
-    'idx_producto_local_id_activo'
+    'idx_producto_local_id_activo',
+    'uq_pedido_mesa_id_vigente'
   ]::text[] then
-    raise exception 'TP-11: expected 12 exact additional indexes, found %: %', actual_count, actual_names;
+    raise exception 'TP-11: expected 14 exact additional indexes, found %: %', actual_count, actual_names;
   end if;
 
   select count(*) into actual_count

@@ -216,6 +216,7 @@ begin
   if actual_names <> array[
     'idx_categoria_local_id_activo_orden',
     'idx_detalle_pedido_pedido_id',
+    'idx_detalle_pedido_pedido_id_estado',
     'idx_detalle_pedido_producto_id',
     'idx_historial_estado_pedido_id_creado_en',
     'idx_mesa_local_id_estado',
@@ -227,10 +228,10 @@ begin
     'idx_producto_categoria_id_activo',
     'idx_producto_local_id_activo'
   ]::text[] then
-    raise exception 'TP-10: índices adicionales de D-08 diferentes: %', actual_names;
+    raise exception 'TP-10: índices adicionales vigentes diferentes: %', actual_names;
   end if;
 
-  raise notice 'TP-10 aprobada: rechazos dinámicos, 9 UNIQUE y 12 índices verificados';
+  raise notice 'TP-10 aprobada: rechazos dinámicos, 9 UNIQUE y 13 índices idx_* verificados';
 end
 $tp10_catalogs$;
 

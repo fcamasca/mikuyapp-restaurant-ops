@@ -4,7 +4,7 @@
 
 Crear manualmente cuatro cuentas Supabase Auth y asociar exactamente un perfil activo por cuenta para los roles `ADMINISTRADOR`, `MOZO`, `COCINA` y `CAJA` del local `MIKUY-DEMO`. Este procedimiento no crea usuarios desde seed, frontend, migraciones o `service_role`; tampoco implementa funciones PostgreSQL, privilegios ni RLS.
 
-La plantilla versionada es `supabase/h2_user_profiles.template.sql`. Sus cuatro parámetros UUID permanecen en `NULL`; ejecutarla sin sustituirlos aborta la transacción antes de modificar perfiles. Los valores reales solo deben escribirse en una copia temporal abierta dentro de Supabase Dashboard.
+La plantilla versionada es `supabase/templates/h2_user_profiles.template.sql`. Sus cuatro parámetros UUID permanecen en `NULL`; ejecutarla sin sustituirlos aborta la transacción antes de modificar perfiles. Los valores reales solo deben escribirse en una copia temporal abierta dentro de Supabase Dashboard.
 
 ## Requisitos previos
 
@@ -18,7 +18,7 @@ El usuario responsable debe tener acceso administrativo al proyecto Supabase `mi
 4. Conservar los correos y contraseñas fuera del repositorio; no introducirlos en archivos, commits, capturas o registros.
 5. Copiar temporalmente los UUID Auth de las cuatro cuentas desde **Authentication → Users**.
 6. Abrir **SQL Editor** dentro del mismo proyecto Supabase.
-7. Copiar el contenido de `supabase/h2_user_profiles.template.sql` y pegarlo en una consulta temporal del editor.
+7. Copiar el contenido de `supabase/templates/h2_user_profiles.template.sql` y pegarlo en una consulta temporal del editor.
 8. Dentro de esa consulta temporal, sustituir únicamente los cuatro `NULL` de `v_administrador_uuid`, `v_mozo_uuid`, `v_cocina_uuid` y `v_caja_uuid` por los UUID correspondientes. No modificar la plantilla versionada.
 9. Revisar la correspondencia entre cada UUID y su rol; ejecutar la consulta solamente desde el Dashboard.
 10. Comprobar que el resultado informa: **cuatro perfiles activos, cuatro roles diferentes y un único local MIKUY-DEMO**. Si falta un usuario, rol, local o existe un UUID duplicado, la transacción falla completamente.
