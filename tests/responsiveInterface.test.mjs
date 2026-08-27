@@ -50,28 +50,26 @@ test('TP-29: catálogo y mesas administrativas cargan y reintentan por separado'
   assert.match(admin, /const \[tablesAttempt, setTablesAttempt\]/)
 })
 
-test('TP-53: tablero y carta adaptan columnas para móvil, tablet y escritorio', () => {
+test('TP-53: tablero operativo adapta cards y controles para móvil y tablet', () => {
   assert.match(waiter, /overflow-x-hidden/)
-  assert.match(waiter, /grid gap-4 sm:grid-cols-2 xl:grid-cols-3/)
-  assert.match(waiter, /grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4/)
+  assert.match(waiter, /grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3/)
+  assert.match(waiter, /grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-4/)
   assert.match(waiter, /min-w-0 break-words/)
-  assert.match(waiter, /min-h-11[^\n]*sm:/)
+  assert.match(waiter, /min-h-12 w-full/)
+  assert.match(waiter, /min-h-11 w-full min-w-0/)
 })
 
-test('TP-53: mesas y carta conservan estados independientes con reintento', () => {
-  assert.match(waiter, /const \[tablesLoading, setTablesLoading\]/)
-  assert.match(waiter, /const \[catalogLoading, setCatalogLoading\]/)
+test('TP-53: tablero conserva carga, vacío, error y reintento', () => {
+  assert.match(waiter, /const \[loading, setLoading\]/)
   assert.match(waiter, /No hay mesas disponibles/)
-  assert.match(waiter, /No hay productos disponibles/)
   assert.match(waiter, /Reintentar mesas/)
-  assert.match(waiter, /Reintentar carta/)
 })
 
 test('TP-53: los cuatro estados de mesa tienen texto además del color', () => {
   for (const label of ['Libre', 'Ocupada', 'Pedido listo', 'Pendiente de pago']) {
     assert.match(waiter, new RegExp(label))
   }
-  assert.match(waiter, /Estado: \{status\.label\}/)
+  assert.match(waiter, /Estado: <strong>\{status\.label\}<\/strong>/)
 })
 
 test('TP-24: la vista 403 es táctil y no desborda en pantallas pequeñas', () => {

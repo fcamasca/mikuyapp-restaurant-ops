@@ -7,7 +7,7 @@
 - [x] H3-T03 — Alta segura de detalles implementada y validada; precio y estado controlados por PostgreSQL.
 - [x] H3-T04 — Privilegios por columna y RLS para modificar o retirar únicamente detalles `ABIERTO` implementados y validados.
 - [x] H3-T05 — Envío transaccional, selectivo e idempotente implementado y validado, incluida concurrencia real y rollback completo.
-- [ ] H3-T06 — Pendiente.
+- [x] H3-T06 — Tablero operativo de mesas implementado y validado: cards táctiles, estados textuales, total vigente, filtros, orden y navegación al pedido.
 - [ ] H3-T07 — Pendiente.
 - [ ] H3-T08 — Pendiente.
 - [ ] H3-T09 — Pendiente.

@@ -7,6 +7,7 @@ export type ApplicationRoute =
   | '/tecnica'
   | '/admin/catalogo'
   | '/mozo/mesas'
+  | `/mozo/pedidos/${number}`
   | '/403'
 
 export interface RouteAuthorizationInput {
@@ -30,6 +31,13 @@ const knownRoutes = new Set<ApplicationRoute>([
   '/mozo/mesas',
   '/403',
 ])
+
+export function getWaiterOrderId(pathname: string): number | null {
+  const match = /^\/mozo\/pedidos\/(\d+)$/.exec(pathname)
+  if (!match) return null
+  const orderId = Number(match[1])
+  return Number.isSafeInteger(orderId) && orderId > 0 ? orderId : null
+}
 
 export function getRoleDestination(role: RoleCode): ApplicationRoute {
   switch (role) {
@@ -82,7 +90,10 @@ export function resolveApplicationRoute(input: RouteAuthorizationInput): RouteAu
     return { status: 'redirect', pathname: getRoleDestination(role) }
   }
 
-  if (!isSafeInternalPath(pathname) || !knownRoutes.has(pathname as ApplicationRoute)) {
+  const waiterOrderId = getWaiterOrderId(pathname)
+
+  if (!isSafeInternalPath(pathname)
+    || (!knownRoutes.has(pathname as ApplicationRoute) && waiterOrderId === null)) {
     return { status: 'redirect', pathname: '/403' }
   }
 
@@ -90,7 +101,7 @@ export function resolveApplicationRoute(input: RouteAuthorizationInput): RouteAu
     return { status: 'redirect', pathname: '/403' }
   }
 
-  if (pathname === '/mozo/mesas' && role !== 'MOZO') {
+  if ((pathname === '/mozo/mesas' || waiterOrderId !== null) && role !== 'MOZO') {
     return { status: 'redirect', pathname: '/403' }
   }
 

@@ -3,8 +3,9 @@ import { AuthProvider, useAuthentication } from './components/AuthProvider'
 import CategoryAdministrationPage from './pages/CategoryAdministrationPage'
 import LoginPage from './pages/LoginPage'
 import VerificationPage from './pages/VerificationPage'
+import WaiterOrderPage from './pages/WaiterOrderPage'
 import WaiterTablesPage from './pages/WaiterTablesPage'
-import { getRoleDestination, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
+import { getRoleDestination, getWaiterOrderId, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
 
 function LoadingScreen({ context = false }: { readonly context?: boolean }) {
   return (
@@ -127,10 +128,16 @@ function ApplicationRouter() {
       <WaiterTablesPage
         context={profileContext.context}
         isSigningOut={isSigningOut}
+        onOpenOrder={(orderId) => navigate(`/mozo/pedidos/${orderId}`)}
         onNavigateToTechnical={() => navigate('/tecnica')}
         onSignOut={() => { void signOut() }}
       />
     )
+  }
+
+  const waiterOrderId = getWaiterOrderId(resolution.pathname)
+  if (waiterOrderId !== null) {
+    return <WaiterOrderPage orderId={waiterOrderId} onBack={() => navigate('/mozo/mesas')} />
   }
 
   if (resolution.pathname === '/tecnica') {

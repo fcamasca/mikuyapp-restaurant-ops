@@ -1,333 +1,186 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { test } from 'node:test'
-import { resolveApplicationRoute } from '../src/services/appRoutes.ts'
-import { createCatalogService } from '../src/services/catalogService.ts'
+import test from 'node:test'
+import { getWaiterOrderId, resolveApplicationRoute } from '../src/services/appRoutes.ts'
+import { createWaiterOrderService, filterAndSortWaiterTables } from '../src/services/waiterOrderService.ts'
 
-function createContext(roleCode = 'MOZO') {
+const pageSource = readFileSync(new URL('../src/pages/WaiterTablesPage.tsx', import.meta.url), 'utf8')
+const orderPageSource = readFileSync(new URL('../src/pages/WaiterOrderPage.tsx', import.meta.url), 'utf8')
+const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
+const serviceSource = readFileSync(new URL('../src/services/waiterOrderService.ts', import.meta.url), 'utf8')
+
+function context(role = 'MOZO') {
   return {
-    profile: {
-      id: 'test-user-own', local_id: 'test-local-own', rol_id: 2,
-      nombre: 'Mozo de prueba', activo: true,
-    },
-    role: { id: 2, codigo: roleCode, activo: true },
-    local: { id: 'test-local-own', activo: true },
+    profile: { id: 'user-own', local_id: 'local-own', rol_id: 2, nombre: 'Mozo', activo: true },
+    role: { id: 2, codigo: role, activo: true },
+    local: { id: 'local-own', activo: true },
   }
 }
 
-function createCategory(overrides = {}) {
-  return {
-    id: 'category-main', codigo: 'MAIN', nombre: 'Principal',
-    orden: 1, activo: true, ...overrides,
-  }
+function table(overrides = {}) {
+  return { id: 'table-1', codigo: 'M-01', nombre: 'Mesa 1', estado: 'LIBRE', activo: true, ...overrides }
 }
 
-function createProduct(overrides = {}) {
-  return {
-    id: 'product-main', categoria_id: 'category-main', codigo: 'MAIN-01',
-    nombre: 'Producto principal', precio: 12.5, activo: true, ...overrides,
-  }
-}
-
-function createTable(overrides = {}) {
-  return {
-    id: 'table-main', codigo: 'M-01', nombre: 'Mesa principal',
-    estado: 'LIBRE', activo: true, ...overrides,
-  }
-}
-
-function createClient({ categories = [], products = [], tables = [], errors = {}, rejection = null } = {}) {
+function createClient({ tables = [], orders = [], details = [], errors = {}, rpcData = [{ pedido_id: 12, fue_creado: true }], rpcError = null } = {}) {
   const calls = []
-  const client = {
-    from(table) {
-      const call = { table, columns: null, filters: [], orders: [] }
-      calls.push(call)
-      const query = {
-        select(columns) {
-          call.columns = columns
-          return query
-        },
-        eq(column, value) {
-          call.filters.push({ column, value })
-          return query
-        },
-        order(column, options) {
-          call.orders.push({ column, options })
-          return query
-        },
-        async returns() {
-          if (rejection) throw rejection
-          const data = table === 'categoria' ? categories : table === 'producto' ? products : tables
-          return { data, error: errors[table] ?? null }
-        },
-      }
-      return query
+  const rpcCalls = []
+  return {
+    calls,
+    rpcCalls,
+    client: {
+      from(resource) {
+        const call = { resource, columns: '', filters: [], inFilters: [] }
+        calls.push(call)
+        const query = {
+          select(columns) { call.columns = columns; return query },
+          eq(column, value) { call.filters.push({ column, value }); return query },
+          in(column, values) { call.inFilters.push({ column, values }); return query },
+          async returns() {
+            const data = resource === 'mesa' ? tables : resource === 'pedido' ? orders : details
+            return { data, error: errors[resource] ?? null }
+          },
+        }
+        return query
+      },
+      async rpc(name, args) {
+        rpcCalls.push({ name, args })
+        return { data: rpcData, error: rpcError }
+      },
     },
   }
-
-  return { client, calls, errors }
 }
 
-const pageSource = readFileSync(
-  new URL('../src/pages/WaiterTablesPage.tsx', import.meta.url),
-  'utf8',
-)
-
-test('agrupa la carta y ordena categorías por orden/nombre y productos por nombre/código', async () => {
-  const categories = [
-    createCategory({ id: 'category-z', codigo: 'Z', nombre: 'Zumos', orden: 2 }),
-    createCategory({ id: 'category-a', codigo: 'A', nombre: 'Almuerzos', orden: 2 }),
-    createCategory({ id: 'category-first', codigo: 'FIRST', nombre: 'Bebidas', orden: 1 }),
-  ]
-  const products = [
-    createProduct({ id: 'z', categoria_id: 'category-first', codigo: 'Z', nombre: 'Agua' }),
-    createProduct({ id: 'a', categoria_id: 'category-first', codigo: 'A', nombre: 'Agua' }),
-    createProduct({ id: 'meal', categoria_id: 'category-a', nombre: 'Saltado' }),
-    createProduct({ id: 'juice', categoria_id: 'category-z', nombre: 'Naranja' }),
-  ]
-  const fixture = createClient({ categories, products })
-  const result = await createCatalogService(fixture.client).getOperationalCatalog(createContext())
-
+test('consulta mesas activas, pedidos vigentes y detalles con filtros de servidor', async () => {
+  const fixture = createClient({ tables: [table()] })
+  const result = await createWaiterOrderService(fixture.client).getTableBoard(context())
   assert.equal(result.ok, true)
-  assert.deepEqual(result.data.groups.map((group) => group.category.nombre), [
-    'Bebidas', 'Almuerzos', 'Zumos',
-  ])
-  assert.deepEqual(result.data.groups[0].products.map((product) => product.codigo), ['A', 'Z'])
-})
-
-test('excluye categorías inactivas y sus productos aunque aparezcan en la respuesta', async () => {
-  const fixture = createClient({
-    categories: [createCategory(), createCategory({ id: 'category-hidden', activo: false })],
-    products: [createProduct(), createProduct({ id: 'hidden', categoria_id: 'category-hidden' })],
-  })
-  const result = await createCatalogService(fixture.client).getOperationalCatalog(createContext())
-
-  assert.equal(result.ok, true)
-  assert.deepEqual(result.data.groups.map((group) => group.category.id), ['category-main'])
-  assert.deepEqual(result.data.groups[0].products.map((product) => product.id), ['product-main'])
-})
-
-test('excluye productos inactivos de la carta del mozo', async () => {
-  const fixture = createClient({
-    categories: [createCategory()],
-    products: [createProduct(), createProduct({ id: 'product-hidden', activo: false })],
-  })
-  const result = await createCatalogService(fixture.client).getOperationalCatalog(createContext())
-
-  assert.equal(result.ok, true)
-  assert.deepEqual(result.data.groups[0].products.map((product) => product.id), ['product-main'])
-})
-
-test('omite categorías activas sin productos visibles', async () => {
-  const fixture = createClient({
-    categories: [createCategory(), createCategory({ id: 'category-empty', orden: 2 })],
-    products: [createProduct()],
-  })
-  const result = await createCatalogService(fixture.client).getOperationalCatalog(createContext())
-
-  assert.equal(result.ok, true)
-  assert.deepEqual(result.data.groups.map((group) => group.category.id), ['category-main'])
-})
-
-test('devuelve carta vacía si no existen productos visibles', async () => {
-  const fixture = createClient({
-    categories: [createCategory()],
-    products: [createProduct({ activo: false })],
-  })
-  const result = await createCatalogService(fixture.client).getOperationalCatalog(createContext())
-
-  assert.equal(result.ok, true)
-  assert.deepEqual(result.data.groups, [])
-})
-
-test('filtra mesas por local validado y activo, consultando únicamente columnas permitidas', async () => {
-  const fixture = createClient({ tables: [createTable()] })
-  const result = await createCatalogService(fixture.client).getOperationalTables(createContext())
-
-  assert.equal(result.ok, true)
-  assert.equal(fixture.calls.length, 1)
-  assert.equal(fixture.calls[0].table, 'mesa')
-  assert.equal(fixture.calls[0].columns, 'id,codigo,nombre,estado,activo')
+  assert.deepEqual(fixture.calls.map((call) => call.resource), ['mesa', 'pedido'])
   assert.deepEqual(fixture.calls[0].filters, [
-    { column: 'local_id', value: 'test-local-own' },
-    { column: 'activo', value: true },
+    { column: 'local_id', value: 'local-own' }, { column: 'activo', value: true },
   ])
-  assert.deepEqual(fixture.calls[0].orders.map((order) => order.column), ['codigo', 'nombre'])
+  assert.equal(fixture.calls[1].inFilters[0].column, 'estado')
+  assert.deepEqual(fixture.calls[1].inFilters[0].values, [
+    'ABIERTO', 'ENVIADO', 'RECIBIDO_COCINA', 'EN_PREPARACION', 'LISTO', 'ENTREGADO',
+  ])
 })
 
-test('excluye mesas inactivas aunque el doble las entregue', async () => {
+test('asocia un único pedido vigente por mesa y calcula total desde detalles persistidos', async () => {
   const fixture = createClient({
-    tables: [createTable(), createTable({ id: 'table-hidden', activo: false })],
-  })
-  const result = await createCatalogService(fixture.client).getOperationalTables(createContext())
-
-  assert.equal(result.ok, true)
-  assert.deepEqual(result.data.map((table) => table.id), ['table-main'])
-})
-
-test('ordena mesas de manera estable por código y después por nombre', async () => {
-  const fixture = createClient({
-    tables: [
-      createTable({ id: 'second', codigo: 'M-02', nombre: 'Segunda' }),
-      createTable({ id: 'first-z', codigo: 'M-01', nombre: 'Zona' }),
-      createTable({ id: 'first-a', codigo: 'M-01', nombre: 'Acceso' }),
+    tables: [table()],
+    orders: [{ id: 21, mesa_id: 'table-1', estado: 'ENVIADO' }],
+    details: [
+      { pedido_id: 21, cantidad: 2, precio_unitario: 12.5 },
+      { pedido_id: 21, cantidad: 1, precio_unitario: 5 },
     ],
   })
-  const result = await createCatalogService(fixture.client).getOperationalTables(createContext())
-
+  const result = await createWaiterOrderService(fixture.client).getTableBoard(context())
   assert.equal(result.ok, true)
-  assert.deepEqual(result.data.map((table) => table.id), ['first-a', 'first-z', 'second'])
+  assert.deepEqual(result.data[0].pedido, { id: 21, estado: 'ENVIADO', total: 30 })
+  assert.equal(fixture.calls[2].resource, 'detalle_pedido')
+  assert.equal(fixture.calls[2].columns, 'pedido_id,cantidad,precio_unitario')
 })
 
-test('representa los cuatro estados operativos con etiquetas textuales y leyenda', async () => {
+test('no consulta detalles ni inventa total cuando no existen pedidos vigentes', async () => {
+  const fixture = createClient({ tables: [table()] })
+  const result = await createWaiterOrderService(fixture.client).getTableBoard(context())
+  assert.equal(result.ok, true)
+  assert.equal(result.data[0].pedido, null)
+  assert.equal(fixture.calls.length, 2)
+})
+
+test('excluye defensivamente mesas inactivas', async () => {
+  const fixture = createClient({ tables: [table(), table({ id: 'hidden', activo: false })] })
+  const result = await createWaiterOrderService(fixture.client).getTableBoard(context())
+  assert.deepEqual(result.ok && result.data.map((item) => item.id), ['table-1'])
+})
+
+test('filtra todas las opciones de estado sin búsqueda adicional', () => {
   const statuses = ['LIBRE', 'OCUPADA', 'PEDIDO_LISTO', 'PENDIENTE_PAGO']
-  const fixture = createClient({
-    tables: statuses.map((estado, index) => createTable({ id: `table-${index}`, estado })),
-  })
-  const result = await createCatalogService(fixture.client).getOperationalTables(createContext())
-
-  assert.equal(result.ok, true)
-  assert.deepEqual(new Set(result.data.map((table) => table.estado)), new Set(statuses))
-  assert.match(pageSource, /label: 'Libre'/)
-  assert.match(pageSource, /label: 'Ocupada'/)
-  assert.match(pageSource, /label: 'Pedido listo'/)
-  assert.match(pageSource, /label: 'Pendiente de pago'/)
-  assert.match(pageSource, /Leyenda de estados de mesas/)
-  assert.match(pageSource, /Estado: \{status\.label\}/)
+  const rows = statuses.map((estado, index) => ({ ...table({ id: `t-${index}`, estado }), pedido: null }))
+  assert.equal(filterAndSortWaiterTables(rows, 'TODAS', 'ASC').length, 4)
+  for (const estado of statuses) {
+    assert.deepEqual(filterAndSortWaiterTables(rows, estado, 'ASC').map((item) => item.estado), [estado])
+  }
+  for (const label of ['Todas', 'Libres', 'Ocupadas', 'Pedido listo', 'Pendiente de pago']) {
+    assert.match(pageSource, new RegExp(label))
+  }
+  assert.doesNotMatch(pageSource, /type="search"|Buscar mesa|pagin/i)
 })
 
-test('el tablero muestra texto de estado además de su diferenciación visual', () => {
-  assert.match(pageSource, /className=\{`min-w-0 break-words rounded-2xl border p-4 \$\{status\.className\}`\}/)
-  assert.match(pageSource, /Estado: \{status\.label\}/)
-  assert.match(pageSource, /\{status\.description\}/)
+test('ordena códigos numéricos de forma ascendente y descendente', () => {
+  const rows = [
+    { ...table({ id: '10', codigo: 'M-10' }), pedido: null },
+    { ...table({ id: '2', codigo: 'M-2' }), pedido: null },
+    { ...table({ id: '1', codigo: 'M-1' }), pedido: null },
+  ]
+  assert.deepEqual(filterAndSortWaiterTables(rows, 'TODAS', 'ASC').map((item) => item.id), ['1', '2', '10'])
+  assert.deepEqual(filterAndSortWaiterTables(rows, 'TODAS', 'DESC').map((item) => item.id), ['10', '2', '1'])
 })
 
-test('la página del mozo no incluye controles ni operaciones de mutación', () => {
-  assert.doesNotMatch(pageSource, /createTable|updateTable|setTableActive|deleteTable/)
-  assert.doesNotMatch(pageSource, /\.insert\(|\.update\(|\.delete\(|\.channel\(/)
-  assert.doesNotMatch(pageSource, /onClick=\{\(\) =>[^}]*table/)
-  assert.doesNotMatch(pageSource, /Crear pedido|Seleccionar mesa|Editar mesa|Eliminar mesa/)
+test('Tomar pedido usa la RPC permanente sin enviar identidad ni local', async () => {
+  const fixture = createClient()
+  const result = await createWaiterOrderService(fixture.client).createOrRecoverOrder(context(), 'table-1')
+  assert.deepEqual(result, { ok: true, data: { pedidoId: 12, fueCreado: true } })
+  assert.deepEqual(fixture.rpcCalls, [{
+    name: 'crear_o_recuperar_pedido_mesa', args: { p_mesa_id: 'table-1' },
+  }])
 })
 
-test('la pantalla muestra indicadores de carga independientes para carta y mesas', () => {
-  assert.match(pageSource, /\[tablesLoading, setTablesLoading\]/)
-  assert.match(pageSource, /\[catalogLoading, setCatalogLoading\]/)
-  assert.match(pageSource, /Cargando mesas…/)
-  assert.match(pageSource, /Cargando carta…/)
-})
-
-test('la pantalla diferencia vacíos de mesas y productos', () => {
-  assert.match(pageSource, /No hay mesas disponibles/)
-  assert.match(pageSource, /No hay productos disponibles/)
-})
-
-test('la pantalla ofrece errores y reintentos independientes', () => {
-  assert.match(pageSource, /\[tablesError, setTablesError\]/)
-  assert.match(pageSource, /\[catalogError, setCatalogError\]/)
-  assert.match(pageSource, /setTablesAttempt\(\(attempt\) => attempt \+ 1\)/)
-  assert.match(pageSource, /setCatalogAttempt\(\(attempt\) => attempt \+ 1\)/)
-  assert.match(pageSource, /Reintentar mesas/)
-  assert.match(pageSource, /Reintentar carta/)
-})
-
-test('muestra nombres y precios de productos con formato de moneda local', () => {
-  assert.match(pageSource, /currency: 'PEN'/)
-  assert.match(pageSource, /\{group\.category\.nombre\}/)
-  assert.match(pageSource, /\{product\.nombre\}/)
-  assert.match(pageSource, /priceFormatter\.format\(product\.precio\)/)
-})
-
-test('un error de mesas permanece seguro y no impide consultar la carta', async () => {
-  const fixture = createClient({
-    categories: [createCategory()], products: [createProduct()],
-    errors: { mesa: { message: 'private SQL internal-token' } },
-  })
-  const service = createCatalogService(fixture.client)
-  const tables = await service.getOperationalTables(createContext())
-  const catalog = await service.getOperationalCatalog(createContext())
-
-  assert.equal(tables.ok, false)
-  assert.equal(tables.error.kind, 'connection-error')
-  assert.equal(tables.error.recoverable, true)
-  assert.doesNotMatch(tables.error.message, /SQL|token/)
-  assert.equal(catalog.ok, true)
-})
-
-test('un error de carta no impide consultar las mesas activas', async () => {
-  const fixture = createClient({
-    tables: [createTable()],
-    errors: { categoria: { message: 'private SQL internal-token' } },
-  })
-  const service = createCatalogService(fixture.client)
-  const catalog = await service.getOperationalCatalog(createContext())
-  const tables = await service.getOperationalTables(createContext())
-
-  assert.equal(catalog.ok, false)
-  assert.doesNotMatch(catalog.error.message, /SQL|token/)
-  assert.equal(tables.ok, true)
-  assert.equal(tables.data.length, 1)
-})
-
-test('permite reintentar una lectura de mesas después de un error recuperable', async () => {
-  const errors = { mesa: { message: 'temporary failure' } }
-  const fixture = createClient({ tables: [createTable()], errors })
-  const service = createCatalogService(fixture.client)
-
-  const initial = await service.getOperationalTables(createContext())
-  assert.equal(initial.ok, false)
-  delete errors.mesa
-
-  const retried = await service.getOperationalTables(createContext())
-  assert.equal(retried.ok, true)
-  assert.equal(retried.data.length, 1)
-})
-
-test('traduce excepciones de red de mesas sin revelar información sensible', async () => {
-  const fixture = createClient({ rejection: new Error('private SQL internal-token') })
-  const result = await createCatalogService(fixture.client).getOperationalTables(createContext())
-
-  assert.equal(result.ok, false)
-  assert.equal(result.error.recoverable, true)
-  assert.doesNotMatch(result.error.message, /SQL|token/)
-})
-
-test('devuelve resultado vacío cuando no hay mesas activas', async () => {
-  const fixture = createClient({ tables: [createTable({ activo: false })] })
-  const result = await createCatalogService(fixture.client).getOperationalTables(createContext())
-
-  assert.equal(result.ok, true)
-  assert.deepEqual(result.data, [])
-})
-
-test('bloquea por guarda y servicio el acceso de roles distintos de MOZO', async () => {
+test('rechaza roles distintos de MOZO antes de consultar Supabase', async () => {
   for (const role of ['ADMINISTRADOR', 'COCINA', 'CAJA']) {
-    const resolution = resolveApplicationRoute({
-      pathname: '/mozo/mesas', authenticationStatus: 'authenticated',
-      contextStatus: 'valid', role,
-    })
-    assert.deepEqual(resolution, { status: 'redirect', pathname: '/403' })
-
-    const fixture = createClient({ tables: [createTable()] })
-    const result = await createCatalogService(fixture.client).getOperationalTables(createContext(role))
-    assert.equal(result.ok, false)
-    assert.equal(result.error.kind, 'authorization-error')
+    const fixture = createClient()
+    const board = await createWaiterOrderService(fixture.client).getTableBoard(context(role))
+    const order = await createWaiterOrderService(fixture.client).createOrRecoverOrder(context(role), 'table-1')
+    assert.equal(board.ok, false)
+    assert.equal(order.ok, false)
     assert.deepEqual(fixture.calls, [])
+    assert.deepEqual(fixture.rpcCalls, [])
   }
 })
 
-test('las consultas operativas conservan filtros explícitos del local y registros activos', async () => {
-  const fixture = createClient({
-    categories: [createCategory()], products: [createProduct()], tables: [createTable()],
-  })
-  const service = createCatalogService(fixture.client)
-  await service.getOperationalCatalog(createContext())
-  await service.getOperationalTables(createContext())
+test('traduce errores de tablero y RPC a mensajes recuperables seguros', async () => {
+  const board = await createWaiterOrderService(createClient({ errors: { mesa: { message: 'SQL secret' } } }).client).getTableBoard(context())
+  const order = await createWaiterOrderService(createClient({ rpcError: { message: 'SQL secret' }, rpcData: null }).client).createOrRecoverOrder(context(), 'table-1')
+  assert.equal(board.ok, false)
+  assert.equal(order.ok, false)
+  assert.doesNotMatch(board.error.message, /SQL|secret/)
+  assert.doesNotMatch(order.error.message, /SQL|secret/)
+})
 
-  assert.deepEqual(fixture.calls.map((call) => call.table), ['categoria', 'producto', 'mesa'])
-  for (const call of fixture.calls) {
-    assert.deepEqual(call.filters, [
-      { column: 'local_id', value: 'test-local-own' },
-      { column: 'activo', value: true },
-    ])
+test('cards muestran código, estado textual, total y acción táctil', () => {
+  assert.match(pageSource, /\{table\.codigo\}/)
+  assert.match(pageSource, /Estado: <strong>\{status\.label\}<\/strong>/)
+  assert.match(pageSource, /Total vigente/)
+  assert.match(pageSource, /moneyFormatter\.format\(table\.pedido\.total\)/)
+  assert.match(pageSource, /Tomar pedido/)
+  assert.match(pageSource, /Ver pedido/)
+  assert.match(pageSource, /min-h-12 w-full/)
+})
+
+test('bloquea repetición visual mientras abre una mesa y conserva PostgreSQL como autoridad', () => {
+  assert.match(pageSource, /if \(openingTableId\) return/)
+  assert.match(pageSource, /disabled=\{Boolean\(openingTableId\) \|\| unavailable\}/)
+  assert.match(pageSource, /Abriendo pedido…/)
+  assert.match(serviceSource, /crear_o_recuperar_pedido_mesa/)
+})
+
+test('mantiene carga, vacío, filtro vacío y error recuperable', () => {
+  for (const text of ['Cargando mesas…', 'No hay mesas disponibles', 'No hay mesas para este filtro', 'Reintentar mesas']) {
+    assert.match(pageSource, new RegExp(text))
   }
+  assert.match(pageSource, /role="alert"/)
+})
+
+test('navega a una ruta mínima de pedido y restringe acceso al MOZO', () => {
+  assert.equal(getWaiterOrderId('/mozo/pedidos/42'), 42)
+  assert.equal(getWaiterOrderId('/mozo/pedidos/no-valido'), null)
+  assert.deepEqual(resolveApplicationRoute({
+    pathname: '/mozo/pedidos/42', authenticationStatus: 'authenticated', contextStatus: 'valid', role: 'MOZO',
+  }), { status: 'allowed', pathname: '/mozo/pedidos/42' })
+  assert.deepEqual(resolveApplicationRoute({
+    pathname: '/mozo/pedidos/42', authenticationStatus: 'authenticated', contextStatus: 'valid', role: 'CAJA',
+  }), { status: 'redirect', pathname: '/403' })
+  assert.match(appSource, /onOpenOrder=\{\(orderId\) => navigate\(`\/mozo\/pedidos\/\$\{orderId\}`\)\}/)
+  assert.match(orderPageSource, /La carta y la revisión se incorporan en T07 y T08/)
+  assert.doesNotMatch(orderPageSource, /agregar_detalle_pedido|enviar_pedido_cocina|producto/)
 })
