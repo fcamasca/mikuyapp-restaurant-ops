@@ -51,3 +51,9 @@ La UI deshabilita temporalmente acciones durante solicitudes, pero los índices,
 ## H3-D10 — Límites y aprobación
 
 H3 no implementa cocina, Realtime, entrega, caja, impresión ni modificación/anulación de detalles enviados. Los estados posteriores del detalle preparan la evolución de H4: cocina deberá detectar trabajo nuevo por detalles y no asumir que una cabecera avanzada implica ausencia de líneas `ABIERTO` o recién `ENVIADO`. La construcción empieza únicamente tras aprobación humana de los cuatro documentos del Spec. La aceptación de H3 ocurre después de construir, ejecutar las pruebas humanas y recibir aprobación explícita; recién entonces corresponde crear `acceptance.md`.
+
+## H3-D11 — Liberación de mesa con pedido vacío
+
+`public.liberar_mesa_pedido_vacio(p_pedido_id bigint)` es una función `SECURITY DEFINER`, propiedad de `postgres`, con `search_path` fijo y `EXECUTE` solo para `authenticated`. Obtiene identidad y contexto en servidor, exige rol `MOZO` y mismo local, bloquea la cabecera y su mesa, y valida conjuntamente pedido `ABIERTO`, mesa `OCUPADA` y ausencia total de detalles.
+
+En una única transacción cambia la cabecera `ABIERTO → ANULADO`, registra esa transición en `historial_estado` y cambia la mesa `OCUPADA → LIBRE`. No elimina el pedido ni concede actualización directa de estados. Cualquier detalle existente, cualquier cabecera distinta de `ABIERTO`, otro local/rol o una carrera concurrente rechazan la operación completa. La UI solo ofrece la acción en un pedido abierto y vacío, exige confirmación, bloquea doble tap y vuelve al tablero después de la respuesta confirmada del servidor.

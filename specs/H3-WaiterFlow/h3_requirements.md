@@ -19,6 +19,7 @@ H3 permite al rol `MOZO` seleccionar una mesa activa, crear o recuperar un únic
 | H3-R09 | Enviar atómicamente: siempre pasan únicamente los detalles `ABIERTO → ENVIADO`; en el primer envío la cabecera pasa `ABIERTO → ENVIADO`, mientras que en envíos posteriores conserva su estado actual; `pedido.enviado_en` conserva la fecha del primer envío y se evitan envíos duplicados. | Must |
 | H3-R10 | Permitir agregar productos posteriormente al mismo pedido vigente; los nuevos detalles nacen `ABIERTO`, se persisten y requieren una nueva acción de envío selectivo. | Must |
 | H3-R11 | Restringir lectura y mutaciones al local y rol `MOZO` autenticados; impedir que el cliente manipule `precio_unitario`, `estado`, pedido, producto, creador o estado de mesa fuera de las operaciones autorizadas. | Must |
+| H3-R12 | Permitir al `MOZO` liberar una mesa ocupada por error únicamente cuando su pedido vigente esté `ABIERTO` y no tenga ningún detalle: anular la cabecera, registrar historial y devolver la mesa a `LIBRE` de forma atómica, sin eliminar el pedido. | Must |
 
 ## 3. Estados y reglas
 
@@ -27,6 +28,8 @@ Un pedido está vigente cuando su estado es `ABIERTO`, `ENVIADO`, `RECIBIDO_COCI
 H3 implementa `ABIERTO → ENVIADO` en la cabecera únicamente durante el primer envío. En todo envío, inicial o posterior, `enviar_pedido_cocina` cambia exclusivamente detalles `ABIERTO → ENVIADO`. Un envío posterior nunca retrocede ni sobrescribe el estado más avanzado de la cabecera, y `pedido.enviado_en` conserva la fecha del primer envío. Por ello, un pedido vigente puede tener una cabecera más avanzada y, al mismo tiempo, detalles anteriores enviados y agregados nuevos `ABIERTO`.
 
 Los estados posteriores del detalle quedan contemplados para H4, que deberá consultar el estado individual de los detalles para detectar nuevos platos aunque la cabecera ya esté en `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` o `ENTREGADO`; H3 no implementa operativa de cocina. Cuando `cantidad > 1`, el estado sigue correspondiendo al detalle completo, no a cada unidad.
+
+Un pedido `ABIERTO` sin ningún `detalle_pedido` puede pasar manualmente a `ANULADO` mediante la operación autorizada de liberación; en la misma transacción su mesa `OCUPADA` vuelve a `LIBRE` y se registra `ABIERTO → ANULADO`. La operación se rechaza si existe cualquier detalle o si la cabecera ya no está `ABIERTO`.
 
 ## 4. Requisitos no funcionales
 

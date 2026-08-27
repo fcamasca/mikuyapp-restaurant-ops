@@ -53,6 +53,7 @@ interface AddedDetailRow extends WaiterOrderDetail { readonly detalle_id: number
 interface ReviewOrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
 interface ReviewTableRow { readonly id: string; readonly codigo: string; readonly nombre: string }
 interface SentOrderRow { readonly pedido_id: number; readonly detalles_enviados: number }
+interface ReleasedTableRow { readonly pedido_id: number; readonly mesa_id: string; readonly pedido_estado: 'ANULADO'; readonly mesa_estado: 'LIBRE' }
 type WaiterOrderClient = Pick<SupabaseClient, 'from' | 'rpc'>
 
 const tableCollator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' })
@@ -244,6 +245,20 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         return { ok: true, data: { detallesEnviados: row.detalles_enviados } }
       } catch {
         return connectionError('No pudimos enviar el pedido a cocina. Los productos permanecen por enviar.')
+      }
+    },
+
+    async releaseEmptyOrderTable(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<{ mesaId: string }>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para liberar mesas.')
+      try {
+        const result = await client.rpc('liberar_mesa_pedido_vacio', { p_pedido_id: orderId })
+        const row = (result.data as ReleasedTableRow[] | null)?.[0]
+        if (result.error || !row) {
+          return connectionError('No pudimos liberar la mesa. Verifica que el pedido siga vacío e intenta nuevamente.')
+        }
+        return { ok: true, data: { mesaId: row.mesa_id } }
+      } catch {
+        return connectionError('No pudimos liberar la mesa. Verifica que el pedido siga vacío e intenta nuevamente.')
       }
     },
   }

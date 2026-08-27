@@ -12,6 +12,7 @@ const modelMigration = readFileSync(new URL('../supabase/migrations/202608260001
 const orderMigration = readFileSync(new URL('../supabase/migrations/20260826000200_h3_t02_open_or_recover_order.sql', import.meta.url), 'utf8')
 const sendMigration = readFileSync(new URL('../supabase/migrations/20260826000700_send_order_to_kitchen.sql', import.meta.url), 'utf8')
 const consolidationMigration = readFileSync(new URL('../supabase/migrations/20260826000800_consolidate_open_order_details.sql', import.meta.url), 'utf8')
+const releaseMigration = readFileSync(new URL('../supabase/migrations/20260827000100_release_empty_order_table.sql', import.meta.url), 'utf8')
 
 function context(role = 'MOZO') {
   return {
@@ -485,4 +486,54 @@ test('T09 libera siempre guards locales y delega concurrencia crítica a Postgre
   assert.match(sendMigration, /for update/)
   assert.match(sendMigration, /estado = 'ABIERTO'/)
   assert.match(sendMigration, /estado = 'ENVIADO'/)
+})
+
+test('H3-TA16 libera el pedido vacío exclusivamente mediante la operación de dominio', async () => {
+  const fixture = createClient({
+    rpcData: [{ pedido_id: 12, mesa_id: 'table-1', pedido_estado: 'ANULADO', mesa_estado: 'LIBRE' }],
+  })
+  const result = await createWaiterOrderService(fixture.client).releaseEmptyOrderTable(context(), 12)
+  assert.deepEqual(result, { ok: true, data: { mesaId: 'table-1' } })
+  assert.deepEqual(fixture.rpcCalls, [{ name: 'liberar_mesa_pedido_vacio', args: { p_pedido_id: 12 } }])
+  assert.doesNotMatch(serviceSource, /from\('pedido'\)\.update|from\('mesa'\)\.update/)
+})
+
+test('H3-TA16 rechaza cliente no MOZO y conserva error recuperable del servidor', async () => {
+  const unauthorized = createClient()
+  const denied = await createWaiterOrderService(unauthorized.client).releaseEmptyOrderTable(context('CAJA'), 12)
+  assert.equal(denied.ok, false)
+  assert.equal(unauthorized.rpcCalls.length, 0)
+
+  const failed = createClient({ rpcData: null, rpcError: { message: 'pedido con detalles' } })
+  const result = await createWaiterOrderService(failed.client).releaseEmptyOrderTable(context(), 12)
+  assert.equal(result.ok, false)
+  assert.match(result.error.message, /pedido siga vacío/)
+})
+
+test('H3-TA16 operación PostgreSQL es atómica, autorizada y no elimina pedidos', () => {
+  assert.match(releaseMigration, /create or replace function public\.liberar_mesa_pedido_vacio/)
+  assert.match(releaseMigration, /security definer/)
+  assert.match(releaseMigration, /set search_path = pg_catalog/)
+  assert.match(releaseMigration, /from public\.obtener_contexto_autenticado/)
+  assert.match(releaseMigration, /v_rol_codigo is distinct from 'MOZO'/)
+  assert.match(releaseMigration, /for update/g)
+  assert.match(releaseMigration, /from public\.detalle_pedido/)
+  assert.match(releaseMigration, /set estado = 'ANULADO'/)
+  assert.match(releaseMigration, /set estado = 'LIBRE'/)
+  assert.match(releaseMigration, /insert into public\.historial_estado/)
+  assert.doesNotMatch(releaseMigration, /delete from public\.pedido/)
+  assert.match(releaseMigration, /revoke all on function public\.liberar_mesa_pedido_vacio\(bigint\) from public/)
+  assert.match(releaseMigration, /grant execute on function public\.liberar_mesa_pedido_vacio\(bigint\) to authenticated/)
+})
+
+test('H3-TA16 UI confirma, bloquea doble tap y navega solo tras éxito', () => {
+  assert.match(orderPageSource, /review\?\.estado === 'ABIERTO' && details\.length === 0/)
+  assert.match(orderPageSource, /¿Liberar \{review\.mesa\.codigo\}\? El pedido vacío será anulado/)
+  assert.match(orderPageSource, /releasingRef\.current/)
+  assert.match(orderPageSource, /if \(!orders \|\| releasingRef\.current/)
+  assert.match(orderPageSource, /Liberando…/)
+  assert.match(orderPageSource, /if \(result\.ok\) \{ onBack\(\); return \}/)
+  assert.match(orderPageSource, /setConfirmingRelease\(false\)/)
+  assert.match(orderPageSource, /getOrderDetails\(context, orderId\)/)
+  assert.match(orderPageSource, /getOrderReview\(context, orderId\)/)
 })

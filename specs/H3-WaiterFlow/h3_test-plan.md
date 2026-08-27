@@ -21,6 +21,7 @@ Estas pruebas validan reglas funcionales, datos, transacciones y servicios sin d
 | H3-TA13 | Agregar productos a pedido previamente enviado. | Se usa la misma cabecera y los nuevos detalles nacen `ABIERTO`; no se envían automáticamente. |
 | H3-TA14 | Enviar agregados posteriores con la cabecera en cada estado vigente posterior a `ABIERTO`. | Solo los nuevos detalles `ABIERTO` pasan a `ENVIADO`; los detalles anteriores no cambian, la cabecera no retrocede ni se sobrescribe y `pedido.enviado_en` conserva exactamente la fecha del primer envío. |
 | H3-TA15 | Usar producto/categoría inactivos o de otro local. | La función rechaza el alta sin crear filas ni filtrar información. |
+| H3-TA16 | Liberar una mesa con pedido vacío. | Solo un `MOZO` del mismo local puede transformar atómicamente pedido `ABIERTO` sin detalles a `ANULADO`, registrar historial y devolver mesa `OCUPADA → LIBRE`; detalles existentes, otros estados, doble llamada o error no producen transición parcial. |
 
 ## 2. Pruebas técnicas manuales
 
@@ -35,6 +36,7 @@ Estas verificaciones se ejecutan contra PostgreSQL/Supabase y se documentan con 
 | H3-TM05 | Privilegios por columna y RLS. | Solo `cantidad` y `observacion` son actualizables y solo en filas `ABIERTO`; DELETE tiene la misma restricción. |
 | H3-TM06 | Atomicidad del envío. | Un error inducido revierte cabecera, detalles e historial; sin transición parcial. |
 | H3-TM07 | Seguridad de funciones y aislamiento. | Propietario, `SECURITY DEFINER`, search path, grants y RLS impiden acceso `anon`, otros roles y otros locales. |
+| H3-TM08 | Seguridad y atomicidad de liberación de mesa vacía. | La función autorizada es la única que cambia ambos estados, rechaza cualquier detalle, soporta concurrencia y revierte pedido, historial y mesa ante error inducido. |
 
 ## 3. Pruebas humanas funcionales y visuales
 
@@ -50,6 +52,7 @@ Estas pruebas validan experiencia táctil, claridad visual y comportamiento resp
 | H3-TH06 | Usar observaciones frecuentes y libres. | Ambas opciones son comprensibles y el texto confirmado reaparece al recuperar el pedido. |
 | H3-TH07 | Revisar y enviar. | La UI distingue “por enviar” de “ya solicitado”, muestra total y exige acción explícita. |
 | H3-TH08 | Agregar y enviar productos posteriormente. | Se conservan los ya solicitados; los nuevos aparecen abiertos hasta el nuevo envío. |
+| H3-TH09 | Liberar mesa ocupada por pedido vacío. | La acción solo aparece en pedido `ABIERTO` vacío, confirma la mesa, evita doble tap, muestra `Liberando…` y vuelve al tablero con la mesa `LIBRE`. |
 
 ## 4. Evidencia, aprobación y aceptación
 

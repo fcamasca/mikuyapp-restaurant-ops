@@ -6,7 +6,7 @@ Alcance: validación integral de H3; este documento no constituye `acceptance.md
 
 ## 1. Resultado ejecutivo
 
-**H3-T10 no completada.** Las validaciones funcionales, automatizadas y técnicas están aprobadas; las migraciones ya coinciden y no quedaron fixtures. Solo falta completar metadata documental de las pruebas humanas y confirmar visualmente los dos ajustes UX más recientes. No corresponde repetir las pruebas funcionales ya demostradas.
+**H3-T10 no completada.** La regresión automatizada y el esquema remoto están aprobados y las migraciones coinciden. Tras incorporar la liberación manual de mesa con pedido vacío, falta ejecutar su prueba SQL transaccional preparada contra Supabase y validar humanamente su confirmación, feedback y retorno al tablero. También continúan los pendientes documentales/visuales ya registrados. No corresponde repetir las pruebas funcionales ya demostradas.
 
 ## 2. Pruebas automatizadas
 
@@ -16,7 +16,7 @@ Comando integral:
 node --experimental-strip-types --test tests/*.test.mjs
 ```
 
-Resultado: **233/233 aprobadas**, 0 fallidas, 0 omitidas. Un intento previo con `node --test tests` falló porque Node interpretó el directorio como módulo; se corrigió el comando al patrón `tests/*.test.mjs`. No fue un defecto del producto.
+Resultado actual: **238/238 aprobadas**, 0 fallidas, 0 omitidas. El conteo incorpora cuatro casos automatizados de `H3-TA16` y la prueba transversal del menú autenticado agregada después de la primera ejecución 233/233. Un intento previo con `node --test tests` falló porque Node interpretó el directorio como módulo; se corrigió el comando al patrón `tests/*.test.mjs`. No fue un defecto del producto.
 
 | ID | Resultado | Evidencia principal |
 |---|---|---|
@@ -121,12 +121,12 @@ No se repite ninguna prueba funcional por falta de documentación. Para completa
 
 | Validación | Resultado |
 |---|---|
-| Suite completa H1/H2/H3 | 233/233 |
-| Suite mozo/T09 | 40/40 en su última corrida individual |
+| Suite completa H1/H2/H3 | 238/238 |
+| Suite mozo/T09 + H3-TA16 | 44/44 |
 | Responsive técnico | 13/13 en su última corrida individual |
 | `npm run typecheck` | Aprobado |
 | `npm run build` | Aprobado; 72 módulos transformados |
-| Rutas, autenticación, contexto, catálogo y seguridad | Incluidos y aprobados en 233/233 |
+| Rutas, autenticación, contexto, catálogo y seguridad | Incluidos y aprobados en 238/238 |
 | `git diff --check` | Aprobado; solo avisos informativos LF/CRLF |
 
 ## 7. Defectos encontrados y corregidos durante H3
@@ -151,3 +151,33 @@ Para cerrar H3-T10 deben completarse, sin crear `acceptance.md` ni repetir las p
 
 1. proporcionar, para H3-TH01–H3-TH08, navegador, viewport y orientación reales; cuando no haya un único valor común, indicar cuáles correspondieron a cada grupo de pruebas;
 2. confirmar visualmente que el aviso de conflicto aparece solo dentro de la card afectada y que el avatar abre nombre/rol/cierre de sesión correctamente en celular/tablet.
+
+## 9. Corrección aprobada: liberar mesa con pedido vacío
+
+Se incorporó la decisión funcional `H3-R12 → H3-D11 → H3-T10 → H3-TA16/H3-TM08/H3-TH09` sin convertirla en anulación general:
+
+- operación permanente `liberar_mesa_pedido_vacio`, `SECURITY DEFINER`, propietario `postgres` y `search_path = pg_catalog`;
+- identidad y contexto obtenidos en PostgreSQL; ejecución exclusiva para `authenticated` con rol `MOZO` del mismo local;
+- bloqueo de pedido y mesa, exigencia de pedido `ABIERTO`, mesa `OCUPADA` y cero detalles;
+- transición atómica `pedido ABIERTO → ANULADO`, historial correspondiente y `mesa OCUPADA → LIBRE`;
+- el pedido se conserva físicamente y deja de ser vigente;
+- UI visible únicamente para pedido `ABIERTO` vacío, confirmación identificando la mesa, guard contra doble tap, `Liberando…`, error sin falso éxito y navegación al tablero solo tras confirmación del servidor.
+
+### Evidencia ejecutada en esta corrección
+
+| Validación | Resultado |
+|---|---|
+| `npm run typecheck` | Aprobado |
+| Suite mozo | 44/44 |
+| Suite integral H1/H2/H3 | 238/238 |
+| `npm run build` | Aprobado; 72 módulos transformados |
+| `npx supabase db push --linked` | Aplicó únicamente `20260827000100_release_empty_order_table.sql` |
+| `npx supabase migration list --linked` | Local/remoto coinciden hasta `20260827000100` |
+| `npx supabase db lint --linked --level error` | `No schema errors found` |
+| `git diff --check` | Aprobado; solo avisos informativos LF/CRLF |
+
+El archivo `supabase/tests/release_empty_order_table.sql` deja preparada, dentro de una transacción con `ROLLBACK`, la verificación de transición completa, historial, nuevo ciclo, rechazos por detalles/estado/local/rol, privilegios, doble llamada y rollback inducido. La CLI disponible no ofrece ejecución arbitraria de este archivo contra el remoto; por tanto, **H3-TM08 permanece pendiente de ejecución en Supabase SQL Editor**. No se atribuye un resultado todavía.
+
+`H3-TH09` también permanece pendiente: confirmar/cancelar sin cambios, feedback `Liberando…`, protección visual ante doble tap, retorno al tablero y mesa visible como `LIBRE`. La concurrencia real de dos llamadas de liberación debe quedar demostrada junto con la validación SQL/técnica; no se da por aprobada solo por inspección del bloqueo.
+
+No se crearon fixtures remotos durante esta corrección y no se creó `acceptance.md`.
