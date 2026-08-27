@@ -172,17 +172,17 @@ begin
     (-9402, v_other_local_id, v_other_table_id, v_other_waiter_id, 'ABIERTO');
 
   insert into public.detalle_pedido (
-    id, pedido_id, producto_id, cantidad, precio_unitario, observacion, estado
+    id, pedido_id, producto_id, cantidad, precio_unitario, observacion, estado, enviado_en
   )
   overriding system value
   values
-    (-9411, -9401, v_product_id, 2, 10.00, null, 'ABIERTO'),
-    (-9412, -9401, v_product_id, 1, 5.00, null, 'ABIERTO'),
-    (-9413, -9401, v_product_id, 1, 7.00, null, 'ENVIADO'),
-    (-9414, -9401, v_product_id, 1, 8.00, null, 'RECIBIDO_COCINA'),
-    (-9415, -9401, v_product_id, 1, 9.00, null, 'EN_PREPARACION'),
-    (-9416, -9401, v_product_id, 1, 10.00, null, 'LISTO'),
-    (-9417, -9402, v_other_product_id, 1, 11.00, null, 'ABIERTO');
+    (-9411, -9401, v_product_id, 2, 10.00, null, 'ABIERTO', null),
+    (-9412, -9401, v_product_id, 1, 5.00, null, 'ABIERTO', null),
+    (-9413, -9401, v_product_id, 1, 7.00, null, 'ENVIADO', '2026-08-26 10:00:00+00'),
+    (-9414, -9401, v_product_id, 1, 8.00, null, 'RECIBIDO_COCINA', '2026-08-26 10:01:00+00'),
+    (-9415, -9401, v_product_id, 1, 9.00, null, 'EN_PREPARACION', '2026-08-26 10:02:00+00'),
+    (-9416, -9401, v_product_id, 1, 10.00, null, 'LISTO', '2026-08-26 10:03:00+00'),
+    (-9417, -9402, v_other_product_id, 1, 11.00, null, 'ABIERTO', null);
 
   perform pg_catalog.set_config('request.jwt.claim.sub', v_waiter_id::text, true);
   perform pg_catalog.set_config('request.jwt.claim.role', 'authenticated', true);

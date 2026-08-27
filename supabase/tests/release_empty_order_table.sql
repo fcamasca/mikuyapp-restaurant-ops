@@ -81,9 +81,9 @@ begin
     (-98104, v_local_id, v_table_sent_order, v_waiter_id, 'ENVIADO'),
     (-98105, v_other_local_id, v_table_other, v_other_waiter_id, 'ABIERTO'),
     (-98106, v_local_id, v_table_rollback, v_waiter_id, 'ABIERTO');
-  insert into public.detalle_pedido (id, pedido_id, producto_id, cantidad, precio_unitario, estado) overriding system value values
-    (-98102, -98102, v_product_id, 1, 10, 'ABIERTO'),
-    (-98103, -98103, v_product_id, 1, 10, 'ENVIADO');
+  insert into public.detalle_pedido (id, pedido_id, producto_id, cantidad, precio_unitario, estado, enviado_en) overriding system value values
+    (-98102, -98102, v_product_id, 1, 10, 'ABIERTO', null),
+    (-98103, -98103, v_product_id, 1, 10, 'ENVIADO', '2026-08-26 10:00:00+00');
 
   perform pg_temp.set_test_user(v_waiter_id);
   perform public.liberar_mesa_pedido_vacio(-98101);

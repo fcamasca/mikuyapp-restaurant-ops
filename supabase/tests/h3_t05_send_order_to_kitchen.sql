@@ -148,15 +148,15 @@ begin
     (-9504, v_local_id, v_table_id, v_waiter_id, 'ANULADO');
 
   insert into public.detalle_pedido (
-    id, pedido_id, producto_id, cantidad, precio_unitario, estado
+    id, pedido_id, producto_id, cantidad, precio_unitario, estado, enviado_en
   )
   overriding system value
   values
-    (-9511, -9501, v_product_id, 1, 10.00, 'ABIERTO'),
-    (-9512, -9501, v_product_id, 2, 10.00, 'ABIERTO'),
-    (-9513, -9501, v_product_id, 1, 10.00, 'ENVIADO'),
-    (-9514, -9501, v_product_id, 1, 10.00, 'RECIBIDO_COCINA'),
-    (-9515, -9502, v_other_product_id, 1, 11.00, 'ABIERTO');
+    (-9511, -9501, v_product_id, 1, 10.00, 'ABIERTO', null),
+    (-9512, -9501, v_product_id, 2, 10.00, 'ABIERTO', null),
+    (-9513, -9501, v_product_id, 1, 10.00, 'ENVIADO', '2026-08-25 11:58:00+00'),
+    (-9514, -9501, v_product_id, 1, 10.00, 'RECIBIDO_COCINA', '2026-08-25 11:59:00+00'),
+    (-9515, -9502, v_other_product_id, 1, 11.00, 'ABIERTO', null);
 
   perform pg_temp.h3_t05_set_user(v_waiter_id);
 
@@ -225,11 +225,11 @@ begin
     );
 
     insert into public.detalle_pedido (
-      id, pedido_id, producto_id, cantidad, precio_unitario, estado
+      id, pedido_id, producto_id, cantidad, precio_unitario, estado, enviado_en
     ) overriding system value
     values
-      (v_detail_id, v_order_id, v_product_id, 1, 10.00, 'ABIERTO'),
-      (v_detail_id - 10, v_order_id, v_product_id, 1, 10.00, 'ENVIADO');
+      (v_detail_id, v_order_id, v_product_id, 1, 10.00, 'ABIERTO', null),
+      (v_detail_id - 10, v_order_id, v_product_id, 1, 10.00, 'ENVIADO', v_original_sent_at);
 
     select result.detalles_enviados, result.cabecera_actualizada,
            result.pedido_estado, result.enviado_en
@@ -296,6 +296,7 @@ begin
   if (select estado from public.pedido where id = -9590) <> 'ABIERTO'
     or (select enviado_en from public.pedido where id = -9590) is not null
     or (select estado from public.detalle_pedido where id = -9591) <> 'ABIERTO'
+    or (select enviado_en from public.detalle_pedido where id = -9591) is not null
     or exists (select 1 from public.historial_estado where pedido_id = -9590) then
     raise exception 'H3-T05 rollback incompleto';
   end if;

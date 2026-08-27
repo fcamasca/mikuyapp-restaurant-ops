@@ -226,7 +226,9 @@ begin
     raise exception 'H3-T07 no consolidó producto ABIERTO sin observación';
   end if;
 
-  update public.detalle_pedido set estado = 'ENVIADO' where id = v_detail_id;
+  update public.detalle_pedido
+  set estado = 'ENVIADO', enviado_en = pg_catalog.clock_timestamp()
+  where id = v_detail_id;
   perform public.agregar_detalle_pedido(v_order_id, v_product_id, 1, 'Sin cebolla');
   if (select cantidad from public.detalle_pedido where id = v_detail_id) <> 3
     or (select estado from public.detalle_pedido where id = v_detail_id) <> 'ENVIADO'
