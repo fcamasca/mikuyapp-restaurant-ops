@@ -57,7 +57,32 @@ test('H4-T06 prioriza trabajo no listo y muestra antigüedad legible', () => {
     detail({ pedido_id: 10, detalle_id: 102, estado: 'EN_PREPARACION', enviado_en: '2026-08-27T12:00:00Z' }),
   ])
   assert.equal(groups[0].oldestSentAt, '2026-08-27T12:00:00Z')
+  assert.deepEqual(groups[0].details.map((item) => item.detalle_id), [102, 101])
+  assert.equal(groups[0].allReady, false)
   assert.equal(formatKitchenAge('2026-08-27T12:00:00Z', Date.parse('2026-08-27T13:05:00Z')), 'Enviado hace 1 h 5 min')
+})
+
+test('H4-T10 pedido mixto prioriza pendientes y conserva LISTO al final del grupo', () => {
+  const groups = groupKitchenBoard([
+    detail({ pedido_id: 10, detalle_id: 101, estado: 'LISTO', enviado_en: '2026-08-27T11:00:00Z' }),
+    detail({ pedido_id: 10, detalle_id: 102, estado: 'EN_PREPARACION', enviado_en: '2026-08-27T12:00:00Z' }),
+    detail({ pedido_id: 10, detalle_id: 103, estado: 'RECIBIDO_COCINA', enviado_en: '2026-08-27T11:30:00Z' }),
+  ])
+  assert.deepEqual(groups[0].details.map((item) => item.detalle_id), [103, 102, 101])
+  assert.equal(groups[0].oldestSentAt, '2026-08-27T11:30:00Z')
+})
+
+test('H4-T10 pedidos completamente LISTO van al final y permanecen visibles', () => {
+  const groups = groupKitchenBoard([
+    detail({ pedido_id: 20, detalle_id: 201, estado: 'LISTO', enviado_en: '2026-08-27T10:00:00Z' }),
+    detail({ pedido_id: 10, detalle_id: 101, estado: 'EN_PREPARACION', enviado_en: '2026-08-27T12:00:00Z' }),
+    detail({ pedido_id: 30, detalle_id: 301, estado: 'LISTO', enviado_en: '2026-08-27T11:00:00Z' }),
+  ])
+  assert.deepEqual(groups.map((group) => group.pedidoId), [10, 20, 30])
+  assert.deepEqual(groups.map((group) => group.allReady), [false, true, true])
+  assert.equal(groups.flatMap((group) => group.details).length, 3)
+  assert.match(pageSource, />Listos</)
+  assert.match(pageSource, /Permanecen visibles hasta completar la entrega en H5/)
 })
 
 test('H4-T06 muestra estados textuales y únicamente acciones adyacentes válidas', () => {

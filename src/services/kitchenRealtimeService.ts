@@ -33,6 +33,7 @@ export interface KitchenOrderGroup {
   readonly mesaNombre: string
   readonly details: readonly KitchenBoardRow[]
   readonly oldestSentAt: string
+  readonly allReady: boolean
 }
 
 export interface PendingKitchenTransition {
@@ -69,18 +70,21 @@ export function groupKitchenBoard(rows: readonly KitchenBoardRow[]): readonly Ki
       new Date(left.enviado_en).getTime() - new Date(right.enviado_en).getTime()
       || left.detalle_id - right.detalle_id)
     const pending = sorted.filter((detail) => detail.estado !== 'LISTO')
-    const orderSource = pending.length > 0 ? pending : sorted
+    const ready = sorted.filter((detail) => detail.estado === 'LISTO')
+    const orderSource = pending.length > 0 ? pending : ready
     return {
       key: pedidoId,
       pedidoId,
       pedidoEstado: sorted[0].pedido_estado,
       mesaCodigo: sorted[0].mesa_codigo,
       mesaNombre: sorted[0].mesa_nombre,
-      details: sorted,
+      details: [...pending, ...ready],
       oldestSentAt: orderSource[0].enviado_en,
+      allReady: pending.length === 0,
     }
   }).sort((left, right) =>
-    new Date(left.oldestSentAt).getTime() - new Date(right.oldestSentAt).getTime()
+    Number(left.allReady) - Number(right.allReady)
+    || new Date(left.oldestSentAt).getTime() - new Date(right.oldestSentAt).getTime()
     || left.pedidoId - right.pedidoId)
 }
 

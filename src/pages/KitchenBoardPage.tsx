@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
 import {
   createKitchenRealtimeService,
@@ -170,8 +170,11 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
           {error && <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4" role="alert"><p className="text-sm text-rose-800">{error}</p><button className="mt-3 min-h-11 rounded-xl border border-rose-300 px-4 py-2 font-semibold text-rose-900" onClick={() => { void handleRef.current?.resync() }} type="button">Reintentar</button></div>}
           {loading ? <p aria-busy="true" className="mt-6 rounded-2xl bg-white p-5 text-stone-600">Cargando pedidos de cocina…</p>
             : groups.length === 0 ? <p className="mt-6 rounded-2xl border border-dashed border-stone-300 bg-white p-5 text-stone-600">No hay productos pendientes en cocina.</p>
-              : <ul className="mt-6 grid min-w-0 gap-5 xl:grid-cols-2">{groups.map((group) => (
-                <li className="min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5" key={group.key}>
+              : <ul className="mt-6 grid min-w-0 gap-5 xl:grid-cols-2">{groups.map((group, groupIndex) => (
+                <Fragment key={group.key}>
+                  {groupIndex === 0 && !group.allReady && <li className="list-none xl:col-span-2"><h3 className="text-lg font-bold text-stone-800">Trabajo pendiente</h3><p className="mt-1 text-sm text-stone-600">Pedidos que todavía requieren una acción de cocina.</p></li>}
+                  {group.allReady && (groupIndex === 0 || !groups[groupIndex - 1].allReady) && <li className="mt-2 list-none border-t border-stone-300 pt-6 xl:col-span-2"><h3 className="text-lg font-bold text-emerald-900">Listos</h3><p className="mt-1 text-sm text-stone-600">Permanecen visibles hasta completar la entrega en H5.</p></li>}
+                <li className="min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b border-stone-200 pb-4">
                     <div><p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Mesa {group.mesaCodigo}</p><h3 className="mt-1 text-xl font-bold">{group.mesaNombre}</h3></div>
                     <div className="text-right"><p className="font-semibold">Pedido #{group.pedidoId}</p><p className="mt-1 text-sm text-stone-600">{formatKitchenAge(group.oldestSentAt)}</p></div>
@@ -189,7 +192,7 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
                         : <p className="mt-4 rounded-xl border border-emerald-300 bg-white/70 px-4 py-3 text-center font-semibold text-emerald-900">Preparación completada</p>}
                     </li>
                   })}</ul>
-                </li>
+                </li></Fragment>
               ))}</ul>}
         </section>
       </div>

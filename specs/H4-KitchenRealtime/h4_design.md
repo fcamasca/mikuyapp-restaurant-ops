@@ -12,7 +12,7 @@ Se añadirá `detalle_pedido.enviado_en timestamptz null`. La función existente
 
 Una operación de lectura funcional, por ejemplo `obtener_tablero_cocina()`, devuelve exclusivamente datos del local autenticado para rol `COCINA`: pedido, mesa, detalle, producto, cantidad, observación, estado, `enviado_en` y `modificado_en`. Excluye pedidos terminales `ENTREGADO`, `PAGADO` y `ANULADO`. La lectura segura permite conservar el nombre histórico del producto aunque después quede inactivo, sin abrir el catálogo completo ni confiar en joins construidos por React.
 
-La carga se agrupa por `pedido_id`/mesa. Los grupos se ordenan por el menor `enviado_en` de sus detalles todavía no listos; si el grupo solo contiene `LISTO`, usa el menor `enviado_en`. Dentro del grupo se ordena por `enviado_en`, luego por `detalle_id`, para estabilidad.
+La carga se agrupa por `pedido_id`/mesa. Se muestran primero los grupos con al menos un detalle pendiente, ordenados por el menor `enviado_en` entre sus detalles todavía no listos. Dentro de cada grupo se presentan primero los detalles pendientes y después los `LISTO`; cada bloque conserva orden estable por `enviado_en` y luego `detalle_id`. Los pedidos cuyos detalles están todos `LISTO` permanecen visibles, se ordenan por su menor `enviado_en` y se presentan al final en una sección visual **Listos** hasta que H5 complete la entrega.
 
 El tablero presenta columnas o secciones equivalentes a “Recibidos”, “En preparación” y “Listos”. `ENVIADO` aparece como “Nuevo/por recibir”; `RECIBIDO_COCINA`, “Recibido”; `EN_PREPARACION`, “En preparación”; y `LISTO`, “Listo”. Texto e iconografía acompañan al color.
 
