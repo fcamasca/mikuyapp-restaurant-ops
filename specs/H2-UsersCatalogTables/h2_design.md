@@ -8,13 +8,13 @@ Se reutiliza el cliente público Supabase existente con Auth email/password, `ge
 
 La aplicación consulta `public.perfil_usuario` filtrando `id = auth.uid()` y recupera el rol/local asociados mediante lecturas de sus propias filas autorizadas. La política `SELECT` de `perfil_usuario` se define exclusivamente con `USING (id = auth.uid())`: no consulta `perfil_usuario` otra vez, no expone otros perfiles y permite detectar si el perfil propio está inactivo para rechazarlo correctamente.
 
-Una única función auxiliar de autorización, denominada `public.h2_auth_context()`, suministra a las demás políticas el contexto válido del usuario. Su contrato es:
+Una única función auxiliar de autorización, denominada `public.obtener_contexto_autenticado()`, suministra a las demás políticas el contexto válido del usuario. Su contrato es:
 
 - Parámetros: ninguno; la identidad siempre se obtiene internamente con `auth.uid()`.
 - Retorno: `TABLE(local_id uuid, rol_id smallint, rol_codigo text)`; devuelve exactamente una fila cuando perfil, rol y local están activos y el código pertenece a `ADMINISTRADOR`, `MOZO`, `COCINA` o `CAJA`; devuelve cero filas en cualquier otro caso.
 - Implementación futura: función SQL `STABLE SECURITY DEFINER SET search_path = pg_catalog`; todas las referencias se califican como `public.perfil_usuario`, `public.rol`, `public.local` y `auth.uid()`.
 - Propietario: `postgres`, rol administrativo propietario de las tablas que permite consultar el perfil sin volver a evaluar su política; el frontend nunca obtiene sus credenciales.
-- Privilegios: `REVOKE ALL ON FUNCTION public.h2_auth_context() FROM PUBLIC, anon`; conceder únicamente `EXECUTE` a `authenticated`. No otorgar ejecución a usuarios anónimos ni exponer parámetros que permitan elegir otra identidad.
+- Privilegios: `REVOKE ALL ON FUNCTION public.obtener_contexto_autenticado() FROM PUBLIC, anon`; conceder únicamente `EXECUTE` a `authenticated`. No otorgar ejecución a usuarios anónimos ni exponer parámetros que permitan elegir otra identidad.
 
 Una sesión sin contexto válido se cierra o queda bloqueada sin revelar datos. El frontend valida además que la fila propia, rol y local cumplen estas condiciones antes de mostrar rutas operativas.
 
@@ -71,7 +71,7 @@ Los privilegios `INSERT` y `UPDATE` por columna, `DELETE` de tabla y `SELECT` se
 
 `INSERT` debe incluir únicamente `local_id` igual al contexto; `WITH CHECK` rechaza cualquier otro local. Para producto, la categoría pertenece al mismo local por FK compuesta y política. El alta de mesa no posee privilegio de inserción sobre `estado`, por lo que usa obligatoriamente el default `LIBRE`; `WITH CHECK` añade la comprobación `estado = 'LIBRE'`. La desactivación se rechaza en base de datos mediante política `WITH CHECK (activo = true OR estado = 'LIBRE')`, además de la validación visual. `DELETE` real conserva las FK `ON DELETE RESTRICT` sin cascada ni debilitamiento. Cada operación mantiene `SELECT` suficiente para la representación PostgREST.
 
-La política de perfil nunca llama a `h2_auth_context()`. Las políticas de rol, local, categoría, producto y mesa sí utilizan la función, que accede mediante su propietario y evita recursión. No se concede acceso a perfiles ajenos, secuencias ni tablas transaccionales.
+La política de perfil nunca llama a `obtener_contexto_autenticado()`. Las políticas de rol, local, categoría, producto y mesa sí utilizan la función, que accede mediante su propietario y evita recursión. No se concede acceso a perfiles ajenos, secuencias ni tablas transaccionales.
 
 ## D-09 — Procedimiento único para cuatro usuarios
 

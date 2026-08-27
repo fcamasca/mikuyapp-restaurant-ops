@@ -24,7 +24,7 @@ H3 permite al rol `MOZO` seleccionar una mesa activa, crear o recuperar un únic
 
 Un pedido está vigente cuando su estado es `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` o `ENTREGADO`. `PAGADO` y `ANULADO` son terminales. `PENDIENTE_PAGO` es exclusivamente un estado de `mesa`, no de `pedido`.
 
-H3 implementa `ABIERTO → ENVIADO` en la cabecera únicamente durante el primer envío. En todo envío, inicial o posterior, `h3_enviar_pedido` cambia exclusivamente detalles `ABIERTO → ENVIADO`. Un envío posterior nunca retrocede ni sobrescribe el estado más avanzado de la cabecera, y `pedido.enviado_en` conserva la fecha del primer envío. Por ello, un pedido vigente puede tener una cabecera más avanzada y, al mismo tiempo, detalles anteriores enviados y agregados nuevos `ABIERTO`.
+H3 implementa `ABIERTO → ENVIADO` en la cabecera únicamente durante el primer envío. En todo envío, inicial o posterior, `enviar_pedido_cocina` cambia exclusivamente detalles `ABIERTO → ENVIADO`. Un envío posterior nunca retrocede ni sobrescribe el estado más avanzado de la cabecera, y `pedido.enviado_en` conserva la fecha del primer envío. Por ello, un pedido vigente puede tener una cabecera más avanzada y, al mismo tiempo, detalles anteriores enviados y agregados nuevos `ABIERTO`.
 
 Los estados posteriores del detalle quedan contemplados para H4, que deberá consultar el estado individual de los detalles para detectar nuevos platos aunque la cabecera ya esté en `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` o `ENTREGADO`; H3 no implementa operativa de cocina. Cuando `cantidad > 1`, el estado sigue correspondiendo al detalle completo, no a cada unidad.
 

@@ -30,7 +30,7 @@ Estas verificaciones se ejecutan contra PostgreSQL/Supabase y se documentan con 
 |---|---|---|
 | H3-TM01 | Restricción única de pedido vigente por mesa. | Se rechaza una segunda cabecera en cualquiera de los seis estados vigentes. |
 | H3-TM02 | Clasificación de estados. | `PAGADO` y `ANULADO` permiten un nuevo ciclo; `PENDIENTE_PAGO` solo existe en mesa. |
-| H3-TM03 | Privilegios de alta de detalle. | `authenticated` no tiene `INSERT`; solo puede ejecutar `h3_agregar_detalle`. |
+| H3-TM03 | Privilegios de alta de detalle. | `authenticated` no tiene `INSERT`; solo puede ejecutar `agregar_detalle_pedido`. |
 | H3-TM04 | Precio y estado controlados por servidor. | Traza SQL demuestra lectura de `producto.precio` e inserción explícita `ABIERTO`. |
 | H3-TM05 | Privilegios por columna y RLS. | Solo `cantidad` y `observacion` son actualizables y solo en filas `ABIERTO`; DELETE tiene la misma restricción. |
 | H3-TM06 | Atomicidad del envío. | Un error inducido revierte cabecera, detalles e historial; sin transición parcial. |

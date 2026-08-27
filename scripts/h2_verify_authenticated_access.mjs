@@ -62,12 +62,12 @@ async function authenticateAll() {
     clients.set(role, instance)
     pass(`login ${role}`)
 
-    const { data: contextRows, error: contextError } = await instance.rpc('h2_auth_context')
+    const { data: contextRows, error: contextError } = await instance.rpc('obtener_contexto_autenticado')
     if (contextError || contextRows?.length !== 1 || contextRows[0].rol_codigo !== role) {
       throw new Error(`Contexto inválido para ${role}.`)
     }
     contexts.set(role, contextRows[0])
-    pass(`h2_auth_context ${role}`)
+    pass(`obtener_contexto_autenticado ${role}`)
 
     const { data: profiles, error: profileError } = await instance.from('perfil_usuario').select('id,local_id,rol_id,nombre,activo')
     if (profileError || profiles?.length !== 1 || !profiles[0].activo

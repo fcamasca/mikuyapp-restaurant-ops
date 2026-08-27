@@ -5,10 +5,10 @@
 | ID | Trabajo | Diseño | Requisitos | Horas |
 |---|---|---|---|---:|
 | H3-T01 | Preparar el cambio mínimo de modelo: estado de detalle, checks, índice por pedido/estado e índice único de pedido vigente. | H3-D01 | H3-R03, H3-R09, H3-R10 | 0.50 |
-| H3-T02 | Implementar la operación transaccional para crear/recuperar pedido, historial inicial y ocupación segura de mesa. | H3-D03, H3-D09 | H3-R02, H3-R03, H3-R11 | 0.75 |
-| H3-T03 | Implementar `h3_agregar_detalle` con precio obtenido en servidor y estado `ABIERTO` obligatorio. | H3-D04, H3-D09 | H3-R05, H3-R11 | 0.50 |
+| H3-T02 | Implementar `crear_o_recuperar_pedido_mesa`, historial inicial y ocupación segura de mesa. | H3-D03, H3-D09 | H3-R02, H3-R03, H3-R11 | 0.75 |
+| H3-T03 | Implementar `agregar_detalle_pedido` con precio obtenido en servidor y estado `ABIERTO` obligatorio. | H3-D04, H3-D09 | H3-R05, H3-R11 | 0.50 |
 | H3-T04 | Implementar privilegios por columna y RLS para modificar cantidad/observación y retirar únicamente detalles `ABIERTO`. | H3-D05, H3-D09 | H3-R06, H3-R07, H3-R11 | 0.50 |
-| H3-T05 | Implementar `h3_enviar_pedido` selectiva, atómica e idempotente: detalles abiertos a enviados, cabecera solo `ABIERTO → ENVIADO` en el primer envío y conservación posterior de estado y `enviado_en`. | H3-D07, H3-D09 | H3-R09, H3-R11 | 0.75 |
+| H3-T05 | Implementar `enviar_pedido_cocina` selectiva, atómica e idempotente: detalles abiertos a enviados, cabecera solo `ABIERTO → ENVIADO` en el primer envío y conservación posterior de estado y `enviado_en`. | H3-D07, H3-D09 | H3-R09, H3-R11 | 0.75 |
 | H3-T06 | Adaptar tablero de mesas con cards, estados, total, filtros, orden y navegación. | H3-D02, H3-D06 | H3-R01, H3-R03 | 0.50 |
 | H3-T07 | Construir cards de productos, filtro por categoría y controles táctiles de cantidad/observación/retiro. | H3-D02, H3-D04, H3-D05 | H3-R04, H3-R05, H3-R06, H3-R07 | 0.75 |
 | H3-T08 | Implementar revisión, total persistido, separación por enviar/solicitado y agregados posteriores. | H3-D06, H3-D08 | H3-R08, H3-R10 | 0.50 |
