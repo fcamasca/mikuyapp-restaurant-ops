@@ -137,7 +137,8 @@ function ApplicationRouter() {
 
   const waiterOrderId = getWaiterOrderId(resolution.pathname)
   if (waiterOrderId !== null) {
-    return <WaiterOrderPage orderId={waiterOrderId} onBack={() => navigate('/mozo/mesas')} />
+    if (!profileContext.context) return <LoadingScreen context />
+    return <WaiterOrderPage context={profileContext.context} orderId={waiterOrderId} onBack={() => navigate('/mozo/mesas')} />
   }
 
   if (resolution.pathname === '/tecnica') {

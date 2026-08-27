@@ -16,7 +16,7 @@ La operación transaccional `public.crear_o_recuperar_pedido_mesa(p_mesa_id uuid
 
 ## H3-D04 — Alta segura de detalles
 
-Se incorpora una única función `SECURITY DEFINER`, `public.agregar_detalle_pedido(p_pedido_id, p_producto_id, p_cantidad, p_observacion)`. La función obtiene internamente `auth.uid()`, valida rol `MOZO`, local, pedido vigente, producto y categoría activos, cantidad positiva y observación válida. Consulta `producto.precio` en PostgreSQL, copia ese valor a `precio_unitario` e inserta el detalle forzando `estado = 'ABIERTO'`.
+Se incorpora una única función `SECURITY DEFINER`, `public.agregar_detalle_pedido(p_pedido_id, p_producto_id, p_cantidad, p_observacion)`. La función obtiene internamente `auth.uid()`, valida rol `MOZO`, local, pedido vigente, producto y categoría activos, cantidad positiva y observación válida. Consulta `producto.precio` en PostgreSQL y fuerza `estado = 'ABIERTO'`. Bajo un bloqueo transaccional por pedido/producto, incrementa un detalle `ABIERTO` existente con producto y observación equivalente o inserta una nueva línea copiando el precio vigente. Nunca consolida detalles enviados o posteriores ni observaciones diferentes.
 
 El cliente no envía `precio_unitario` ni `estado` como parte del contrato. `authenticated` no recibe privilegio `INSERT` directo sobre `detalle_pedido`; solo `EXECUTE` sobre esta función. Así, un payload alternativo no puede falsear precio ni crear un detalle `ENVIADO`.
 

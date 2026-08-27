@@ -204,6 +204,40 @@ begin
     raise exception 'H3-T03 detalle, precio de servidor o estado inicial incorrectos';
   end if;
 
+  perform public.agregar_detalle_pedido(v_order_id, v_product_id, 1, 'Sin cebolla');
+  if (select count(*) from public.detalle_pedido where pedido_id = v_order_id and producto_id = v_product_id and observacion = 'Sin cebolla') <> 1
+    or (select cantidad from public.detalle_pedido where id = v_detail_id) <> 3 then
+    raise exception 'H3-T07 no consolidó producto ABIERTO con observación equivalente';
+  end if;
+
+  perform public.agregar_detalle_pedido(v_order_id, v_product_id, 1, 'Poco picante');
+  if not exists (
+    select 1 from public.detalle_pedido
+    where pedido_id = v_order_id and producto_id = v_product_id
+      and observacion = 'Poco picante' and cantidad = 1 and estado = 'ABIERTO'
+  ) then
+    raise exception 'H3-T07 fusionó observaciones diferentes';
+  end if;
+
+  perform public.agregar_detalle_pedido(v_order_id, v_product_id, 1, null);
+  perform public.agregar_detalle_pedido(v_order_id, v_product_id, 1, null);
+  if (select count(*) from public.detalle_pedido where pedido_id = v_order_id and producto_id = v_product_id and observacion is null and estado = 'ABIERTO') <> 1
+    or (select cantidad from public.detalle_pedido where pedido_id = v_order_id and producto_id = v_product_id and observacion is null and estado = 'ABIERTO') <> 2 then
+    raise exception 'H3-T07 no consolidó producto ABIERTO sin observación';
+  end if;
+
+  update public.detalle_pedido set estado = 'ENVIADO' where id = v_detail_id;
+  perform public.agregar_detalle_pedido(v_order_id, v_product_id, 1, 'Sin cebolla');
+  if (select cantidad from public.detalle_pedido where id = v_detail_id) <> 3
+    or (select estado from public.detalle_pedido where id = v_detail_id) <> 'ENVIADO'
+    or not exists (
+      select 1 from public.detalle_pedido
+      where pedido_id = v_order_id and producto_id = v_product_id
+        and observacion = 'Sin cebolla' and cantidad = 1 and estado = 'ABIERTO'
+    ) then
+    raise exception 'H3-T07 modificó un enviado o no creó el nuevo ABIERTO';
+  end if;
+
   v_initial_count := (select count(*) from public.detalle_pedido);
 
   begin

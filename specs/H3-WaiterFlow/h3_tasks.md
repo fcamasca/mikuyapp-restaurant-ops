@@ -8,7 +8,7 @@
 - [x] H3-T04 — Privilegios por columna y RLS para modificar o retirar únicamente detalles `ABIERTO` implementados y validados.
 - [x] H3-T05 — Envío transaccional, selectivo e idempotente implementado y validado, incluida concurrencia real y rollback completo.
 - [x] H3-T06 — Tablero operativo de mesas implementado y validado: cards táctiles, estados textuales, total vigente, filtros, orden y navegación al pedido.
-- [ ] H3-T07 — Pendiente.
+- [x] H3-T07 — Carta táctil y gestión de detalles implementadas y aprobadas: modos pedido/carta, consolidación segura de detalles `ABIERTO`, observaciones, edición, retiro confirmado y cards compactas.
 - [ ] H3-T08 — Pendiente.
 - [ ] H3-T09 — Pendiente.
 - [ ] H3-T10 — Pendiente.

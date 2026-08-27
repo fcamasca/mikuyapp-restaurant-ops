@@ -2,12 +2,13 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { getWaiterOrderId, resolveApplicationRoute } from '../src/services/appRoutes.ts'
-import { createWaiterOrderService, filterAndSortWaiterTables } from '../src/services/waiterOrderService.ts'
+import { combineOrderObservation, createWaiterOrderService, filterAndSortWaiterTables } from '../src/services/waiterOrderService.ts'
 
 const pageSource = readFileSync(new URL('../src/pages/WaiterTablesPage.tsx', import.meta.url), 'utf8')
 const orderPageSource = readFileSync(new URL('../src/pages/WaiterOrderPage.tsx', import.meta.url), 'utf8')
 const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
 const serviceSource = readFileSync(new URL('../src/services/waiterOrderService.ts', import.meta.url), 'utf8')
+const consolidationMigration = readFileSync(new URL('../supabase/migrations/20260826000800_consolidate_open_order_details.sql', import.meta.url), 'utf8')
 
 function context(role = 'MOZO') {
   return {
@@ -29,12 +30,15 @@ function createClient({ tables = [], orders = [], details = [], errors = {}, rpc
     rpcCalls,
     client: {
       from(resource) {
-        const call = { resource, columns: '', filters: [], inFilters: [] }
+        const call = { resource, columns: '', filters: [], inFilters: [], mutation: null }
         calls.push(call)
         const query = {
           select(columns) { call.columns = columns; return query },
           eq(column, value) { call.filters.push({ column, value }); return query },
           in(column, values) { call.inFilters.push({ column, values }); return query },
+          update(values) { call.mutation = { kind: 'update', values }; return query },
+          delete() { call.mutation = { kind: 'delete' }; return query },
+          then(resolve) { resolve({ error: errors[resource] ?? null }); return Promise.resolve() },
           async returns() {
             const data = resource === 'mesa' ? tables : resource === 'pedido' ? orders : details
             return { data, error: errors[resource] ?? null }
@@ -181,6 +185,135 @@ test('navega a una ruta mínima de pedido y restringe acceso al MOZO', () => {
     pathname: '/mozo/pedidos/42', authenticationStatus: 'authenticated', contextStatus: 'valid', role: 'CAJA',
   }), { status: 'redirect', pathname: '/403' })
   assert.match(appSource, /onOpenOrder=\{\(orderId\) => navigate\(`\/mozo\/pedidos\/\$\{orderId\}`\)\}/)
-  assert.match(orderPageSource, /La carta y la revisión se incorporan en T07 y T08/)
-  assert.doesNotMatch(orderPageSource, /agregar_detalle_pedido|enviar_pedido_cocina|producto/)
+  assert.match(orderPageSource, /Agregar productos/)
+  assert.doesNotMatch(orderPageSource, /enviar_pedido_cocina/)
+})
+
+test('T07 agrega exclusivamente mediante RPC sin precio ni estado del cliente', async () => {
+  const fixture = createClient({ rpcData: [{ detalle_id: 31, pedido_id: 12, producto_id: 'product-1', cantidad: 1, precio_unitario: 18.5, observacion: null, estado: 'ABIERTO' }] })
+  const result = await createWaiterOrderService(fixture.client).addOrderDetail(context(), 12, 'product-1')
+  assert.equal(result.ok, true)
+  assert.deepEqual(fixture.rpcCalls, [{ name: 'agregar_detalle_pedido', args: { p_pedido_id: 12, p_producto_id: 'product-1', p_cantidad: 1, p_observacion: null } }])
+  assert.equal('precio_unitario' in fixture.rpcCalls[0].args, false)
+  assert.equal('estado' in fixture.rpcCalls[0].args, false)
+  assert.equal(result.data.precio_unitario, 18.5)
+  assert.equal(result.data.estado, 'ABIERTO')
+})
+
+test('T07 limita cambios directos a cantidad/observación y retiro de ABIERTO', async () => {
+  const fixture = createClient()
+  const service = createWaiterOrderService(fixture.client)
+  assert.equal((await service.updateOpenDetail(context(), 31, { cantidad: 2 })).ok, true)
+  assert.deepEqual(fixture.calls[0].mutation, { kind: 'update', values: { cantidad: 2 } })
+  assert.deepEqual(fixture.calls[0].filters, [{ column: 'id', value: 31 }, { column: 'estado', value: 'ABIERTO' }])
+  assert.equal((await service.removeOpenDetail(context(), 31)).ok, true)
+  assert.deepEqual(fixture.calls[1].mutation, { kind: 'delete' })
+  assert.deepEqual(fixture.calls[1].filters[1], { column: 'estado', value: 'ABIERTO' })
+  assert.equal((await service.updateOpenDetail(context(), 31, { cantidad: 0 })).ok, false)
+})
+
+test('T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controles táctiles', () => {
+  for (const text of ['Sin cebolla', 'Sin ají', 'Poco picante', 'Sin cancha', 'Otra…', 'Editar observación', 'Retirar']) assert.match(orderPageSource, new RegExp(text))
+  assert.equal(combineOrderObservation(['Sin cebolla', 'Poco picante'], 'Mesa comparte plato'), 'Sin cebolla, Poco picante, Mesa comparte plato')
+  assert.equal(combineOrderObservation([], '  '), null)
+  assert.match(orderPageSource, /detail\.observacion\?\.split\(','\)/)
+  assert.match(orderPageSource, /detail\.estado === 'ABIERTO'/)
+  assert.match(orderPageSource, /ya fue enviado y no se puede editar ni retirar/)
+  assert.match(orderPageSource, /min-h-11|min-h-12/)
+  assert.match(orderPageSource, /overflow-x-hidden/)
+  assert.match(orderPageSource, /sm:grid-cols-2/)
+})
+
+test('T07 conserva estado persistido cuando PostgreSQL rechaza una mutación', async () => {
+  const fixture = createClient({ errors: { detalle_pedido: { code: '42501' } } })
+  const service = createWaiterOrderService(fixture.client)
+  const update = await service.updateOpenDetail(context(), 31, { observacion: 'Sin ají' })
+  const removal = await service.removeOpenDetail(context(), 31)
+  assert.equal(update.ok, false)
+  assert.equal(removal.ok, false)
+  assert.match(update.error.message, /datos anteriores se mantienen/)
+})
+
+test('T07 confirma retiro, permite cancelar y muestra feedback local', () => {
+  assert.match(orderPageSource, /¿Retirar \{productName\}/)
+  assert.match(orderPageSource, /setConfirmingRemoval\(detail\.id\)/)
+  assert.match(orderPageSource, /setConfirmingRemoval\(null\)/)
+  assert.match(orderPageSource, /⏳ Retirando…/)
+  assert.match(orderPageSource, /aria-busy=\{detailBusy\}/)
+})
+
+test('T07 impide doble mutación por línea y no usa menos uno para eliminar', () => {
+  assert.match(orderPageSource, /pendingDetailIds\.current\.has\(detail\.id\)/)
+  assert.match(orderPageSource, /pendingDetailIds\.current\.add\(detail\.id\)/)
+  assert.match(orderPageSource, /pendingDetailIds\.current\.delete\(detail\.id\)/)
+  assert.match(orderPageSource, /detail\.cantidad <= 1/)
+  assert.match(orderPageSource, /value < 1\) return/)
+  assert.doesNotMatch(orderPageSource, /quantity\([^)]*remove|detail\.cantidad === 1[^\n]*remove/)
+})
+
+test('T07 muestra actualización local y rehabilita controles tras respuesta', () => {
+  assert.match(orderPageSource, /Actualizando…/)
+  assert.match(orderPageSource, /disabled=\{detailBusy\}/)
+  assert.match(orderPageSource, /setBusyDetails\(\(ids\) => ids\.filter/)
+  assert.match(orderPageSource, /if \(!result\.ok\) \{ await reload\(\); setError/)
+})
+
+test('T07 recarga persistencia tras cada mutación y no muestra éxito optimista', () => {
+  assert.match(orderPageSource, /else await reload\(\)/)
+  assert.match(orderPageSource, /else if \(await reload\(\)\)/)
+  assert.match(orderPageSource, /if \(!result\.ok\) setError\(result\.error\.message\)/)
+  assert.doesNotMatch(orderPageSource, /setDetails\(\[\.\.\.details|filter\(\(detail\) => detail\.id/)
+})
+
+test('T07 abre carta para pedido vacío y resumen para pedido con detalles', () => {
+  assert.match(orderPageSource, /setMode\(detailResult\.data\.length > 0 \? 'ORDER' : 'CATALOG'\)/)
+  assert.match(orderPageSource, /mode === 'CATALOG' && <section/)
+  assert.match(orderPageSource, /mode === 'ORDER' && <section/)
+  assert.match(orderPageSource, /Pedido actual/)
+  assert.match(orderPageSource, /\+ Agregar productos/)
+})
+
+test('T07 alterna Pedido y Carta sin ruta adicional ni salida automática tras agregar', () => {
+  assert.match(orderPageSource, /onClick=\{\(\) => setMode\('CATALOG'\)\}/)
+  assert.match(orderPageSource, /Volver al pedido/)
+  assert.match(orderPageSource, /onClick=\{\(\) => setMode\('ORDER'\)\}/)
+  const addFunction = orderPageSource.slice(orderPageSource.indexOf('async function add('), orderPageSource.indexOf('async function quantity('))
+  assert.doesNotMatch(addFunction, /setMode/)
+  assert.match(orderPageSource, /\{details\.length\} líneas · Total/)
+})
+
+test('T07 separa ya solicitado de por enviar y conserva edición solo para ABIERTO', () => {
+  assert.match(orderPageSource, /requestedDetails = details\.filter\(\(detail\) => detail\.estado !== 'ABIERTO'\)/)
+  assert.match(orderPageSource, /openDetails = details\.filter\(\(detail\) => detail\.estado === 'ABIERTO'\)/)
+  assert.match(orderPageSource, /Ya solicitado/)
+  assert.match(orderPageSource, /Por enviar/)
+  assert.match(orderPageSource, /\{open \? <>/)
+  assert.match(orderPageSource, /detail\.observacion/)
+})
+
+test('T07 consolida atómicamente solo producto y observación equivalentes en ABIERTO', () => {
+  assert.match(consolidationMigration, /pg_advisory_xact_lock/)
+  assert.match(consolidationMigration, /detail_row\.producto_id = p_producto_id/)
+  assert.match(consolidationMigration, /detail_row\.estado = 'ABIERTO'/)
+  assert.match(consolidationMigration, /is not distinct from/)
+  assert.match(consolidationMigration, /set cantidad = detail_row\.cantidad \+ p_cantidad/)
+  assert.match(consolidationMigration, /insert into public\.detalle_pedido/)
+  assert.doesNotMatch(consolidationMigration, /p_precio|p_estado/)
+})
+
+test('T07 bloquea taps repetidos de agregar antes del siguiente render', () => {
+  assert.match(orderPageSource, /pendingProductIds\.current\.has\(productId\)/)
+  assert.match(orderPageSource, /pendingProductIds\.current\.add\(productId\)/)
+  assert.match(orderPageSource, /pendingProductIds\.current\.delete\(productId\)/)
+})
+
+test('T07 usa card compacta ABIERTO y cantidad de solo lectura para enviados', () => {
+  assert.match(orderPageSource, /aria-label=\{`Retirar \$\{productName\}`\}/)
+  assert.match(orderPageSource, /className="h-5 w-5"/)
+  assert.match(orderPageSource, /className="grid h-11 w-11/)
+  assert.match(orderPageSource, /<svg aria-hidden="true"/)
+  assert.doesNotMatch(orderPageSource, /🗑/)
+  assert.match(orderPageSource, /!open && ` · Estado:/)
+  assert.match(orderPageSource, /: <strong className="shrink-0">× \{detail\.cantidad\}<\/strong>/)
+  assert.match(orderPageSource, /detail\.cantidad <= 1/)
 })

@@ -23,6 +23,18 @@ export interface WaiterTableBoardItem {
   readonly pedido: CurrentOrderSummary | null
 }
 
+export type OrderDetailStatus = 'ABIERTO' | 'ENVIADO' | 'RECIBIDO_COCINA' | 'EN_PREPARACION' | 'LISTO'
+
+export interface WaiterOrderDetail {
+  readonly id: number
+  readonly pedido_id: number
+  readonly producto_id: string
+  readonly cantidad: number
+  readonly precio_unitario: number
+  readonly observacion: string | null
+  readonly estado: OrderDetailStatus
+}
+
 export type WaiterOrderResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly error: { readonly message: string; readonly recoverable: true } }
@@ -31,12 +43,18 @@ interface TableRow extends Omit<WaiterTableBoardItem, 'pedido'> { readonly activ
 interface OrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
 interface DetailRow { readonly pedido_id: number; readonly cantidad: number; readonly precio_unitario: number }
 interface OpenOrderRow { readonly pedido_id: number; readonly fue_creado: boolean }
+interface AddedDetailRow extends WaiterOrderDetail { readonly detalle_id: number }
 type WaiterOrderClient = Pick<SupabaseClient, 'from' | 'rpc'>
 
 const tableCollator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' })
 
 function connectionError(message: string): WaiterOrderResult<never> {
   return { ok: false, error: { message, recoverable: true } }
+}
+
+export function combineOrderObservation(selected: readonly string[], freeText: string): string | null {
+  const parts = [...selected, freeText.trim()].filter(Boolean)
+  return parts.length > 0 ? parts.join(', ') : null
 }
 
 export function filterAndSortWaiterTables(
@@ -109,6 +127,65 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         return { ok: true, data: { pedidoId: row.pedido_id, fueCreado: row.fue_creado } }
       } catch {
         return connectionError('No pudimos abrir el pedido de la mesa. Intenta nuevamente.')
+      }
+    },
+
+    async getOrderDetails(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<readonly WaiterOrderDetail[]>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para consultar este pedido.')
+      try {
+        const result = await client.from('detalle_pedido')
+          .select('id,pedido_id,producto_id,cantidad,precio_unitario,observacion,estado')
+          .eq('pedido_id', orderId).returns<WaiterOrderDetail[]>()
+        if (result.error) return connectionError('No pudimos cargar los productos del pedido. Intenta nuevamente.')
+        return { ok: true, data: result.data ?? [] }
+      } catch {
+        return connectionError('No pudimos cargar los productos del pedido. Intenta nuevamente.')
+      }
+    },
+
+    async addOrderDetail(context: ValidatedProfileContext, orderId: number, productId: string): Promise<WaiterOrderResult<WaiterOrderDetail>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para agregar productos.')
+      try {
+        const result = await client.rpc('agregar_detalle_pedido', {
+          p_pedido_id: orderId,
+          p_producto_id: productId,
+          p_cantidad: 1,
+          p_observacion: null,
+        })
+        const row = (result.data as AddedDetailRow[] | null)?.[0]
+        if (result.error || !row) return connectionError('No pudimos agregar el producto. Intenta nuevamente.')
+        return { ok: true, data: { ...row, id: row.detalle_id } }
+      } catch {
+        return connectionError('No pudimos agregar el producto. Intenta nuevamente.')
+      }
+    },
+
+    async updateOpenDetail(context: ValidatedProfileContext, detailId: number, input: { readonly cantidad?: number; readonly observacion?: string | null }): Promise<WaiterOrderResult<null>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para modificar productos.')
+      if (input.cantidad !== undefined && (!Number.isInteger(input.cantidad) || input.cantidad < 1)) {
+        return connectionError('La cantidad debe ser un entero mayor o igual a 1.')
+      }
+      const changes: { cantidad?: number; observacion?: string | null } = {}
+      if (input.cantidad !== undefined) changes.cantidad = input.cantidad
+      if (input.observacion !== undefined) changes.observacion = input.observacion?.trim() || null
+      if (Object.keys(changes).length === 0) return { ok: true, data: null }
+      try {
+        const result = await client.from('detalle_pedido').update(changes).eq('id', detailId).eq('estado', 'ABIERTO')
+        if (result.error) return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
+        return { ok: true, data: null }
+      } catch {
+        return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
+      }
+    },
+
+    async removeOpenDetail(context: ValidatedProfileContext, detailId: number): Promise<WaiterOrderResult<null>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para retirar productos.')
+      try {
+        const result = await client.from('detalle_pedido').delete().eq('id', detailId).eq('estado', 'ABIERTO')
+        if (result.error) return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
+        return { ok: true, data: null }
+      } catch {
+        return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
       }
     },
   }

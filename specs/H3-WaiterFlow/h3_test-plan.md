@@ -9,7 +9,7 @@ Estas pruebas validan reglas funcionales, datos, transacciones y servicios sin d
 | H3-TA01 | Crear pedido en mesa libre. | Se crea una sola cabecera `ABIERTO`, historial inicial y mesa `OCUPADA`. |
 | H3-TA02 | Dos clientes intentan crear pedido en la misma mesa. | Una operación gana; no existe una segunda cabecera vigente. |
 | H3-TA03 | Recargar y recuperar un pedido vigente en cada estado real. | Se recupera para `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` y `ENTREGADO`; no para `PAGADO` o `ANULADO`. |
-| H3-TA04 | Agregar producto con la función de servidor. | PostgreSQL lee `producto.precio`, copia ese valor y crea el detalle `ABIERTO`. |
+| H3-TA04 | Agregar o consolidar producto con la función de servidor. | PostgreSQL controla precio y estado; consolida atómicamente producto + observación equivalente solo contra un detalle `ABIERTO`. Observaciones diferentes o detalles enviados producen una nueva línea `ABIERTO`. |
 | H3-TA05 | Intentar falsear `precio_unitario` o solicitar estado `ENVIADO` al agregar. | El contrato no acepta esos valores y no existe `INSERT` directo; precio y estado resultan definidos por PostgreSQL. |
 | H3-TA06 | Modificar cantidad/observación y retirar detalle `ABIERTO`. | Solo el detalle abierto cambia o se elimina; el total se recalcula correctamente. |
 | H3-TA07 | Modificar o retirar detalle `ENVIADO` o posterior. | La operación es rechazada y no produce cambios parciales. |
