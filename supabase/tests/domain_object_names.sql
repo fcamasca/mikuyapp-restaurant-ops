@@ -11,6 +11,7 @@ declare
     'local_select_contexto_autenticado',
     'mesa_delete_administrador',
     'mesa_insert_administrador',
+    'mesa_select_cocina_local',
     'mesa_select_local',
     'mesa_update_administrador',
     'perfil_usuario_select_propio',

@@ -46,6 +46,7 @@ begin
 
   if actual_policies <> array[
       'detalle_pedido_delete_abierto_mozo',
+      'detalle_pedido_select_cocina_local',
       'detalle_pedido_select_mozo_local',
       'detalle_pedido_update_abierto_mozo'
     ] then
