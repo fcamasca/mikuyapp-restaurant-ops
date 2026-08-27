@@ -1,6 +1,7 @@
 begin;
 
 delete from public.detalle_pedido where pedido_id = -40391;
+delete from public.historial_estado where pedido_id = -40391;
 delete from public.pedido where id = -40391;
 delete from public.mesa where id = '00000000-0000-0000-0000-00000000d43c';
 delete from public.producto where id = '00000000-0000-0000-0000-00000000d43d';
@@ -12,6 +13,7 @@ delete from public.local where id = '00000000-0000-0000-0000-00000000d440';
 do $cleanup_verified$
 begin
   if exists (select 1 from public.detalle_pedido where id = -40391)
+    or exists (select 1 from public.historial_estado where pedido_id = -40391)
     or exists (select 1 from public.pedido where id = -40391)
     or exists (
       select 1 from auth.users
