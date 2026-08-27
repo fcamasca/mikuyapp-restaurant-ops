@@ -2,14 +2,14 @@
 
 ## Estado
 
-El Spec fue aprobado humanamente. H4-T01 está implementada y validada; H4-T02–H4-T10 permanecen pendientes.
+El Spec fue aprobado humanamente. H4-T01 y H4-T02 están implementadas y validadas; H4-T03–H4-T10 permanecen pendientes.
 
 ## Plan de construcción propuesto
 
 | Estado | ID | Tarea | Diseño | Requisitos | Est. h |
 |---|---|---|---|---|---:|
 | [x] | H4-T01 | Crear cambio mínimo de modelo para `detalle_pedido.enviado_en`, backfill compatible, constraint e índice de antigüedad; adaptar el envío existente para fijar el timestamp en servidor una sola vez. | H4-D01, H4-D05 | H4-R03, H4-R10 | 0.75 |
-| [ ] | H4-T02 | Implementar snapshot seguro `obtener_tablero_cocina`, sus privilegios y lecturas RLS mínimas por rol/local. | H4-D02, H4-D08 | H4-R01, H4-R02, H4-R05 | 0.75 |
+| [x] | H4-T02 | Implementar snapshot seguro `obtener_tablero_cocina`, sus privilegios y lecturas RLS mínimas por rol/local. | H4-D02, H4-D08 | H4-R01, H4-R02, H4-R05 | 0.75 |
 | [ ] | H4-T03 | Implementar `actualizar_estado_detalle_cocina` con transición adyacente, lock, estado esperado, auditoría y rollback. | H4-D03, H4-D05, H4-D08, H4-D09 | H4-R04–H4-R06, H4-R10, H4-R13 | 1.00 |
 | [ ] | H4-T04 | Implementar derivación agregada actual de cabecera, historial de cada cambio real y sincronización de mesa; ajustar alta posterior para cabecera `→ ABIERTO` y mesa `PEDIDO_LISTO → OCUPADA`. | H4-D04 | H4-R07–H4-R10 | 1.00 |
 | [ ] | H4-T05 | Configurar publicación Realtime y ciclo de snapshot/suscripción/resincro en un servicio reutilizable; tratar eventos como señales para recargar, con debounce opcional y sin polling. | H4-D06, H4-D08, H4-D09 | H4-R11–H4-R13 | 1.00 |
