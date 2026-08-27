@@ -44,7 +44,7 @@ begin
     or function_definition !~* 'FOR UPDATE'
     or function_definition !~* 'detail_row\.estado = ''ABIERTO'''
     or function_definition !~* 'set estado = ''ENVIADO'''
-    or function_definition !~* 'historial_estado' then
+    or function_definition !~* 'sincronizar_estado_operativo_pedido' then
     raise exception 'H3-T05 definición transaccional incompleta';
   end if;
 
@@ -96,6 +96,7 @@ declare
   v_order_id bigint;
   v_detail_id bigint;
   v_expected_state text;
+  v_derived_state text;
   v_index integer := 0;
 begin
   insert into auth.users (id, aud, role, email, encrypted_password)
@@ -236,13 +237,32 @@ begin
     into strict v_sent, v_header_changed, v_state, v_sent_at
     from public.enviar_pedido_cocina(v_order_id) as result;
 
-    if v_sent <> 1 or v_header_changed
-      or v_state <> v_expected_state
+    v_derived_state := case
+      when v_expected_state = 'ENTREGADO' then 'ENTREGADO'
+      else 'ENVIADO'
+    end;
+
+    if v_sent <> 1
+      or v_header_changed is distinct from (v_expected_state <> 'ENTREGADO')
+      or v_state <> v_derived_state
       or v_sent_at is distinct from v_original_sent_at
-      or (select estado from public.pedido where id = v_order_id) <> v_expected_state
+      or (select estado from public.pedido where id = v_order_id) <> v_derived_state
       or (select estado from public.detalle_pedido where id = v_detail_id) <> 'ENVIADO'
       or (select estado from public.detalle_pedido where id = v_detail_id - 10) <> 'ENVIADO'
-      or exists (select 1 from public.historial_estado where pedido_id = v_order_id) then
+      or (
+        v_expected_state = 'ENTREGADO'
+        and exists (select 1 from public.historial_estado where pedido_id = v_order_id)
+      )
+      or (
+        v_expected_state <> 'ENTREGADO'
+        and not exists (
+          select 1 from public.historial_estado
+          where pedido_id = v_order_id
+            and estado_anterior = v_expected_state
+            and estado_nuevo = 'ENVIADO'
+            and usuario_id = v_waiter_id
+        )
+      ) then
       raise exception 'H3-T05 envío posterior inconsistente para %', v_expected_state;
     end if;
   end loop;
