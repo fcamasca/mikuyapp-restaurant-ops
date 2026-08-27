@@ -273,6 +273,14 @@ test('T09 conflicto descarta borrador, cierra Guardar y permite editar de nuevo'
   assert.match(orderPageSource, /Editar observación/)
 })
 
+test('T09 aviso ya recuperado no ofrece Reintentar y desaparece al volver a editar', () => {
+  assert.match(orderPageSource, /setConflictNotice\(mutationError\.kind === 'concurrent-conflict'\)/)
+  assert.match(orderPageSource, /\{!conflictNotice && <button/)
+  assert.match(orderPageSource, />Reintentar<\/button>\}/)
+  assert.match(orderPageSource, /function editObservation[\s\S]*?setConflictNotice\(false\); setError\(null\)/)
+  assert.doesNotMatch(orderPageSource, /Actualizar<\/button>|Entendido<\/button>/)
+})
+
 test('T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controles táctiles', () => {
   for (const text of ['Sin cebolla', 'Sin ají', 'Poco picante', 'Sin cancha', 'Otra…', 'Editar observación', 'Retirar']) assert.match(orderPageSource, new RegExp(text))
   assert.equal(combineOrderObservation(['Sin cebolla', 'Poco picante'], 'Mesa comparte plato'), 'Sin cebolla, Poco picante, Mesa comparte plato')

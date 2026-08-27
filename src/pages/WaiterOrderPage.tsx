@@ -18,6 +18,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
   const [mode, setMode] = useState<'ORDER' | 'CATALOG'>('CATALOG')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [conflictNotice, setConflictNotice] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const pendingProductIds = useRef(new Set<string>())
   const [busyDetails, setBusyDetails] = useState<readonly number[]>([])
@@ -47,12 +48,15 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
   async function recoverDetailMutation(detailId: number, mutationError: { readonly kind: 'operation-error' | 'concurrent-conflict'; readonly message: string }) {
     if (mutationError.kind === 'concurrent-conflict') resetDetailDraft(detailId)
     const refreshed = await reload()
-    if (refreshed) setError(mutationError.message)
+    if (refreshed) {
+      setConflictNotice(mutationError.kind === 'concurrent-conflict')
+      setError(mutationError.message)
+    }
   }
   useEffect(() => {
     let cancelled = false
     async function load() {
-      setLoading(true); setError(null)
+      setLoading(true); setConflictNotice(false); setError(null)
       if (!orders || !catalog) { setLoading(false); setError('No pudimos preparar el pedido. Intenta nuevamente.'); return }
       const [catalogResult, detailResult, reviewResult] = await Promise.all([catalog.getOperationalCatalog(context), orders.getOrderDetails(context, orderId), orders.getOrderReview(context, orderId)])
       if (cancelled) return
@@ -76,7 +80,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
   async function add(productId: string) {
     if (!orders || pendingProductIds.current.has(productId)) return
     pendingProductIds.current.add(productId)
-    setBusy(`p-${productId}`); setError(null)
+    setBusy(`p-${productId}`); setConflictNotice(false); setError(null)
     try {
       const result = await orders.addOrderDetail(context, orderId, productId)
       if (!result.ok) { await reload(); setError(result.error.message) } else await reload()
@@ -87,7 +91,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
   async function quantity(detail: WaiterOrderDetail, value: number) {
     if (!orders || pendingDetailIds.current.has(detail.id) || detail.estado !== 'ABIERTO' || value < 1) return
     pendingDetailIds.current.add(detail.id)
-    setBusyDetails((ids) => [...ids, detail.id]); setError(null)
+    setBusyDetails((ids) => [...ids, detail.id]); setConflictNotice(false); setError(null)
     try {
       const result = await orders.updateOpenDetail(context, detail.id, { cantidad: value }, { cantidad: detail.cantidad })
       if (!result.ok) await recoverDetailMutation(detail.id, result.error); else await reload()
@@ -96,6 +100,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
     }
   }
   function editObservation(detail: WaiterOrderDetail) {
+    setConflictNotice(false); setError(null)
     const parts = detail.observacion?.split(',').map((part) => part.trim()).filter(Boolean) ?? []
     setSelected(notes.filter((note) => parts.includes(note)))
     setFree(parts.filter((part) => !notes.includes(part as typeof notes[number])).join(', ')); setEditing(detail.id)
@@ -103,7 +108,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
   async function saveObservation(detail: WaiterOrderDetail) {
     if (!orders || pendingDetailIds.current.has(detail.id) || detail.estado !== 'ABIERTO') return
     pendingDetailIds.current.add(detail.id)
-    setBusyDetails((ids) => [...ids, detail.id]); setError(null)
+    setBusyDetails((ids) => [...ids, detail.id]); setConflictNotice(false); setError(null)
     try {
       const result = await orders.updateOpenDetail(context, detail.id, { observacion: combineOrderObservation(selected, free) }, { observacion: detail.observacion })
       if (!result.ok) await recoverDetailMutation(detail.id, result.error)
@@ -115,7 +120,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
   async function remove(detail: WaiterOrderDetail) {
     if (!orders || pendingDetailIds.current.has(detail.id) || detail.estado !== 'ABIERTO') return
     pendingDetailIds.current.add(detail.id)
-    setBusyDetails((ids) => [...ids, detail.id]); setError(null)
+    setBusyDetails((ids) => [...ids, detail.id]); setConflictNotice(false); setError(null)
     try {
       const result = await orders.removeOpenDetail(context, detail.id)
       if (!result.ok) await recoverDetailMutation(detail.id, result.error)
@@ -127,7 +132,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
 
   async function sendToKitchen() {
     if (!orders || sendingRef.current || openDetails.length === 0) return
-    sendingRef.current = true; setSending(true); setError(null)
+    sendingRef.current = true; setSending(true); setConflictNotice(false); setError(null)
     try {
       const result = await orders.sendOrderToKitchen(context, orderId)
       const refreshed = await reload()
@@ -140,7 +145,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
 
   return <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 lg:px-8"><div className="mx-auto min-w-0 max-w-7xl">
     <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Pedido vigente</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">{review ? `${review.mesa.codigo} · ${review.mesa.nombre}` : `Pedido #${orderId}`}</h1><p className="mt-1 text-sm text-stone-600">Pedido #{orderId}</p></div><button className="min-h-11 w-full rounded-xl border bg-white px-4 py-3 font-semibold sm:w-auto" onClick={onBack} type="button">Volver a mesas</button></header>
-    {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800" role="alert"><p>{error}</p><button className="mt-2 min-h-11 rounded-xl border border-rose-300 px-4 font-semibold" onClick={() => setAttempt((n) => n + 1)} type="button">Reintentar</button></div>}
+    {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800" role="alert"><p>{error}</p>{!conflictNotice && <button className="mt-2 min-h-11 rounded-xl border border-rose-300 px-4 font-semibold" onClick={() => setAttempt((n) => n + 1)} type="button">Reintentar</button>}</div>}
     {loading ? <p aria-busy="true" className="mt-8">Cargando pedido y productos…</p> : <div className="mt-8 min-w-0">
       {mode === 'CATALOG' && <section className="min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-bold">Agregar productos</h2>{details.length > 0 && <p className="mt-1 text-sm text-stone-600">{details.length} líneas · Total {money.format(total)}</p>}</div>{details.length > 0 && <button className="min-h-11 rounded-xl border border-stone-300 px-4 font-semibold" onClick={() => setMode('ORDER')} type="button">Volver al pedido</button>}</div><div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Filtrar por categoría"><button className={`min-h-11 shrink-0 rounded-full px-4 font-semibold ${category === 'TODAS' ? 'bg-emerald-800 text-white' : 'border'}`} onClick={() => setCategory('TODAS')} type="button">Todas</button>{groups.map((group) => <button className={`min-h-11 shrink-0 rounded-full px-4 font-semibold ${category === group.category.id ? 'bg-emerald-800 text-white' : 'border'}`} key={group.category.id} onClick={() => setCategory(group.category.id)} type="button">{group.category.nombre}</button>)}</div>
         {visible.length === 0 ? <p className="mt-6">No hay productos disponibles.</p> : visible.map((group) => <div className="mt-6" key={group.category.id}><h3 className="font-bold">{group.category.nombre}</h3><ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">{group.products.map((product) => <li className="flex min-w-0 flex-col rounded-2xl border p-4" key={product.id}><strong className="break-words text-lg">{product.nombre}</strong><span className="mt-1 text-stone-600">{money.format(product.precio)}</span><button aria-busy={busy === `p-${product.id}`} className="mt-4 min-h-12 rounded-xl bg-emerald-800 px-4 font-bold text-white disabled:opacity-60" disabled={Boolean(busy)} onClick={() => { void add(product.id) }} type="button">{busy === `p-${product.id}` ? 'Agregando…' : 'Agregar'}</button></li>)}</ul></div>)}
