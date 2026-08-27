@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
+import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
 import {
   createWaiterOrderService,
   filterAndSortWaiterTables,
@@ -54,29 +55,36 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
   const openingTableRef = useRef<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    async function loadBoard(): Promise<void> {
-      setLoading(true)
-      setError(null)
-      if (!service) {
-        setLoading(false)
-        setError('No pudimos cargar las mesas. Intenta nuevamente.')
-        return
-      }
-      const result = await service.getTableBoard(context)
-      if (cancelled) return
+  const loadBoard = useCallback(async (showLoading = false, isCurrent: () => boolean = () => true): Promise<void> => {
+    if (showLoading) setLoading(true)
+    if (!service) {
       setLoading(false)
-      if (!result.ok) {
-        setTables([])
-        setError(result.error.message)
-        return
-      }
-      setTables(result.data)
+      setError('No pudimos cargar las mesas. Intenta nuevamente.')
+      return
     }
-    void loadBoard()
-    return () => { cancelled = true }
-  }, [attempt, context, service])
+    const result = await service.getTableBoard(context)
+    if (!isCurrent()) return
+    setLoading(false)
+    if (!result.ok) { setError(result.error.message); return }
+    setTables(result.data)
+    setError(null)
+  }, [context, service])
+
+  useEffect(() => { void loadBoard(true) }, [attempt, loadBoard])
+
+  useEffect(() => {
+    if (!clientResult.ok || !service) return
+    let disposed = false
+    let handle: Awaited<ReturnType<typeof subscribeToOperationsChanges>> | null = null
+    void subscribeToOperationsChanges(clientResult.client, () => loadBoard(false, () => !disposed), () => {
+      if (disposed) return
+      setError('La conexión en tiempo real se interrumpió. Estamos recuperando las mesas.')
+    }, { channelName: 'waiter-tables-signals', initialRefresh: false }).then((started) => {
+      if (disposed) void started.stop()
+      else handle = started
+    })
+    return () => { disposed = true; if (handle) void handle.stop() }
+  }, [clientResult, loadBoard, service])
 
   const visibleTables = useMemo(() => filterAndSortWaiterTables(tables, filter, order), [filter, order, tables])
 

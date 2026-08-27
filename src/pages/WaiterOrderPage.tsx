@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
 import { createCatalogService, type CatalogGroup } from '../services/catalogService'
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
+import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
 import { combineOrderObservation, createWaiterOrderService, type WaiterOrderDetail, type WaiterOrderReview } from '../services/waiterOrderService'
 
 interface Props { readonly context: ValidatedProfileContext; readonly orderId: number; readonly isSigningOut: boolean; readonly onBack: () => void; readonly onSignOut: () => void }
@@ -35,12 +36,25 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
   const [releasing, setReleasing] = useState(false)
   const releasingRef = useRef(false)
 
-  async function reload(): Promise<boolean> {
+  const reload = useCallback(async (): Promise<boolean> => {
     if (!orders) return false
     const result = await orders.getOrderDetails(context, orderId)
     if (!result.ok) { setError(result.error.message); return false }
     setDetails(result.data); return true
-  }
+  }, [context, orderId, orders])
+  const reloadOrderSnapshot = useCallback(async (isCurrent: () => boolean = () => true): Promise<void> => {
+    if (!orders) return
+    const [detailResult, reviewResult] = await Promise.all([
+      orders.getOrderDetails(context, orderId),
+      orders.getOrderReview(context, orderId),
+    ])
+    if (!isCurrent()) return
+    if (!detailResult.ok) { setError(detailResult.error.message); return }
+    if (!reviewResult.ok) { setError(reviewResult.error.message); return }
+    setDetails(detailResult.data)
+    setReview(reviewResult.data)
+    setError(null)
+  }, [context, orderId, orders])
   function resetDetailDraft(detailId: number) {
     if (editing === detailId) {
       setEditing(null)
@@ -84,6 +98,19 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     }
     void load(); return () => { cancelled = true }
   }, [attempt, catalog, context, orderId, orders])
+  useEffect(() => {
+    if (!clientResult.ok || !orders) return
+    let disposed = false
+    let handle: Awaited<ReturnType<typeof subscribeToOperationsChanges>> | null = null
+    void subscribeToOperationsChanges(clientResult.client, () => reloadOrderSnapshot(() => !disposed), () => {
+      if (disposed) return
+      setError('La conexión en tiempo real se interrumpió. Estamos recuperando el pedido.')
+    }, { channelName: `waiter-order-${orderId}-signals`, initialRefresh: false }).then((started) => {
+      if (disposed) void started.stop()
+      else handle = started
+    })
+    return () => { disposed = true; if (handle) void handle.stop() }
+  }, [clientResult, orderId, orders, reloadOrderSnapshot])
   const visible = category === 'TODAS' ? groups : groups.filter((group) => group.category.id === category)
   const names = useMemo(() => new Map(groups.flatMap((group) => group.products.map((product) => [product.id, product.nombre] as const))), [groups])
   const requestedDetails = details.filter((detail) => detail.estado !== 'ABIERTO')

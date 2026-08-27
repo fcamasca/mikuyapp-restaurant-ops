@@ -2,7 +2,7 @@
 
 ## Estado
 
-El Spec fue aprobado humanamente. H4-T01–H4-T07 están implementadas y validadas; H4-T08–H4-T10 permanecen pendientes.
+El Spec fue aprobado humanamente. H4-T01–H4-T08 están implementadas y validadas; H4-T09–H4-T10 permanecen pendientes.
 
 ## Plan de construcción propuesto
 
@@ -15,7 +15,7 @@ El Spec fue aprobado humanamente. H4-T01–H4-T07 están implementadas y validad
 | [x] | H4-T05 | Configurar publicación Realtime y ciclo de snapshot/suscripción/resincro en un servicio reutilizable; tratar eventos como señales para recargar, con debounce opcional y sin polling. | H4-D06, H4-D08, H4-D09 | H4-R11–H4-R13 | 1.00 |
 | [x] | H4-T06 | Construir ruta y tablero de cocina con agrupación por pedido/mesa, antigüedad, tiempo, estados y acciones táctiles. | H4-D02, H4-D03, H4-D07, H4-D10 | H4-R01–H4-R04, H4-R07, H4-R14 | 1.25 |
 | [x] | H4-T07 | Integrar Realtime en cocina para nuevos detalles, actualizaciones, recarga autoritativa, errores y reconexión, evitando duplicados mediante reemplazo del snapshot. | H4-D06, H4-D07, H4-D09 | H4-R07, H4-R11–H4-R14 | 0.75 |
-| [ ] | H4-T08 | Integrar señal/recarga Realtime en tablero y pedido del mozo para reflejar detalle, cabecera y mesa persistidos. | H4-D06, H4-D07 | H4-R09, H4-R11, H4-R12 | 0.50 |
+| [x] | H4-T08 | Integrar señal/recarga Realtime en tablero y pedido del mozo para reflejar detalle, cabecera y mesa persistidos. | H4-D06, H4-D07 | H4-R09, H4-R11, H4-R12 | 0.50 |
 | [ ] | H4-T09 | Ejecutar pruebas SQL, automatizadas, técnicas, concurrencia y regresión H1–H3; corregir únicamente defectos de H4. | H4-D01–H4-D10 | H4-R01–H4-R14 | 0.75 |
 | [ ] | H4-T10 | Ejecutar validación humana responsive y de dos dispositivos; consolidar evidencia de H4 sin crear aceptación. | H4-D02, H4-D06, H4-D09, H4-D10 | H4-R01–H4-R14 | 0.75 |
 
