@@ -57,3 +57,14 @@ Estas pruebas validan experiencia táctil, claridad visual y comportamiento resp
 ## 4. Evidencia, aprobación y aceptación
 
 Cada ejecución registra ID, resultado, ambiente y evidencia sin credenciales. Las pruebas visuales anotan dispositivo, navegador, viewport y orientación. La construcción no comienza hasta la aprobación humana explícita de los cuatro documentos del Spec. Esa aprobación no equivale a aceptación de H3. `acceptance.md` no se crea todavía: corresponde después de construcción, ejecución satisfactoria de pruebas humanas y aprobación explícita.
+
+## 5. Evolución posterior al cierre: auditoría
+
+| ID | Tipo | Caso | Resultado esperado |
+|---|---|---|---|
+| H3-EA01 | Automatizada | Crear pedido y primer detalle. | Creación y modificación iniciales coinciden con el usuario autenticado y entre sí. |
+| H3-EA02 | Automatizada | Otro mozo agrega o modifica un detalle. | Se conserva `pedido.creado_por`; cambian `pedido.modificado_*`; cada detalle conserva autoría individual. |
+| H3-EA03 | Automatizada | Cambiar exclusivamente el estado de un detalle. | Cambia la auditoría del detalle sin sustituir la modificación comercial del pedido. |
+| H3-EA04 | Automatizada | Intentar enviar UUID de auditoría o modificar columnas protegidas. | PostgreSQL ignora/rechaza la suplantación; React no envía IDs de autor. |
+| H3-EA05 | Automatizada | Construir una card con pedido vigente. | El servicio obtiene y la card muestra el nombre del creador original sin consultar perfiles directamente. |
+| H3-ETM01 | Técnica | Verificar columnas, timestamps, triggers, FK, grants, local y rol. | Auditoría obligatoria, FK `RESTRICT`, identidad desde sesión y aislamiento sin permisos adicionales. |

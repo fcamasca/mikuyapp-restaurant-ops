@@ -57,3 +57,11 @@ H3 no implementa cocina, Realtime, entrega, caja, impresión ni modificación/an
 `public.liberar_mesa_pedido_vacio(p_pedido_id bigint)` es una función `SECURITY DEFINER`, propiedad de `postgres`, con `search_path` fijo y `EXECUTE` solo para `authenticated`. Obtiene identidad y contexto en servidor, exige rol `MOZO` y mismo local, bloquea la cabecera y su mesa, y valida conjuntamente pedido `ABIERTO`, mesa `OCUPADA` y ausencia total de detalles.
 
 En una única transacción cambia la cabecera `ABIERTO → ANULADO`, registra esa transición en `historial_estado` y cambia la mesa `OCUPADA → LIBRE`. No elimina el pedido ni concede actualización directa de estados. Cualquier detalle existente, cualquier cabecera distinta de `ABIERTO`, otro local/rol o una carrera concurrente rechazan la operación completa. La UI solo ofrece la acción en un pedido abierto y vacío, exige confirmación, bloquea doble tap y vuelve al tablero después de la respuesta confirmada del servidor.
+
+## H3-ED01 — Evolución de auditoría posterior al cierre
+
+Una migración incremental agrega `pedido.modificado_por/modificado_en` y `detalle_pedido.creado_por/creado_en/modificado_por/modificado_en`, todos obligatorios y con FK `ON DELETE RESTRICT` hacia `perfil_usuario`. Las filas previas se completan conservadoramente desde la creación de su pedido.
+
+Triggers `SECURITY DEFINER` obtienen el actor desde `auth.uid()`, conservan inmutables los campos de creación y actualizan la auditoría sin ampliar los privilegios de columna del cliente. Insertar, consolidar, cambiar cantidad/observación o retirar un detalle actualiza la modificación comercial de la cabecera; un cambio exclusivamente de estado actualiza el detalle, pero no `pedido.modificado_*`, dejando preparado H4 sin implementarlo.
+
+El tablero obtiene el nombre del creador mediante `obtener_creadores_pedidos_vigentes`, función de lectura limitada a rol `MOZO`, pedidos vigentes y local autenticado. No se amplía la lectura general de perfiles ni se agrega una relación de responsable a `mesa`.

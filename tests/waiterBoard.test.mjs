@@ -13,6 +13,8 @@ const orderMigration = readFileSync(new URL('../supabase/migrations/202608260002
 const sendMigration = readFileSync(new URL('../supabase/migrations/20260826000700_send_order_to_kitchen.sql', import.meta.url), 'utf8')
 const consolidationMigration = readFileSync(new URL('../supabase/migrations/20260826000800_consolidate_open_order_details.sql', import.meta.url), 'utf8')
 const releaseMigration = readFileSync(new URL('../supabase/migrations/20260827000100_release_empty_order_table.sql', import.meta.url), 'utf8')
+const auditMigration = readFileSync(new URL('../supabase/migrations/20260827000200_order_audit_trail.sql', import.meta.url), 'utf8')
+const creatorLookupFixMigration = readFileSync(new URL('../supabase/migrations/20260827000300_fix_order_creator_lookup.sql', import.meta.url), 'utf8')
 
 function context(role = 'MOZO') {
   return {
@@ -26,7 +28,7 @@ function table(overrides = {}) {
   return { id: 'table-1', codigo: 'M-01', nombre: 'Mesa 1', estado: 'LIBRE', activo: true, ...overrides }
 }
 
-function createClient({ tables = [], orders = [], details = [], mutationRows = [{ id: 31 }], errors = {}, rpcData = [{ pedido_id: 12, fue_creado: true }], rpcError = null } = {}) {
+function createClient({ tables = [], orders = [], details = [], mutationRows = [{ id: 31 }], errors = {}, rpcData = [{ pedido_id: 12, fue_creado: true }], creatorData = [], rpcError = null } = {}) {
   const calls = []
   const rpcCalls = []
   return {
@@ -53,7 +55,7 @@ function createClient({ tables = [], orders = [], details = [], mutationRows = [
       },
       async rpc(name, args) {
         rpcCalls.push({ name, args })
-        return { data: rpcData, error: rpcError }
+        return { data: name === 'obtener_creadores_pedidos_vigentes' ? creatorData : rpcData, error: rpcError }
       },
     },
   }
@@ -76,7 +78,8 @@ test('consulta mesas activas, pedidos vigentes y detalles con filtros de servido
 test('asocia un único pedido vigente por mesa y calcula total desde detalles persistidos', async () => {
   const fixture = createClient({
     tables: [table()],
-    orders: [{ id: 21, mesa_id: 'table-1', estado: 'ENVIADO' }],
+    orders: [{ id: 21, mesa_id: 'table-1', estado: 'ENVIADO', creado_por: 'waiter-one' }],
+    creatorData: [{ pedido_id: 21, creador_nombre: 'Ana Mozo' }],
     details: [
       { pedido_id: 21, cantidad: 2, precio_unitario: 12.5 },
       { pedido_id: 21, cantidad: 1, precio_unitario: 5 },
@@ -84,9 +87,10 @@ test('asocia un único pedido vigente por mesa y calcula total desde detalles pe
   })
   const result = await createWaiterOrderService(fixture.client).getTableBoard(context())
   assert.equal(result.ok, true)
-  assert.deepEqual(result.data[0].pedido, { id: 21, estado: 'ENVIADO', total: 30 })
+  assert.deepEqual(result.data[0].pedido, { id: 21, estado: 'ENVIADO', total: 30, creadorNombre: 'Ana Mozo' })
   assert.equal(fixture.calls[2].resource, 'detalle_pedido')
   assert.equal(fixture.calls[2].columns, 'pedido_id,cantidad,precio_unitario')
+  assert.deepEqual(fixture.rpcCalls, [{ name: 'obtener_creadores_pedidos_vigentes', args: { p_pedido_ids: [21] } }])
 })
 
 test('no consulta detalles ni inventa total cuando no existen pedidos vigentes', async () => {
@@ -536,4 +540,38 @@ test('H3-TA16 UI confirma, bloquea doble tap y navega solo tras éxito', () => {
   assert.match(orderPageSource, /setConfirmingRelease\(false\)/)
   assert.match(orderPageSource, /getOrderDetails\(context, orderId\)/)
   assert.match(orderPageSource, /getOrderReview\(context, orderId\)/)
+})
+
+test('evolución H3 registra auditoría segura de pedido y detalles', () => {
+  for (const column of ['modificado_por', 'modificado_en']) {
+    assert.match(auditMigration, new RegExp(`add column ${column}`))
+  }
+  for (const column of ['creado_por', 'creado_en', 'modificado_por', 'modificado_en']) {
+    assert.match(auditMigration, new RegExp(`add column ${column}`))
+  }
+  assert.match(auditMigration, /references public\.perfil_usuario \(id\) on delete restrict/g)
+  assert.match(auditMigration, /new\.modificado_por := new\.creado_por/)
+  assert.match(auditMigration, /new\.creado_por := v_usuario_id/)
+  assert.match(auditMigration, /new\.creado_por := old\.creado_por/)
+  assert.match(auditMigration, /set modificado_por = v_usuario_id/)
+  assert.match(auditMigration, /new\.estado is distinct from old\.estado/)
+  assert.doesNotMatch(auditMigration, /alter table public\.mesa[\s\S]*responsable/i)
+})
+
+test('tablero deriva y muestra el creador del pedido vigente sin consultar perfiles directamente', () => {
+  assert.match(serviceSource, /obtener_creadores_pedidos_vigentes/)
+  assert.match(serviceSource, /creadorNombre/)
+  assert.match(pageSource, /Atendido por:/)
+  assert.match(pageSource, /table\.pedido\.creadorNombre/)
+  assert.doesNotMatch(serviceSource, /from\('perfil_usuario'\)/)
+  assert.match(auditMigration, /order_row\.local_id = v_local_id/)
+  assert.match(auditMigration, /order_row\.creado_por/)
+  assert.match(creatorLookupFixMigration, /any\(coalesce\(p_pedido_ids, array\[\]::bigint\[\]\)\)/)
+  assert.doesNotMatch(creatorLookupFixMigration, /pg_catalog\.coalesce/)
+})
+
+test('frontend lee auditoría persistida sin enviar UUID de autor en mutaciones', () => {
+  assert.match(serviceSource, /creado_por,creado_en,modificado_por,modificado_en/)
+  assert.doesNotMatch(serviceSource, /p_(creado|modificado)_por/)
+  assert.match(serviceSource, /const changes: \{ cantidad\?: number; observacion\?: string \| null \} = \{\}/)
 })
