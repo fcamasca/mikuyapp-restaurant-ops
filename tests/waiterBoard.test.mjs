@@ -226,6 +226,9 @@ test('T09 detecta actualización obsoleta y compara el valor confirmado anterior
   assert.equal(quantity.ok, false)
   assert.equal(observation.ok, false)
   assert.equal(removal.ok, false)
+  assert.equal(quantity.error.kind, 'concurrent-conflict')
+  assert.equal(observation.error.kind, 'concurrent-conflict')
+  assert.equal(removal.error.kind, 'concurrent-conflict')
   assert.match(quantity.error.message, /otro dispositivo/)
   assert.deepEqual(fixture.calls[0].filters, [
     { column: 'id', value: 31 }, { column: 'estado', value: 'ABIERTO' }, { column: 'cantidad', value: 2 },
@@ -233,6 +236,41 @@ test('T09 detecta actualización obsoleta y compara el valor confirmado anterior
   assert.deepEqual(fixture.calls[1].filters, [
     { column: 'id', value: 32 }, { column: 'estado', value: 'ABIERTO' }, { column: 'observacion', value: null },
   ])
+})
+
+test('T09 observaciones concurrentes conservan al ganador y la sesión perdedora recupera servidor', async () => {
+  const winner = createClient({ mutationRows: [{ id: 31 }] })
+  const confirmed = [{
+    id: 31, pedido_id: 12, producto_id: 'p-1', cantidad: 1, precio_unitario: 18.5,
+    observacion: 'Sin cebolla', estado: 'ABIERTO',
+  }]
+  const loser = createClient({ mutationRows: [], details: confirmed })
+  const winnerService = createWaiterOrderService(winner.client)
+  const loserService = createWaiterOrderService(loser.client)
+
+  const persisted = await winnerService.updateOpenDetail(context(), 31, { observacion: 'Sin cebolla' }, { observacion: null })
+  const rejected = await loserService.updateOpenDetail(context(), 31, { observacion: 'Poco picante' }, { observacion: null })
+  const recovered = await loserService.getOrderDetails(context(), 12)
+
+  assert.equal(persisted.ok, true)
+  assert.equal(rejected.ok, false)
+  assert.equal(rejected.error.kind, 'concurrent-conflict')
+  assert.equal(recovered.ok, true)
+  assert.equal(recovered.data[0].observacion, 'Sin cebolla')
+  assert.doesNotMatch(recovered.data[0].observacion, /Poco picante/)
+})
+
+test('T09 conflicto descarta borrador, cierra Guardar y permite editar de nuevo', () => {
+  assert.match(orderPageSource, /const refreshed = await reload\(\)/)
+  assert.match(orderPageSource, /mutationError\.kind === 'concurrent-conflict'\) resetDetailDraft\(detailId\)/)
+  assert.match(orderPageSource, /resetDetailDraft\(detailId\)/)
+  assert.match(orderPageSource, /setEditing\(null\)/)
+  assert.match(orderPageSource, /setSelected\(\[\]\)/)
+  assert.match(orderPageSource, /setFree\(''\)/)
+  assert.match(orderPageSource, /setConfirmingRemoval\(null\)/)
+  assert.match(serviceSource, /Este producto fue actualizado desde otro dispositivo\. Se cargó la versión más reciente\./)
+  assert.match(orderPageSource, /onClick=\{\(\) => editObservation\(detail\)\}/)
+  assert.match(orderPageSource, /Editar observación/)
 })
 
 test('T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controles táctiles', () => {

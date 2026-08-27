@@ -36,6 +36,19 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
     if (!result.ok) { setError(result.error.message); return false }
     setDetails(result.data); return true
   }
+  function resetDetailDraft(detailId: number) {
+    if (editing === detailId) {
+      setEditing(null)
+      setSelected([])
+      setFree('')
+    }
+    if (confirmingRemoval === detailId) setConfirmingRemoval(null)
+  }
+  async function recoverDetailMutation(detailId: number, mutationError: { readonly kind: 'operation-error' | 'concurrent-conflict'; readonly message: string }) {
+    if (mutationError.kind === 'concurrent-conflict') resetDetailDraft(detailId)
+    const refreshed = await reload()
+    if (refreshed) setError(mutationError.message)
+  }
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -77,7 +90,7 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
     try {
       const result = await orders.updateOpenDetail(context, detail.id, { cantidad: value }, { cantidad: detail.cantidad })
-      if (!result.ok) { await reload(); setError(result.error.message) } else await reload()
+      if (!result.ok) await recoverDetailMutation(detail.id, result.error); else await reload()
     } finally {
       pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
     }
@@ -93,7 +106,8 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
     try {
       const result = await orders.updateOpenDetail(context, detail.id, { observacion: combineOrderObservation(selected, free) }, { observacion: detail.observacion })
-      if (!result.ok) { await reload(); setError(result.error.message) } else if (await reload()) setEditing(null)
+      if (!result.ok) await recoverDetailMutation(detail.id, result.error)
+      else if (await reload()) { setEditing(null); setSelected([]); setFree('') }
     } finally {
       pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
     }
@@ -104,7 +118,8 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
     try {
       const result = await orders.removeOpenDetail(context, detail.id)
-      if (!result.ok) { await reload(); setError(result.error.message) } else { await reload(); setConfirmingRemoval(null) }
+      if (!result.ok) await recoverDetailMutation(detail.id, result.error)
+      else { await reload(); setConfirmingRemoval(null) }
     } finally {
       pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
     }

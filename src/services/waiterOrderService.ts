@@ -43,7 +43,7 @@ export interface WaiterOrderReview {
 
 export type WaiterOrderResult<T> =
   | { readonly ok: true; readonly data: T }
-  | { readonly ok: false; readonly error: { readonly message: string; readonly recoverable: true } }
+  | { readonly ok: false; readonly error: { readonly kind: 'operation-error' | 'concurrent-conflict'; readonly message: string; readonly recoverable: true } }
 
 interface TableRow extends Omit<WaiterTableBoardItem, 'pedido'> { readonly activo: boolean }
 interface OrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
@@ -58,7 +58,18 @@ type WaiterOrderClient = Pick<SupabaseClient, 'from' | 'rpc'>
 const tableCollator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' })
 
 function connectionError(message: string): WaiterOrderResult<never> {
-  return { ok: false, error: { message, recoverable: true } }
+  return { ok: false, error: { kind: 'operation-error', message, recoverable: true } }
+}
+
+function concurrentConflict(): WaiterOrderResult<never> {
+  return {
+    ok: false,
+    error: {
+      kind: 'concurrent-conflict',
+      message: 'Este producto fue actualizado desde otro dispositivo. Se cargó la versión más reciente.',
+      recoverable: true,
+    },
+  }
 }
 
 export function combineOrderObservation(selected: readonly string[], freeText: string): string | null {
@@ -205,7 +216,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         }
         const result = await mutation.select('id').returns<{ id: number }[]>()
         if (result.error) return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
-        if (!result.data?.length) return connectionError('El pedido fue actualizado desde otro dispositivo. Recargamos sus datos.')
+        if (!result.data?.length) return concurrentConflict()
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
@@ -217,7 +228,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       try {
         const result = await client.from('detalle_pedido').delete().eq('id', detailId).eq('estado', 'ABIERTO').select('id').returns<{ id: number }[]>()
         if (result.error) return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
-        if (!result.data?.length) return connectionError('El pedido fue actualizado desde otro dispositivo. Recargamos sus datos.')
+        if (!result.data?.length) return concurrentConflict()
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
