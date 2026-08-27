@@ -122,6 +122,7 @@ Al finalizar las 15 jornadas de trabajo, correspondientes a dos semanas de lunes
 - Estados: libre, ocupada, pedido listo y pendiente de pago.
 - Selección de mesa por el mozo.
 - Liberación automática después del pago.
+- Liberación manual por el mozo únicamente cuando existe un pedido `ABIERTO` vacío; el pedido se anula y se registra el historial correspondiente.
 
 ### 4.4 Pedidos
 
@@ -132,6 +133,8 @@ Al finalizar las 15 jornadas de trabajo, correspondientes a dos semanas de lunes
 - Cálculo automático del total.
 - Envío del pedido a cocina.
 - Incorporación de productos a un pedido abierto.
+- Estado individual por `detalle_pedido`, con transición funcional `ABIERTO → ENVIADO`.
+- Agregados posteriores dentro del mismo pedido y envío selectivo de los nuevos detalles, sin retroceder el estado avanzado de la cabecera.
 - Bloqueo de modificaciones después del pago.
 
 El precio se copiará en el detalle del pedido. Una modificación posterior del precio de la carta no alterará ventas anteriores.
@@ -276,8 +279,8 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 |---|---:|---|---|
 | H1. Base técnica | Jornada 2 | Aplicación desplegada y conectada | Completado y aceptado |
 | H2. Usuarios, carta y mesas | Jornada 7 | Acceso por roles y administración completa de categorías, productos y mesas con integridad y RLS | Completado y aceptado |
-| H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado | No iniciado |
-| H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos | Pendiente |
+| H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado | Cerrado, validado y aceptado |
+| H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos | Siguiente hito; no iniciado, debe comenzar en Spec Mode |
 | H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso | Pendiente |
 | H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos | Pendiente |
 

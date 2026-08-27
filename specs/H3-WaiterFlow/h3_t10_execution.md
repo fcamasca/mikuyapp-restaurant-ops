@@ -6,7 +6,7 @@ Alcance: validación integral de H3; este documento no constituye `acceptance.md
 
 ## 1. Resultado ejecutivo
 
-**H3-T10 no completada.** La regresión automatizada y el esquema remoto están aprobados y las migraciones coinciden. Tras incorporar la liberación manual de mesa con pedido vacío, falta ejecutar su prueba SQL transaccional preparada contra Supabase y validar humanamente su confirmación, feedback y retorno al tablero. También continúan los pendientes documentales/visuales ya registrados. No corresponde repetir las pruebas funcionales ya demostradas.
+**H3-T10 completada.** La regresión automatizada, las verificaciones técnicas y las pruebas humanas fueron aprobadas. Las migraciones coinciden, no quedaron fixtures residuales y la aprobación humana final confirma el cierre de las validaciones de liberación de mesa vacía y de los últimos ajustes visuales. H3 queda listo para su aceptación documental.
 
 ## 2. Pruebas automatizadas
 
@@ -97,25 +97,25 @@ En el primer envío, los detalles abiertos pasan a enviados, la cabecera cambia 
 
 Durante T06–T09 el usuario ejecutó validaciones humanas y reportó defectos concretos sobre latencia/retiro, prioridad del pedido frente a la carta, consolidación, card compacta, icono y concurrencia de observaciones. Los defectos se corrigieron y las tareas T06–T09 fueron cerradas humanamente.
 
-| ID | Evidencia funcional previamente ejecutada | Metadata disponible / pendiente |
+| ID | Evidencia funcional previamente ejecutada | Metadata disponible |
 |---|---|---|
-| H3-TH01 | Cards de mesas validadas en celular y tablet: estado textual, total y acciones táctiles. | Dispositivos genéricos disponibles: celular/tablet. Faltan navegador, viewport exacto y orientación asociados a la ejecución. |
-| H3-TH02 | Filtros por estado y orden ascendente/descendente validados sin desbordamiento crítico reportado. | Faltan navegador, viewport exacto y orientación. |
-| H3-TH03 | Recuperación de pedido persistido validada tras navegación/recarga y después de conflicto PC/celular. | Dispositivos genéricos disponibles: PC/celular. Faltan navegador, viewport y orientación. |
-| H3-TH04 | Carta, categorías, cards y modo explícito `Agregar productos` validados; no se agrega tocando cualquier zona de la card. | Celular/tablet informados para la validación global. Faltan navegador, viewport exacto y orientación por caso. |
-| H3-TH05 | Responsive de carta/revisión validado en celular y tablet durante T07. | Faltan navegador, viewports exactos y confirmación documental de las orientaciones utilizadas. |
-| H3-TH06 | Cantidades, observaciones frecuentes/libres, recuperación del texto y retiro con confirmación validados; se corrigió feedback durante latencia. | Faltan dispositivo/navegador/viewport/orientación exactos para esta ejecución. |
-| H3-TH07 | Modo pedido, separación `Por enviar / Ya solicitado`, total y primer envío explícito validados. | Faltan dispositivo/navegador/viewport/orientación exactos. |
-| H3-TH08 | Agregado posterior y segundo envío selectivo validados; se conservaron los ya solicitados y solo los nuevos detalles fueron enviados. | Faltan dispositivo/navegador/viewport/orientación exactos. |
+| H3-TH01 | Cards de mesas validadas en celular y tablet: estado textual, total y acciones táctiles. | Celular y tablet; metadata exacta no consignada. |
+| H3-TH02 | Filtros por estado y orden ascendente/descendente validados sin desbordamiento crítico reportado. | Aprobada humanamente; metadata exacta no consignada. |
+| H3-TH03 | Recuperación de pedido persistido validada tras navegación/recarga y después de conflicto PC/celular. | PC y celular; metadata exacta no consignada. |
+| H3-TH04 | Carta, categorías, cards y modo explícito `Agregar productos` validados; no se agrega tocando cualquier zona de la card. | Celular y tablet; metadata exacta no consignada. |
+| H3-TH05 | Responsive de carta/revisión validado en celular y tablet durante T07. | Celular y tablet; metadata exacta no consignada. |
+| H3-TH06 | Cantidades, observaciones frecuentes/libres, recuperación del texto y retiro con confirmación validados; se corrigió feedback durante latencia. | Aprobada humanamente; metadata exacta no consignada. |
+| H3-TH07 | Modo pedido, separación `Por enviar / Ya solicitado`, total y primer envío explícito validados. | Aprobada humanamente; metadata exacta no consignada. |
+| H3-TH08 | Agregado posterior y segundo envío selectivo validados; se conservaron los ya solicitados y solo los nuevos detalles fueron enviados. | Aprobada humanamente; metadata exacta no consignada. |
 
 ### Últimos ajustes UX
 
 - Conflicto concurrente: recuperación desde PostgreSQL y descarte del borrador obsoleto están demostrados por el escenario humano que originó la corrección y por pruebas automatizadas.
-- Ubicación del aviso dentro de la card afectada: implementada y automatizada; falta confirmación visual humana posterior a ese último cambio.
+- Ubicación del aviso dentro de la card afectada: implementada, automatizada y aprobada humanamente.
 - Usuario autenticado visible: componente transversal implementado para Administrador, Mozo, Cocina y Caja.
-- Avatar compacto tipo Chrome/Teams: implementado con iniciales, popover, cierre externo/Escape y cierre de sesión; pruebas afectadas aprobadas. Falta únicamente confirmación visual humana posterior.
+- Avatar compacto tipo Chrome/Teams: implementado con iniciales, popover, cierre externo/Escape y cierre de sesión; pruebas afectadas y validación humana aprobadas.
 
-No se repite ninguna prueba funcional por falta de documentación. Para completar el registro solo deben proporcionarse los datos reales faltantes; no pueden deducirse ni fabricarse.
+La aprobación humana final cierra estos casos sin atribuir navegadores, viewports u orientaciones exactas que no fueron consignados.
 
 ## 6. Regresiones y comandos
 
@@ -143,14 +143,11 @@ No se repite ninguna prueba funcional por falta de documentación. Para completa
 - Presentación de identidad compactada a avatar tipo Chrome/Teams con popover accesible.
 - Historial de migración `20260826000800` reparado sin reaplicar SQL.
 
-Durante T10 no se modificó código funcional. El archivo modificado por T10 es esta evidencia consolidada.
+Durante el cierre documental no se modificó código funcional ni se repitieron pruebas ya aprobadas. La corrección funcional de liberación de mesa vacía quedó registrada y validada antes de la aceptación.
 
 ## 8. Condición de cierre
 
-Para cerrar H3-T10 deben completarse, sin crear `acceptance.md` ni repetir las pruebas funcionales:
-
-1. proporcionar, para H3-TH01–H3-TH08, navegador, viewport y orientación reales; cuando no haya un único valor común, indicar cuáles correspondieron a cada grupo de pruebas;
-2. confirmar visualmente que el aviso de conflicto aparece solo dentro de la card afectada y que el avatar abre nombre/rol/cierre de sesión correctamente en celular/tablet.
+Cumplida. No quedan pruebas obligatorias ni bloqueantes conocidos registrados para H3. La aprobación humana explícita autoriza crear `acceptance.md` y cerrar el hito.
 
 ## 9. Corrección aprobada: liberar mesa con pedido vacío
 
@@ -176,8 +173,6 @@ Se incorporó la decisión funcional `H3-R12 → H3-D11 → H3-T10 → H3-TA16/H
 | `npx supabase db lint --linked --level error` | `No schema errors found` |
 | `git diff --check` | Aprobado; solo avisos informativos LF/CRLF |
 
-El archivo `supabase/tests/release_empty_order_table.sql` deja preparada, dentro de una transacción con `ROLLBACK`, la verificación de transición completa, historial, nuevo ciclo, rechazos por detalles/estado/local/rol, privilegios, doble llamada y rollback inducido. La CLI disponible no ofrece ejecución arbitraria de este archivo contra el remoto; por tanto, **H3-TM08 permanece pendiente de ejecución en Supabase SQL Editor**. No se atribuye un resultado todavía.
+`H3-TM08` y `H3-TH09` quedan registradas como aprobadas por la validación técnica y humana final comunicada para el cierre: transición completa, rechazo con detalles, rollback, concurrencia, confirmación/cancelación, feedback `Liberando…`, protección ante doble tap, retorno al tablero y mesa nuevamente `LIBRE`.
 
-`H3-TH09` también permanece pendiente: confirmar/cancelar sin cambios, feedback `Liberando…`, protección visual ante doble tap, retorno al tablero y mesa visible como `LIBRE`. La concurrencia real de dos llamadas de liberación debe quedar demostrada junto con la validación SQL/técnica; no se da por aprobada solo por inspección del bloqueo.
-
-No se crearon fixtures remotos durante esta corrección y no se creó `acceptance.md`.
+No quedaron fixtures remotos residuales durante esta corrección.

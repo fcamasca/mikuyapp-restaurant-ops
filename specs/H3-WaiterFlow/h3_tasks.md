@@ -1,5 +1,7 @@
 # MikuyApp — H3 Flujo del mozo: tareas
 
+**Estado del hito: CERRADO / VALIDADO / ACEPTADO.**
+
 ## Estado de ejecución
 
 - [x] H3-T01 — Cambio mínimo de modelo implementado, migrado y validado contra Supabase remoto.
@@ -11,7 +13,7 @@
 - [x] H3-T07 — Carta táctil y gestión de detalles implementadas y aprobadas: modos pedido/carta, consolidación segura de detalles `ABIERTO`, observaciones, edición, retiro confirmado y cards compactas.
 - [x] H3-T08 — Revisión completa y envío a cocina implementados y aprobados: separación de detalles, total persistido, envío seguro, recarga desde PostgreSQL y agregados posteriores.
 - [x] H3-T09 — Recuperación, errores, reintentos seguros, doble tap y concurrencia implementados y validados; los conflictos descartan borradores obsoletos y recuperan la versión confirmada por PostgreSQL.
-- [ ] H3-T10 — Pendiente.
+- [x] H3-T10 — Validación integral completada; pruebas automatizadas, técnicas y humanas consolidadas y aprobadas.
 
 ## 1. Plan de construcción posterior a la aprobación del Spec
 
@@ -26,7 +28,7 @@
 | H3-T07 | Construir cards de productos, filtro por categoría y controles táctiles de cantidad/observación/retiro. | H3-D02, H3-D04, H3-D05 | H3-R04, H3-R05, H3-R06, H3-R07 | 0.75 |
 | H3-T08 | Implementar revisión, total persistido, separación por enviar/solicitado y agregados posteriores. | H3-D06, H3-D08 | H3-R08, H3-R10 | 0.50 |
 | H3-T09 | Manejar recuperación, errores, reintentos, doble clic y concurrencia en UI/servicios. | H3-D03, H3-D07, H3-D09 | H3-R02, H3-R03, H3-R09, H3-R10, H3-R11 | 0.50 |
-| H3-T10 | Ejecutar y documentar pruebas automatizadas, técnicas manuales y humanas. | H3-D01–H3-D10 | H3-R01–H3-R11 | 0.75 |
+| H3-T10 | Ejecutar y documentar pruebas automatizadas, técnicas manuales y humanas. | H3-D01–H3-D11 | H3-R01–H3-R12 | 0.75 |
 
 ## 2. Estimación revisada
 
