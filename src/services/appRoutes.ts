@@ -6,6 +6,7 @@ export type ApplicationRoute =
   | '/login'
   | '/tecnica'
   | '/admin/catalogo'
+  | '/cocina'
   | '/mozo/mesas'
   | `/mozo/pedidos/${number}`
   | '/403'
@@ -28,6 +29,7 @@ const knownRoutes = new Set<ApplicationRoute>([
   '/login',
   '/tecnica',
   '/admin/catalogo',
+  '/cocina',
   '/mozo/mesas',
   '/403',
 ])
@@ -46,6 +48,7 @@ export function getRoleDestination(role: RoleCode): ApplicationRoute {
     case 'MOZO':
       return '/mozo/mesas'
     case 'COCINA':
+      return '/cocina'
     case 'CAJA':
       return '/tecnica'
   }
@@ -102,6 +105,10 @@ export function resolveApplicationRoute(input: RouteAuthorizationInput): RouteAu
   }
 
   if ((pathname === '/mozo/mesas' || waiterOrderId !== null) && role !== 'MOZO') {
+    return { status: 'redirect', pathname: '/403' }
+  }
+
+  if (pathname === '/cocina' && role !== 'COCINA') {
     return { status: 'redirect', pathname: '/403' }
   }
 

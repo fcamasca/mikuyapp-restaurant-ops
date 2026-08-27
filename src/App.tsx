@@ -3,6 +3,7 @@ import { AuthProvider, useAuthentication } from './components/AuthProvider'
 import AuthenticatedUserMenu from './components/AuthenticatedUserMenu'
 import CategoryAdministrationPage from './pages/CategoryAdministrationPage'
 import LoginPage from './pages/LoginPage'
+import KitchenBoardPage from './pages/KitchenBoardPage'
 import VerificationPage from './pages/VerificationPage'
 import WaiterOrderPage from './pages/WaiterOrderPage'
 import WaiterTablesPage from './pages/WaiterTablesPage'
@@ -131,6 +132,17 @@ function ApplicationRouter() {
         isSigningOut={isSigningOut}
         onOpenOrder={(orderId) => navigate(`/mozo/pedidos/${orderId}`)}
         onNavigateToTechnical={() => navigate('/tecnica')}
+        onSignOut={() => { void signOut() }}
+      />
+    )
+  }
+
+  if (resolution.pathname === '/cocina') {
+    if (!profileContext.context) return <LoadingScreen context />
+    return (
+      <KitchenBoardPage
+        context={profileContext.context}
+        isSigningOut={isSigningOut}
         onSignOut={() => { void signOut() }}
       />
     )
