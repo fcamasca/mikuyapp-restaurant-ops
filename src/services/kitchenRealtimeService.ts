@@ -179,12 +179,14 @@ export function createKitchenRealtimeService(
         refreshInFlight = (async () => {
           try {
             const result = await client.rpc('obtener_tablero_cocina')
+            if (stopped) return
             if (result.error) {
               callbacks.onError('No pudimos sincronizar el tablero de cocina. Revisa tu conexión.')
               return
             }
             callbacks.onSnapshot((result.data as KitchenBoardRow[] | null) ?? [])
           } catch {
+            if (stopped) return
             callbacks.onError('No pudimos sincronizar el tablero de cocina. Revisa tu conexión.')
           }
         })()
@@ -223,6 +225,7 @@ export function createKitchenRealtimeService(
       }
 
       channel.subscribe((status) => {
+        if (stopped) return
         if (status === 'SUBSCRIBED') {
           void refresh()
           return

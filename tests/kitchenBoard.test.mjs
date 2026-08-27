@@ -109,3 +109,12 @@ test('H4-T06 incluye carga, vacío, error recuperable y responsive táctil', () 
   assert.match(pageSource, /xl:grid-cols-2/)
   assert.doesNotMatch(serviceSource, /setInterval|poll/i)
 })
+
+test('H4-T07 página reemplaza filas con snapshots y limpia el canal al desmontarse', () => {
+  assert.match(pageSource, /service\.start\(\{/)
+  assert.match(pageSource, /onSnapshot\(snapshot\)[\s\S]*setRows\(snapshot\)/)
+  assert.match(pageSource, /onError\(message\)/)
+  assert.match(pageSource, /activeHandle = handle/)
+  assert.match(pageSource, /void activeHandle\.stop\(\)/)
+  assert.doesNotMatch(pageSource, /setRows\(\(current\)|\.push\(snapshot|payload\.(new|old)/)
+})

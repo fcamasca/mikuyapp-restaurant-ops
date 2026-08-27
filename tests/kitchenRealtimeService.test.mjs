@@ -183,3 +183,84 @@ test('T05 no usa polling ni construye el tablero mediante append de eventos', ()
   assert.match(serviceSource, /callbacks\.onSnapshot/)
   assert.doesNotMatch(serviceSource, /payload\.(new|old)|\.push\(payload/)
 })
+
+test('T07 incorpora un detalle nuevo reemplazando el snapshot sin duplicar filas', async () => {
+  const fixture = createFixture([
+    [row(1)],
+    [row(1), row(2)],
+  ])
+  const snapshots = []
+  const handle = await createKitchenRealtimeService(fixture.client, fixture.options).start({
+    onSnapshot: (rows) => snapshots.push(rows),
+    onError: () => assert.fail('No se esperaba error'),
+  })
+
+  fixture.emit('detalle_pedido', 'INSERT')
+  fixture.emit('detalle_pedido', 'INSERT')
+  await fixture.flushTimer()
+
+  assert.equal(fixture.rpcCalls, 2)
+  assert.deepEqual(snapshots.at(-1).map((item) => item.detalle_id), [1, 2])
+  assert.equal(new Set(snapshots.at(-1).map((item) => item.detalle_id)).size, 2)
+  await handle.stop()
+})
+
+test('T07 refleja UPDATE repetido o fuera de orden desde el snapshot ganador', async () => {
+  const fixture = createFixture([
+    [row(1, 'ENVIADO')],
+    [row(1, 'RECIBIDO_COCINA')],
+  ])
+  const snapshots = []
+  const handle = await createKitchenRealtimeService(fixture.client, fixture.options).start({
+    onSnapshot: (rows) => snapshots.push(rows),
+    onError: () => assert.fail('No se esperaba error'),
+  })
+
+  fixture.emit('mesa', 'UPDATE')
+  fixture.emit('pedido', 'UPDATE')
+  fixture.emit('detalle_pedido', 'UPDATE')
+  await fixture.flushTimer()
+
+  assert.equal(fixture.rpcCalls, 2)
+  assert.equal(snapshots.at(-1)[0].estado, 'RECIBIDO_COCINA')
+  await handle.stop()
+})
+
+test('T07 cleanup cancela canal y descarta snapshot o status tardíos', async () => {
+  let resolveDeferred
+  let rpcCalls = 0
+  let statusHandler
+  let removed = false
+  const deferred = new Promise((resolve) => { resolveDeferred = resolve })
+  const channel = {
+    on() { return channel },
+    subscribe(callback) { statusHandler = callback; return channel },
+  }
+  const client = {
+    async rpc() {
+      rpcCalls += 1
+      if (rpcCalls === 1) return { data: [row(1)], error: null }
+      return deferred
+    },
+    channel() { return channel },
+    async removeChannel() { removed = true },
+  }
+  const snapshots = []
+  const errors = []
+  const handle = await createKitchenRealtimeService(client).start({
+    onSnapshot: (rows) => snapshots.push(rows),
+    onError: (message) => errors.push(message),
+  })
+
+  const lateRefresh = handle.resync()
+  await handle.stop()
+  resolveDeferred({ data: [row(2)], error: null })
+  await lateRefresh
+  statusHandler('CHANNEL_ERROR')
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(removed, true)
+  assert.equal(snapshots.length, 1)
+  assert.equal(errors.length, 0)
+  assert.equal(rpcCalls, 2)
+})
