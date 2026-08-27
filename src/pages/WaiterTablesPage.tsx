@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
 import {
@@ -113,7 +114,7 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
           </div>
           <nav className="flex w-full flex-wrap gap-3 sm:w-auto">
             <button className="min-h-11 flex-1 rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold sm:flex-none" onClick={onNavigateToTechnical} type="button">Verificación técnica</button>
-            <button aria-busy={isSigningOut} className="min-h-11 flex-1 rounded-xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white disabled:opacity-70 sm:flex-none" disabled={isSigningOut} onClick={onSignOut} type="button">{isSigningOut ? 'Cerrando sesión…' : 'Cerrar sesión'}</button>
+            <AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onSignOut={onSignOut} />
           </nav>
         </header>
 

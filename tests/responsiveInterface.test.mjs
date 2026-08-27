@@ -5,7 +5,34 @@ import test from 'node:test'
 const login = readFileSync(new URL('../src/pages/LoginPage.tsx', import.meta.url), 'utf8')
 const admin = readFileSync(new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url), 'utf8')
 const waiter = readFileSync(new URL('../src/pages/WaiterTablesPage.tsx', import.meta.url), 'utf8')
+const waiterOrder = readFileSync(new URL('../src/pages/WaiterOrderPage.tsx', import.meta.url), 'utf8')
+const userMenu = readFileSync(new URL('../src/components/AuthenticatedUserMenu.tsx', import.meta.url), 'utf8')
 const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
+
+test('identidad autenticada reutiliza contexto y traduce los cuatro roles', () => {
+  assert.match(userMenu, /context\.profile\.nombre/)
+  for (const label of ['Administrador', 'Mozo', 'Cocina', 'Caja']) assert.match(userMenu, new RegExp(label))
+  assert.doesNotMatch(userMenu, /email|uuid|local_id|profile\.id|\.from\(|supabase/i)
+  assert.match(userMenu, /onClick=\{onSignOut\}/)
+  assert.match(userMenu, /Cerrar sesión/)
+})
+
+test('identidad autenticada es común a administración, mozo, pedido, técnica y áreas futuras', () => {
+  assert.match(admin, /AuthenticatedUserMenu/)
+  assert.match(waiter, /AuthenticatedUserMenu/)
+  assert.match(waiterOrder, /AuthenticatedUserMenu/)
+  assert.match(app, /AuthenticatedUserMenu/)
+  assert.match(app, /resolution\.pathname === '\/tecnica'/)
+  assert.match(app, /profileContext\.context && <div[^>]*><AuthenticatedUserMenu/)
+})
+
+test('control de sesión autenticada permanece compacto y táctil en celular y tablet', () => {
+  assert.match(userMenu, /min-w-0 items-center/)
+  assert.match(userMenu, /max-w-40 truncate/)
+  assert.match(userMenu, /sm:max-w-56/)
+  assert.match(userMenu, /min-h-11/)
+  assert.match(userMenu, /shrink-0/)
+})
 
 test('TP-24: login mantiene controles táctiles y estados accesibles en móvil', () => {
   assert.match(login, /overflow-x-hidden/)

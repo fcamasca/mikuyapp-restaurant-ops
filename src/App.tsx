@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AuthProvider, useAuthentication } from './components/AuthProvider'
+import AuthenticatedUserMenu from './components/AuthenticatedUserMenu'
 import CategoryAdministrationPage from './pages/CategoryAdministrationPage'
 import LoginPage from './pages/LoginPage'
 import VerificationPage from './pages/VerificationPage'
@@ -138,10 +139,11 @@ function ApplicationRouter() {
   const waiterOrderId = getWaiterOrderId(resolution.pathname)
   if (waiterOrderId !== null) {
     if (!profileContext.context) return <LoadingScreen context />
-    return <WaiterOrderPage context={profileContext.context} orderId={waiterOrderId} onBack={() => navigate('/mozo/mesas')} />
+    return <WaiterOrderPage context={profileContext.context} isSigningOut={isSigningOut} orderId={waiterOrderId} onBack={() => navigate('/mozo/mesas')} onSignOut={() => { void signOut() }} />
   }
 
   if (resolution.pathname === '/tecnica') {
+    if (!profileContext.context) return <LoadingScreen context />
     return (
       <>
         <nav className="flex items-center justify-end gap-3 bg-stone-100 px-4 pt-4 sm:px-8">
@@ -154,13 +156,7 @@ function ApplicationRouter() {
               Volver
             </button>
           )}
-          <button
-            className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white"
-            onClick={() => { void signOut() }}
-            type="button"
-          >
-            Cerrar sesión
-          </button>
+          <AuthenticatedUserMenu context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }} />
         </nav>
         <VerificationPage role={role} />
       </>
@@ -181,6 +177,7 @@ function ApplicationRouter() {
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">MikuyApp</p>
         <h1 className="mt-3 text-2xl font-bold">{title}</h1>
         <p className="mt-2 text-stone-600">{description}</p>
+        {profileContext.context && <div className="mt-5"><AuthenticatedUserMenu context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }} /></div>}
         {state.message && <p className="mt-4 text-sm text-rose-800" role="alert">{state.message}</p>}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <button
@@ -189,15 +186,6 @@ function ApplicationRouter() {
             type="button"
           >
             {isForbidden ? 'Volver a mi sección' : 'Verificación técnica'}
-          </button>
-          <button
-            aria-busy={isSigningOut}
-            className="min-h-12 rounded-xl bg-emerald-800 px-4 py-3 font-semibold text-white hover:bg-emerald-900 disabled:opacity-70"
-            disabled={isSigningOut}
-            onClick={() => { void signOut() }}
-            type="button"
-          >
-            {isSigningOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
           </button>
         </div>
       </section>

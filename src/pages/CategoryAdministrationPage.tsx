@@ -11,6 +11,7 @@ import {
   type TableMutation,
 } from '../services/catalogService'
 import type { ValidatedProfileContext } from '../services/profileContext'
+import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
 import { getSupabaseClient } from '../services/supabaseClient'
 
 interface CategoryAdministrationPageProps {
@@ -525,15 +526,7 @@ export default function CategoryAdministrationPage({
             >
               Verificación técnica
             </button>
-            <button
-              aria-busy={isSigningOut}
-              className="min-h-11 flex-1 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70 sm:flex-none"
-              disabled={isSigningOut}
-              onClick={onSignOut}
-              type="button"
-            >
-              {isSigningOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
-            </button>
+            <AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onSignOut={onSignOut} />
           </div>
         </header>
 
