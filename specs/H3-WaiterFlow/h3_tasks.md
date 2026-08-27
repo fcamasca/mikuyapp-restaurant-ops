@@ -5,7 +5,7 @@
 - [x] H3-T01 — Cambio mínimo de modelo implementado, migrado y validado contra Supabase remoto.
 - [x] H3-T02 — Creación o recuperación transaccional del pedido implementada, validada y aprobada.
 - [x] H3-T03 — Alta segura de detalles implementada y validada; precio y estado controlados por PostgreSQL.
-- [ ] H3-T04 — Pendiente.
+- [x] H3-T04 — Privilegios por columna y RLS para modificar o retirar únicamente detalles `ABIERTO` implementados y validados.
 - [ ] H3-T05 — Pendiente.
 - [ ] H3-T06 — Pendiente.
 - [ ] H3-T07 — Pendiente.
