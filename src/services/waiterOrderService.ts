@@ -186,7 +186,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       }
     },
 
-    async updateOpenDetail(context: ValidatedProfileContext, detailId: number, input: { readonly cantidad?: number; readonly observacion?: string | null }): Promise<WaiterOrderResult<null>> {
+    async updateOpenDetail(context: ValidatedProfileContext, detailId: number, input: { readonly cantidad?: number; readonly observacion?: string | null }, expected?: { readonly cantidad?: number; readonly observacion?: string | null }): Promise<WaiterOrderResult<null>> {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para modificar productos.')
       if (input.cantidad !== undefined && (!Number.isInteger(input.cantidad) || input.cantidad < 1)) {
         return connectionError('La cantidad debe ser un entero mayor o igual a 1.')
@@ -196,8 +196,16 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       if (input.observacion !== undefined) changes.observacion = input.observacion?.trim() || null
       if (Object.keys(changes).length === 0) return { ok: true, data: null }
       try {
-        const result = await client.from('detalle_pedido').update(changes).eq('id', detailId).eq('estado', 'ABIERTO')
+        let mutation = client.from('detalle_pedido').update(changes).eq('id', detailId).eq('estado', 'ABIERTO')
+        if (expected?.cantidad !== undefined) mutation = mutation.eq('cantidad', expected.cantidad)
+        if (expected && 'observacion' in expected) {
+          mutation = expected.observacion === null
+            ? mutation.is('observacion', null)
+            : mutation.eq('observacion', expected.observacion)
+        }
+        const result = await mutation.select('id').returns<{ id: number }[]>()
         if (result.error) return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
+        if (!result.data?.length) return connectionError('El pedido fue actualizado desde otro dispositivo. Recargamos sus datos.')
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
@@ -207,8 +215,9 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
     async removeOpenDetail(context: ValidatedProfileContext, detailId: number): Promise<WaiterOrderResult<null>> {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para retirar productos.')
       try {
-        const result = await client.from('detalle_pedido').delete().eq('id', detailId).eq('estado', 'ABIERTO')
+        const result = await client.from('detalle_pedido').delete().eq('id', detailId).eq('estado', 'ABIERTO').select('id').returns<{ id: number }[]>()
         if (result.error) return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
+        if (!result.data?.length) return connectionError('El pedido fue actualizado desde otro dispositivo. Recargamos sus datos.')
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos retirar el producto. Intenta nuevamente.')

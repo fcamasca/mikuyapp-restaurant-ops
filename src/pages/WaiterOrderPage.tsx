@@ -64,17 +64,23 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
     if (!orders || pendingProductIds.current.has(productId)) return
     pendingProductIds.current.add(productId)
     setBusy(`p-${productId}`); setError(null)
-    const result = await orders.addOrderDetail(context, orderId, productId)
-    if (!result.ok) setError(result.error.message); else await reload()
-    pendingProductIds.current.delete(productId); setBusy(null)
+    try {
+      const result = await orders.addOrderDetail(context, orderId, productId)
+      if (!result.ok) { await reload(); setError(result.error.message) } else await reload()
+    } finally {
+      pendingProductIds.current.delete(productId); setBusy(null)
+    }
   }
   async function quantity(detail: WaiterOrderDetail, value: number) {
     if (!orders || pendingDetailIds.current.has(detail.id) || detail.estado !== 'ABIERTO' || value < 1) return
     pendingDetailIds.current.add(detail.id)
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
-    const result = await orders.updateOpenDetail(context, detail.id, { cantidad: value })
-    if (!result.ok) { await reload(); setError(result.error.message) } else await reload()
-    pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
+    try {
+      const result = await orders.updateOpenDetail(context, detail.id, { cantidad: value }, { cantidad: detail.cantidad })
+      if (!result.ok) { await reload(); setError(result.error.message) } else await reload()
+    } finally {
+      pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
+    }
   }
   function editObservation(detail: WaiterOrderDetail) {
     const parts = detail.observacion?.split(',').map((part) => part.trim()).filter(Boolean) ?? []
@@ -85,27 +91,36 @@ export default function WaiterOrderPage({ context, orderId, onBack }: Props) {
     if (!orders || pendingDetailIds.current.has(detail.id) || detail.estado !== 'ABIERTO') return
     pendingDetailIds.current.add(detail.id)
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
-    const result = await orders.updateOpenDetail(context, detail.id, { observacion: combineOrderObservation(selected, free) })
-    if (!result.ok) { await reload(); setError(result.error.message) } else if (await reload()) setEditing(null)
-    pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
+    try {
+      const result = await orders.updateOpenDetail(context, detail.id, { observacion: combineOrderObservation(selected, free) }, { observacion: detail.observacion })
+      if (!result.ok) { await reload(); setError(result.error.message) } else if (await reload()) setEditing(null)
+    } finally {
+      pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
+    }
   }
   async function remove(detail: WaiterOrderDetail) {
     if (!orders || pendingDetailIds.current.has(detail.id) || detail.estado !== 'ABIERTO') return
     pendingDetailIds.current.add(detail.id)
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
-    const result = await orders.removeOpenDetail(context, detail.id)
-    if (!result.ok) { await reload(); setError(result.error.message) } else { await reload(); setConfirmingRemoval(null) }
-    pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
+    try {
+      const result = await orders.removeOpenDetail(context, detail.id)
+      if (!result.ok) { await reload(); setError(result.error.message) } else { await reload(); setConfirmingRemoval(null) }
+    } finally {
+      pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
+    }
   }
 
   async function sendToKitchen() {
     if (!orders || sendingRef.current || openDetails.length === 0) return
     sendingRef.current = true; setSending(true); setError(null)
-    const result = await orders.sendOrderToKitchen(context, orderId)
-    const refreshed = await reload()
-    if (!result.ok) setError(result.error.message)
-    else if (!refreshed) setError('El envío fue confirmado, pero no pudimos actualizar la vista. Reintenta la carga.')
-    sendingRef.current = false; setSending(false)
+    try {
+      const result = await orders.sendOrderToKitchen(context, orderId)
+      const refreshed = await reload()
+      if (!result.ok) setError(result.error.message)
+      else if (!refreshed) setError('El envío fue confirmado, pero no pudimos actualizar la vista. Reintenta la carga.')
+    } finally {
+      sendingRef.current = false; setSending(false)
+    }
   }
 
   return <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 lg:px-8"><div className="mx-auto min-w-0 max-w-7xl">

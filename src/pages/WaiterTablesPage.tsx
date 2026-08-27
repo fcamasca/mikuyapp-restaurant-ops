@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
 import {
@@ -50,6 +50,7 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
   const [filter, setFilter] = useState<WaiterTableFilter>('TODAS')
   const [order, setOrder] = useState<WaiterTableOrder>('ASC')
   const [openingTableId, setOpeningTableId] = useState<string | null>(null)
+  const openingTableRef = useRef<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -79,21 +80,26 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
   const visibleTables = useMemo(() => filterAndSortWaiterTables(tables, filter, order), [filter, order, tables])
 
   async function handleTableAction(table: WaiterTableBoardItem): Promise<void> {
-    if (openingTableId) return
+    if (openingTableRef.current) return
     if (table.pedido) {
       onOpenOrder(table.pedido.id)
       return
     }
     if (table.estado !== 'LIBRE' || !service) return
+    openingTableRef.current = table.id
     setOpeningTableId(table.id)
     setActionError(null)
-    const result = await service.createOrRecoverOrder(context, table.id)
-    setOpeningTableId(null)
-    if (!result.ok) {
-      setActionError(result.error.message)
-      return
+    try {
+      const result = await service.createOrRecoverOrder(context, table.id)
+      if (!result.ok) {
+        setActionError(result.error.message)
+        return
+      }
+      onOpenOrder(result.data.pedidoId)
+    } finally {
+      openingTableRef.current = null
+      setOpeningTableId(null)
     }
-    onOpenOrder(result.data.pedidoId)
   }
 
   return (

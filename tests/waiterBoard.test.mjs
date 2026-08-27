@@ -8,6 +8,9 @@ const pageSource = readFileSync(new URL('../src/pages/WaiterTablesPage.tsx', imp
 const orderPageSource = readFileSync(new URL('../src/pages/WaiterOrderPage.tsx', import.meta.url), 'utf8')
 const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
 const serviceSource = readFileSync(new URL('../src/services/waiterOrderService.ts', import.meta.url), 'utf8')
+const modelMigration = readFileSync(new URL('../supabase/migrations/20260826000100_h3_t01_order_detail_state.sql', import.meta.url), 'utf8')
+const orderMigration = readFileSync(new URL('../supabase/migrations/20260826000200_h3_t02_open_or_recover_order.sql', import.meta.url), 'utf8')
+const sendMigration = readFileSync(new URL('../supabase/migrations/20260826000700_send_order_to_kitchen.sql', import.meta.url), 'utf8')
 const consolidationMigration = readFileSync(new URL('../supabase/migrations/20260826000800_consolidate_open_order_details.sql', import.meta.url), 'utf8')
 
 function context(role = 'MOZO') {
@@ -22,7 +25,7 @@ function table(overrides = {}) {
   return { id: 'table-1', codigo: 'M-01', nombre: 'Mesa 1', estado: 'LIBRE', activo: true, ...overrides }
 }
 
-function createClient({ tables = [], orders = [], details = [], errors = {}, rpcData = [{ pedido_id: 12, fue_creado: true }], rpcError = null } = {}) {
+function createClient({ tables = [], orders = [], details = [], mutationRows = [{ id: 31 }], errors = {}, rpcData = [{ pedido_id: 12, fue_creado: true }], rpcError = null } = {}) {
   const calls = []
   const rpcCalls = []
   return {
@@ -35,12 +38,13 @@ function createClient({ tables = [], orders = [], details = [], errors = {}, rpc
         const query = {
           select(columns) { call.columns = columns; return query },
           eq(column, value) { call.filters.push({ column, value }); return query },
+          is(column, value) { call.filters.push({ column, value }); return query },
           in(column, values) { call.inFilters.push({ column, values }); return query },
           update(values) { call.mutation = { kind: 'update', values }; return query },
           delete() { call.mutation = { kind: 'delete' }; return query },
           then(resolve) { resolve({ error: errors[resource] ?? null }); return Promise.resolve() },
           async returns() {
-            const data = resource === 'mesa' ? tables : resource === 'pedido' ? orders : details
+            const data = call.mutation ? mutationRows : resource === 'mesa' ? tables : resource === 'pedido' ? orders : details
             return { data, error: errors[resource] ?? null }
           },
         }
@@ -162,7 +166,8 @@ test('cards muestran código, estado textual, total y acción táctil', () => {
 })
 
 test('bloquea repetición visual mientras abre una mesa y conserva PostgreSQL como autoridad', () => {
-  assert.match(pageSource, /if \(openingTableId\) return/)
+  assert.match(pageSource, /if \(openingTableRef\.current\) return/)
+  assert.match(pageSource, /finally \{\s*openingTableRef\.current = null/)
   assert.match(pageSource, /disabled=\{Boolean\(openingTableId\) \|\| unavailable\}/)
   assert.match(pageSource, /Abriendo pedido…/)
   assert.match(serviceSource, /crear_o_recuperar_pedido_mesa/)
@@ -210,6 +215,24 @@ test('T07 limita cambios directos a cantidad/observación y retiro de ABIERTO', 
   assert.deepEqual(fixture.calls[1].mutation, { kind: 'delete' })
   assert.deepEqual(fixture.calls[1].filters[1], { column: 'estado', value: 'ABIERTO' })
   assert.equal((await service.updateOpenDetail(context(), 31, { cantidad: 0 })).ok, false)
+})
+
+test('T09 detecta actualización obsoleta y compara el valor confirmado anterior', async () => {
+  const fixture = createClient({ mutationRows: [] })
+  const service = createWaiterOrderService(fixture.client)
+  const quantity = await service.updateOpenDetail(context(), 31, { cantidad: 3 }, { cantidad: 2 })
+  const observation = await service.updateOpenDetail(context(), 32, { observacion: 'Sin ají' }, { observacion: null })
+  const removal = await service.removeOpenDetail(context(), 33)
+  assert.equal(quantity.ok, false)
+  assert.equal(observation.ok, false)
+  assert.equal(removal.ok, false)
+  assert.match(quantity.error.message, /otro dispositivo/)
+  assert.deepEqual(fixture.calls[0].filters, [
+    { column: 'id', value: 31 }, { column: 'estado', value: 'ABIERTO' }, { column: 'cantidad', value: 2 },
+  ])
+  assert.deepEqual(fixture.calls[1].filters, [
+    { column: 'id', value: 32 }, { column: 'estado', value: 'ABIERTO' }, { column: 'observacion', value: null },
+  ])
 })
 
 test('T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controles táctiles', () => {
@@ -369,4 +392,46 @@ test('T08 conserva agregados posteriores en Por enviar hasta un nuevo envío', (
   assert.match(orderPageSource, /else await reload\(\)/)
   assert.match(orderPageSource, /detail\.estado === 'ABIERTO'/)
   assert.match(serviceSource, /enviar_pedido_cocina/)
+})
+
+test('T09 reconstruye pedido y mezcla desde PostgreSQL sin carrito efímero', async () => {
+  const details = [
+    { id: 31, pedido_id: 12, producto_id: 'p-1', cantidad: 2, precio_unitario: 18.5, observacion: 'Sin cebolla', estado: 'ENVIADO', producto: { nombre: 'Ceviche' } },
+    { id: 32, pedido_id: 12, producto_id: 'p-2', cantidad: 1, precio_unitario: 9, observacion: null, estado: 'ABIERTO', producto: { nombre: 'Chicha' } },
+  ]
+  const fixture = createClient({ details })
+  const result = await createWaiterOrderService(fixture.client).getOrderDetails(context(), 12)
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.data, details)
+  assert.deepEqual(fixture.calls[0].filters, [{ column: 'pedido_id', value: 12 }])
+  assert.match(orderPageSource, /void load\(\)/)
+  assert.match(orderPageSource, /getOrderReview\(context, orderId\)/)
+  assert.match(orderPageSource, /getOrderDetails\(context, orderId\)/)
+  assert.doesNotMatch(orderPageSource, /localStorage|sessionStorage|cart|carrito/i)
+})
+
+test('T09 errores de alta y envío no producen éxito local y permiten recargar', async () => {
+  const addFixture = createClient({ rpcData: null, rpcError: { message: 'network' } })
+  const sendFixture = createClient({ rpcData: null, rpcError: { message: 'network' } })
+  const add = await createWaiterOrderService(addFixture.client).addOrderDetail(context(), 12, 'p-1')
+  const send = await createWaiterOrderService(sendFixture.client).sendOrderToKitchen(context(), 12)
+  assert.equal(add.ok, false)
+  assert.equal(send.ok, false)
+  assert.match(orderPageSource, /if \(!result\.ok\) \{ await reload\(\); setError\(result\.error\.message\) \}/)
+  assert.match(orderPageSource, /const refreshed = await reload\(\)/)
+  assert.match(orderPageSource, /Reintentar/)
+})
+
+test('T09 libera siempre guards locales y delega concurrencia crítica a PostgreSQL', () => {
+  assert.match(orderPageSource, /finally \{\s*pendingProductIds\.current\.delete/)
+  assert.match(orderPageSource, /finally \{\s*pendingDetailIds\.current\.delete/g)
+  assert.match(orderPageSource, /finally \{\s*sendingRef\.current = false/)
+  assert.match(pageSource, /finally \{\s*openingTableRef\.current = null/)
+  assert.match(orderMigration, /for update/)
+  assert.match(modelMigration, /create unique index/)
+  assert.match(modelMigration, /mesa_id/)
+  assert.match(consolidationMigration, /pg_advisory_xact_lock/)
+  assert.match(sendMigration, /for update/)
+  assert.match(sendMigration, /estado = 'ABIERTO'/)
+  assert.match(sendMigration, /estado = 'ENVIADO'/)
 })
