@@ -7,4 +7,5 @@ Los documentos pueden conservar prefijos históricos del hito. Cada paquete reú
 - [H1 — Base técnica](H1-TechnicalBasis/): aceptado.
 - [H2 — Usuarios, carta y mesas](H2-UsersCatalogTables/): aceptado.
 - [H3 — Flujo del mozo](H3-WaiterFlow/): cerrado, validado y aceptado.
-- H4 — Cocina en tiempo real: siguiente hito; no iniciado y debe comenzar en Spec Mode.
+- [H4 — Cocina en tiempo real](H4-KitchenRealtime/): cerrado, validado y aceptado.
+- H5 — Caja e impresión: siguiente hito; no iniciado y debe comenzar en Spec Mode.

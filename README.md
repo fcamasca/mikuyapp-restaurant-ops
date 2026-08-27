@@ -6,7 +6,7 @@
 
 Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedido → cocina → entrega → pago**.
 
-**Estado actual:** hitos H1, H2 y H3 cerrados, validados y aceptados. H4 es el siguiente hito y todavía no ha iniciado.
+**Estado actual:** H1, H2, H3 y H4 están cerrados, validados y aceptados. H5 — Caja e impresión es el siguiente hito y todavía no ha iniciado.
 
 **Producción:** <https://mikuyapp.pages.dev/>
 
@@ -16,18 +16,20 @@ La operación de un restaurante requiere coordinar a mozos, cocina y caja. Cuand
 
 MikuyApp busca centralizar mesas, carta, pedidos, estados operativos y pagos para reducir esos problemas. El alcance inicial está diseñado para un solo local.
 
-H1 establece la base técnica verificable, H2 incorpora autenticación, roles, carta y mesas, y H3 completa el flujo operativo del mozo hasta el envío selectivo a cocina.
+H1 establece la base técnica verificable, H2 incorpora autenticación, roles, carta y mesas, H3 completa el flujo operativo del mozo y H4 incorpora la operación de cocina y su sincronización Realtime.
 
 ## Estado del proyecto
 
 | Hito | Resultado | Estado |
 |---|---|---|
-| H1 | Base técnica, Supabase y despliegue | Aceptado |
-| H2 | Usuarios, carta y mesas | Aceptado |
+| H1 | Base técnica, Supabase y despliegue | Cerrado, validado y aceptado |
+| H2 | Usuarios, carta y mesas | Cerrado, validado y aceptado |
 | H3 | Flujo del mozo | Cerrado, validado y aceptado |
-| H4 | Cocina en tiempo real | Siguiente hito; no iniciado |
-| H5 | Caja e impresión | Pendiente |
+| H4 | Cocina en tiempo real | Cerrado, validado y aceptado |
+| H5 | Caja e impresión | Siguiente hito; no iniciado |
 | H6 | MVP liberado | Pendiente |
+
+El plan base fue de **24 h**. La referencia de planificación vigente es **32.5 h**; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
 
 ## Funcionalidades disponibles
 
@@ -46,19 +48,23 @@ La aplicación permite comprobar:
 - revisión del consumo y envío selectivo de nuevos detalles a cocina;
 - recuperación del pedido persistido ante recargas, errores y concurrencia;
 - liberación de una mesa ocupada cuando su pedido `ABIERTO` está vacío, conservando el pedido anulado y su historial;
+- tablero de cocina agrupado por pedido y mesa, priorizado por antigüedad y trabajo pendiente;
+- transición individual `ENVIADO → RECIBIDO_COCINA → EN_PREPARACION → LISTO`;
+- actualización de cocina y mozo mediante señales Realtime y recarga autoritativa desde PostgreSQL;
+- estados mixtos, agregados posteriores y derivación transaccional de la cabecera y la mesa;
 - administración completa de categorías, productos y mesas;
-- página técnica autenticada para los cuatro roles;
+- identidad autenticada compacta y página técnica disponible para los cuatro roles;
 - presentación responsive validada en celular, tablet y escritorio.
 
-H3 no incorpora todavía la operación de cocina, Realtime, entrega, cobro, pagos ni impresión. Esas capacidades corresponden a H4 y H5.
+Todavía no están implementados entrega, caja, cobro, impresión ni liberación automática posterior al pago. Esas capacidades corresponden a H5 y etapas posteriores.
 
 ## Roles y rutas
 
-| Rol | Destino después del login | Accesos H2 |
+| Rol | Destino después del login | Accesos actuales |
 |---|---|---|
 | `ADMINISTRADOR` | `/admin/catalogo` | Administración de categorías, productos y mesas; acceso a `/tecnica` |
 | `MOZO` | `/mozo/mesas` | Tablero, pedidos en `/mozo/pedidos/:id`, carta operativa y acceso a `/tecnica` |
-| `COCINA` | `/tecnica` | Página técnica autenticada |
+| `COCINA` | `/cocina` | Tablero Realtime de cocina y acceso a `/tecnica` |
 | `CAJA` | `/tecnica` | Página técnica autenticada |
 
 Las rutas protegidas requieren sesión y contexto válidos. Un acceso de rol no autorizado se dirige a `/403`; una sesión ausente se dirige a `/login`.
@@ -69,7 +75,8 @@ Las rutas protegidas requieren sesión y contexto válidos. Un acceso de rol no 
 flowchart TB
     U[Usuario] --> C[Cloudflare Pages]
     C --> F[React y Vite en el navegador]
-    F --> A[Supabase Data API]
+    F --> A[Supabase Data API y RPC]
+    F <--> R[Supabase Realtime]
     A --> P[PostgreSQL con constraints y RLS]
 ```
 
@@ -78,23 +85,24 @@ flowchart TB
 - PostgreSQL es la fuente de verdad del modelo y los datos demo.
 - RLS y los permisos PostgreSQL protegen el acceso en la base de datos.
 - No existe un servidor de aplicación personalizado; las reglas transaccionales se ejecutan mediante funciones PostgreSQL en Supabase.
+- Realtime actúa como señal: ante un cambio, la interfaz vuelve a consultar el snapshot persistido en lugar de aplicar ciegamente el payload.
 
 ## Stack técnico
 
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
-| Interfaz | React `19.2.8` | Renderizado y estados de la página técnica |
+| Interfaz | React `19.2.8` | Pantallas operativas y estados de interfaz |
 | Lenguaje | TypeScript `7.0.2` | Tipado estático del frontend y servicios |
 | Desarrollo y build | Vite `8.2.2` | Servidor local y generación de `dist` |
 | Estilos | Tailwind CSS `4.3.3` | Utilidades visuales y diseño responsive |
-| Cliente de datos | `@supabase/supabase-js` `2.112.3` | Sesión, consultas autorizadas y operaciones de dominio mediante Supabase Data API |
+| Cliente de datos | `@supabase/supabase-js` `2.112.3` | Sesión, consultas autorizadas, RPC y Realtime |
 | Base de datos | PostgreSQL administrado por Supabase | Persistencia, constraints, permisos y RLS |
 | Herramientas Supabase | Supabase CLI `2.115.0` | Migraciones, lint y verificaciones SQL |
 | Runtime | Node.js `22.12.0` | Ejecución de herramientas y scripts |
 | Paquetes | npm `10.9.0` | Instalación reproducible mediante lockfile |
 | Hosting | Cloudflare Pages | Publicación del frontend estático |
 
-## Alcance implementado en H1–H3
+## Alcance implementado en H1–H4
 
 - Proyecto Vite con React y TypeScript.
 - Tailwind CSS con comportamiento responsive.
@@ -113,16 +121,19 @@ flowchart TB
 - Edición y retiro permitidos únicamente para detalles `ABIERTO`.
 - Envío transaccional `ABIERTO → ENVIADO` por detalle y agregados posteriores selectivos.
 - Recuperación, idempotencia, concurrencia y liberación segura de pedidos vacíos.
+- Timestamp individual e inmutable de envío por detalle.
+- Snapshot seguro y transiciones adyacentes para el rol `COCINA`.
+- Derivación transaccional de estados de pedido y mesa.
+- Tablero de cocina y resincronización Realtime para cocina y mozo.
 - Pruebas SQL de esquema, restricciones y seed.
-- 238 pruebas automatizadas y verificaciones técnicas/humanas consolidadas.
-- H1, H2 y H3 aceptados e integrados en `main`.
+- 261 pruebas automatizadas en la consolidación integral de H4, además de verificaciones técnicas y humanas.
+- H1, H2, H3 y H4 aceptados e integrados en `main`.
 
 ### Fuera del alcance implementado
 
-- Flujo de cocina.
 - Caja y pagos.
 - Impresión.
-- Realtime.
+- Entrega.
 - Reportes.
 
 ## Modelo de datos
@@ -238,6 +249,18 @@ npm run dev
 | `npm run verify:h2-authenticated` | Ejecutar comprobaciones autenticadas reales cuando existan variables locales seguras y fixtures requeridos |
 | `npm run preview` | Servir localmente el build generado |
 
+Las suites de cocina y Realtime existen como archivos de Node Test y se ejecutan focalizadamente con comandos reales como:
+
+```bash
+node --experimental-strip-types --test tests/kitchenBoard.test.mjs
+node --experimental-strip-types --test tests/kitchenRealtimeService.test.mjs
+node --experimental-strip-types --test tests/waiterRealtime.test.mjs
+```
+
+## Despliegue vigente
+
+El frontend de producción está publicado en Cloudflare Pages en <https://mikuyapp.pages.dev/>. Vite genera el artefacto estático en `dist`. El repositorio versiona el workflow de CI que instala dependencias, ejecuta typecheck y genera el build; la configuración operativa del proyecto de Cloudflare Pages no está versionada en este repositorio.
+
 ## Estructura del repositorio
 
 ```text
@@ -246,6 +269,7 @@ specs/
   H1-TechnicalBasis/   Spec, ejecución y aceptación de H1
   H2-UsersCatalogTables/ Spec y aceptación de H2
   H3-WaiterFlow/       Spec, evidencia y aceptación de H3
+  H4-KitchenRealtime/  Spec, evidencia y aceptación de H4
 scripts/               Verificaciones automatizadas
 src/
   data/                Códigos y dataset demo
@@ -276,7 +300,7 @@ Recursos de base de datos:
 | Pruebas SQL | Esquema, constraints, índices, seed e idempotencia |
 | GitHub Actions | Instalación limpia, typecheck y build en cada cambio relevante |
 
-H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, verificaciones reales con cuatro roles y TP-01–TP-53 conformes. H3 cerró con **238/238** pruebas integrales, **44/44** casos del flujo del mozo y validaciones técnicas, humanas, responsive y de concurrencia aprobadas.
+H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, verificaciones reales con cuatro roles y TP-01–TP-53 conformes. H3 cerró con **238/238** pruebas integrales. H4 cerró con la suite integral H1–H4 en **261/261**, SQL remoto H4-T01–T05 aprobado, migraciones sincronizadas, fixtures residuales en `0` y H4-TH01–H4-TH06 aprobadas.
 
 ## Documentación
 
@@ -300,10 +324,16 @@ H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, 
 - [Plan de pruebas de H3](specs/H3-WaiterFlow/h3_test-plan.md)
 - [Evidencia integral de H3](specs/H3-WaiterFlow/h3_t10_execution.md)
 - [Aceptación de H3](specs/H3-WaiterFlow/acceptance.md)
+- [Requisitos de H4](specs/H4-KitchenRealtime/h4_requirements.md)
+- [Diseño de H4](specs/H4-KitchenRealtime/h4_design.md)
+- [Tareas de H4](specs/H4-KitchenRealtime/h4_tasks.md)
+- [Plan de pruebas de H4](specs/H4-KitchenRealtime/h4_test-plan.md)
+- [Evidencia técnica de H4](specs/H4-KitchenRealtime/h4_t09_execution.md)
+- [Aceptación de H4](specs/H4-KitchenRealtime/acceptance.md)
 
 ## Siguiente etapa
 
-H4 contempla la operación de cocina y la sincronización en tiempo real. Todavía no ha iniciado y deberá comenzar en Spec Mode.
+H5 — Caja e impresión es el siguiente hito. Todavía no ha iniciado y deberá comenzar en Spec Mode.
 
 ## Licencia
 

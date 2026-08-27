@@ -35,6 +35,8 @@ El nombre oficial de la aplicación será **MikuyApp**.
 | Backend | Supabase Free |
 | Renta tecnológica mensual | S/0 |
 
+> **Estado de planificación vigente (2026-08-27):** el plan base se conserva como referencia histórica. Las desviaciones aprobadas elevan la referencia actual de **24 h a 32.5 h**, sin implicar tiempo real consumido. El detalle se mantiene en [`docs/CHANGELOG_SCOPE.md`](CHANGELOG_SCOPE.md).
+
 ## 2. Objetivo
 
 Construir y desplegar un MVP que permita registrar, preparar, entregar y cobrar pedidos desde celulares, tablet y computadora, manteniendo sincronizados a mozos, cocina y caja.
@@ -280,8 +282,8 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 | H1. Base técnica | Jornada 2 | Aplicación desplegada y conectada | Completado y aceptado |
 | H2. Usuarios, carta y mesas | Jornada 7 | Acceso por roles y administración completa de categorías, productos y mesas con integridad y RLS | Completado y aceptado |
 | H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado | Cerrado, validado y aceptado |
-| H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos | Siguiente hito; no iniciado, debe comenzar en Spec Mode |
-| H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso | Pendiente |
+| H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos | Cerrado, validado y aceptado |
+| H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso | Siguiente hito; no iniciado, debe comenzar en Spec Mode |
 | H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos | Pendiente |
 
 ## 9. Plan de trabajo
