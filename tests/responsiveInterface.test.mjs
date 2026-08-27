@@ -13,7 +13,7 @@ test('identidad autenticada reutiliza contexto y traduce los cuatro roles', () =
   assert.match(userMenu, /context\.profile\.nombre/)
   for (const label of ['Administrador', 'Mozo', 'Cocina', 'Caja']) assert.match(userMenu, new RegExp(label))
   assert.doesNotMatch(userMenu, /email|uuid|local_id|profile\.id|\.from\(|supabase/i)
-  assert.match(userMenu, /onClick=\{onSignOut\}/)
+  assert.match(userMenu, /onClick=\{signOut\}/)
   assert.match(userMenu, /Cerrar sesión/)
 })
 
@@ -27,11 +27,21 @@ test('identidad autenticada es común a administración, mozo, pedido, técnica 
 })
 
 test('control de sesión autenticada permanece compacto y táctil en celular y tablet', () => {
-  assert.match(userMenu, /min-w-0 items-center/)
-  assert.match(userMenu, /max-w-40 truncate/)
-  assert.match(userMenu, /sm:max-w-56/)
-  assert.match(userMenu, /min-h-11/)
-  assert.match(userMenu, /shrink-0/)
+  assert.match(userMenu, /h-11 w-11[^"\n]*rounded-full/)
+  assert.match(userMenu, /initials\(context\.profile\.nombre\)/)
+  assert.match(userMenu, /aria-haspopup="menu"/)
+  assert.match(userMenu, /aria-expanded=\{open\}/)
+  assert.match(userMenu, /aria-label=\{`Abrir menú de usuario de/)
+  assert.match(userMenu, /role="menu"/)
+  assert.match(userMenu, /role="menuitem"/)
+  assert.match(userMenu, /max-w-\[calc\(100vw-1\.5rem\)\]/)
+})
+
+test('menú compacto cierra por tap externo, Escape y al cerrar sesión', () => {
+  assert.match(userMenu, /document\.addEventListener\('pointerdown', closeFromOutside\)/)
+  assert.match(userMenu, /event\.key === 'Escape'/)
+  assert.match(userMenu, /setOpen\(false\)[\s\S]*onSignOut\(\)/)
+  assert.match(userMenu, /onClick=\{\(\) => setOpen\(\(value\) => !value\)\}/)
 })
 
 test('TP-24: login mantiene controles táctiles y estados accesibles en móvil', () => {
