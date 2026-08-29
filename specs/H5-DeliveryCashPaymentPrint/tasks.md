@@ -5,7 +5,7 @@ Estimación final propuesta del Spec: **12 horas (6 jornadas de 2 h)**. Es una r
 | ID | Trabajo | Req. | Diseño | Est. |
 |---|---|---|---|---:|
 | H5-T01 | **Completada (2026-08-29).** Verificar esquema desplegado, constraints, índices, privilegios, RLS, funciones y publicación Realtime; registrar contradicciones. | R08-R12 | D11 | 1 h |
-| H5-T02 | Diseñar/implementar función segura de entrega, historial, lock e idempotencia; bloquear modificaciones posteriores. | R01-R04 | D01-D02,D10 | 1.5 h |
+| H5-T02 | **Completada (2026-08-29).** Diseñar/implementar función segura de entrega, historial, lock e idempotencia; bloquear modificaciones posteriores. | R01-R04 | D01-D02,D10 | 1.5 h |
 | H5-T03 | Implementar lectura autoritativa de caja y total basado en precios históricos, con aislamiento por local y políticas mínimas. | R05,R10 | D03-D06 | 1.5 h |
 | H5-T04 | Implementar función transaccional de cobro, constraint único, historial, liberación y rollback. | R07-R10 | D05-D06,D10 | 2 h |
 | H5-T05 | Construir ruta `/caja`, listado, detalle, estados, precuenta y ticket postpago. | R05-R07 | D03,D07 | 2 h |

@@ -209,7 +209,7 @@ begin
   end if;
 
   foreach v_expected_state in array array[
-    'RECIBIDO_COCINA', 'EN_PREPARACION', 'LISTO', 'ENTREGADO'
+    'RECIBIDO_COCINA', 'EN_PREPARACION', 'LISTO'
   ] loop
     v_index := v_index + 1;
     v_order_id := -9520 - v_index;
@@ -237,35 +237,47 @@ begin
     into strict v_sent, v_header_changed, v_state, v_sent_at
     from public.enviar_pedido_cocina(v_order_id) as result;
 
-    v_derived_state := case
-      when v_expected_state = 'ENTREGADO' then 'ENTREGADO'
-      else 'ENVIADO'
-    end;
+    v_derived_state := 'ENVIADO';
 
     if v_sent <> 1
-      or v_header_changed is distinct from (v_expected_state <> 'ENTREGADO')
+      or not v_header_changed
       or v_state <> v_derived_state
       or v_sent_at is distinct from v_original_sent_at
       or (select estado from public.pedido where id = v_order_id) <> v_derived_state
       or (select estado from public.detalle_pedido where id = v_detail_id) <> 'ENVIADO'
       or (select estado from public.detalle_pedido where id = v_detail_id - 10) <> 'ENVIADO'
-      or (
-        v_expected_state = 'ENTREGADO'
-        and exists (select 1 from public.historial_estado where pedido_id = v_order_id)
-      )
-      or (
-        v_expected_state <> 'ENTREGADO'
-        and not exists (
-          select 1 from public.historial_estado
-          where pedido_id = v_order_id
-            and estado_anterior = v_expected_state
-            and estado_nuevo = 'ENVIADO'
-            and usuario_id = v_waiter_id
-        )
+      or not exists (
+        select 1 from public.historial_estado
+        where pedido_id = v_order_id
+          and estado_anterior = v_expected_state
+          and estado_nuevo = 'ENVIADO'
+          and usuario_id = v_waiter_id
       ) then
       raise exception 'H3-T05 envío posterior inconsistente para %', v_expected_state;
     end if;
   end loop;
+
+  insert into public.pedido (
+    id, local_id, mesa_id, creado_por, estado, enviado_en
+  ) overriding system value
+  values (
+    -9524, v_local_id, v_advanced_table_ids[4], v_waiter_id,
+    'ENTREGADO', '2026-08-25 12:04:00+00'
+  );
+  insert into public.detalle_pedido (
+    id, pedido_id, producto_id, cantidad, precio_unitario, estado
+  ) overriding system value
+  values (-9534, -9524, v_product_id, 1, 10.00, 'ABIERTO');
+
+  begin
+    perform public.enviar_pedido_cocina(-9524);
+    raise exception 'H3-T05 aceptó pedido ENTREGADO';
+  exception when sqlstate '42501' then null;
+  end;
+  if (select estado from public.detalle_pedido where id = -9534) <> 'ABIERTO'
+    or exists (select 1 from public.historial_estado where pedido_id = -9524) then
+    raise exception 'H3-T05 alteró pedido ENTREGADO rechazado';
+  end if;
 
   perform pg_temp.h3_t05_set_user(v_admin_id);
   begin
