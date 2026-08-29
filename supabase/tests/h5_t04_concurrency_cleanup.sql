@@ -1,0 +1,12 @@
+begin;
+delete from public.pago where pedido_id=-50491;
+delete from public.historial_estado where pedido_id=-50491;
+delete from public.detalle_pedido where pedido_id=-50491;
+delete from public.pedido where id=-50491;
+delete from public.mesa where id='00000000-0000-0000-0000-00000000e491';
+delete from public.producto where id='00000000-0000-0000-0000-00000000e492';
+delete from public.categoria where id='00000000-0000-0000-0000-00000000e493';
+delete from public.perfil_usuario where id='00000000-0000-0000-0000-00000000e494';
+delete from auth.users where id='00000000-0000-0000-0000-00000000e494';
+delete from public.local where id='00000000-0000-0000-0000-00000000e495';
+commit;

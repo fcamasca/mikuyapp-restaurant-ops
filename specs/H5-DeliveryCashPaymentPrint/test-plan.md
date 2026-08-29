@@ -24,6 +24,12 @@ Este plan separa pruebas automatizadas/SQL-técnicas de pruebas humanas. H5 no e
 | H5-TA16 | Inspección de impresión. | CSS oculta navegación/acciones y produce ancho razonable de 80 mm; documento sigue visible si impresora falla. | R11/T07 |
 | H5-TA17 | Suite regresiva H1–H4. | Auth, roles, catálogos, mesa, creación/envío, estados mixtos, cocina, Realtime y liberación de pedido vacío siguen pasando. | R01-R12/T09 |
 
+### Evidencia H5-TA11 — 2026-08-29
+
+H5-TA11 queda satisfecha. Dos solicitudes concurrentes alcanzaron backends PostgreSQL distintos sobre el mismo pedido inicialmente `ENTREGADO`, con su mesa `PENDIENTE_PAGO`. Una sesión confirmó el cobro y la otra terminó con su transacción PostgreSQL abortada después de competir por el lock. La verificación persistida confirmó pedido `PAGADO`, mesa `LIBRE`, detalles aún `LISTO`, exactamente una fila en `pago` y exactamente un historial `ENTREGADO → PAGADO`. Los fixtures se limpiaron al finalizar.
+
+Limitación del entorno: PostgREST no devolvió al segundo cliente el código ni el mensaje del conflicto antes del timeout, aunque PostgreSQL mostró la transacción perdedora abortada. La validación del mensaje visible para el segundo cliente corresponde a H5-TH03 y no bloquea H5-T04 ni la propiedad funcional de pago único.
+
 ## Pruebas humanas finales
 
 | ID | Escenario | Evidencia |
