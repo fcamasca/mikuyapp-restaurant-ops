@@ -13,7 +13,7 @@ function resolve(pathname, overrides = {}) {
 }
 
 test('redirige usuarios anónimos desde todas las rutas protegidas a login', () => {
-  for (const pathname of ['/tecnica', '/admin/catalogo', '/cocina', '/mozo/mesas', '/403']) {
+  for (const pathname of ['/tecnica', '/admin/catalogo', '/cocina', '/caja', '/mozo/mesas', '/403']) {
     assert.deepEqual(
       resolve(pathname, { authenticationStatus: 'unauthenticated', contextStatus: 'idle', role: null }),
       { status: 'redirect', pathname: '/login' },
@@ -47,7 +47,7 @@ test('redirige cada rol a su destino inicial autorizado', () => {
     ADMINISTRADOR: '/admin/catalogo',
     MOZO: '/mozo/mesas',
     COCINA: '/cocina',
-    CAJA: '/tecnica',
+    CAJA: '/caja',
   }
 
   for (const [role, pathname] of Object.entries(destinations)) {
@@ -77,6 +77,14 @@ test('envía a 403 cuando un rol abre directamente una ruta ajena', () => {
     status: 'allowed',
     pathname: '/cocina',
   })
+  assert.deepEqual(resolve('/caja', { role: 'CAJA' }), {
+    status: 'allowed',
+    pathname: '/caja',
+  })
+  assert.deepEqual(resolve('/caja', { role: 'ADMINISTRADOR' }), {
+    status: 'redirect',
+    pathname: '/403',
+  })
 })
 
 test('permite acceso a técnica a los cuatro roles autorizados', () => {
@@ -96,7 +104,7 @@ test('redirige un usuario autenticado que abre login a su destino por rol', () =
   })
   assert.deepEqual(resolve('/login', { role: 'CAJA' }), {
     status: 'redirect',
-    pathname: '/tecnica',
+    pathname: '/caja',
   })
 })
 

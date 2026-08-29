@@ -19,6 +19,7 @@ export interface AuthenticatedRole {
 
 export interface AuthenticatedLocal {
   readonly id: string
+  readonly nombre: string
   readonly activo: boolean
 }
 
@@ -50,6 +51,7 @@ interface RelatedRole {
 
 interface RelatedLocal {
   readonly id: string
+  readonly nombre: string
   readonly activo: boolean
 }
 
@@ -73,7 +75,7 @@ const allowedRoleCodes = new Set<string>([
 ])
 
 const profileColumns =
-  'id,local_id,rol_id,nombre,activo,rol:rol_id(id,codigo,activo),local:local_id(id,activo)'
+  'id,local_id,rol_id,nombre,activo,rol:rol_id(id,codigo,activo),local:local_id(id,nombre,activo)'
 
 const invalidContextMessage = 'Tu acceso no está habilitado. Comunícate con el administrador.'
 const connectionErrorMessage = 'No pudimos verificar tu acceso. Revisa tu conexión e intenta nuevamente.'
@@ -129,6 +131,7 @@ function validateProfile(row: ProfileRow | null, userId: string): ValidatedProfi
     },
     local: {
       id: local.id,
+      nombre: local.nombre,
       activo: local.activo,
     },
   }

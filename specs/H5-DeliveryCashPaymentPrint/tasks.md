@@ -8,7 +8,7 @@ Estimación final propuesta del Spec: **12 horas (6 jornadas de 2 h)**. Es una r
 | H5-T02 | **Completada (2026-08-29).** Diseñar/implementar función segura de entrega, historial, lock e idempotencia; bloquear modificaciones posteriores. | R01-R04 | D01-D02,D10 | 1.5 h |
 | H5-T03 | **Completada (2026-08-29).** Implementar lectura autoritativa de caja y total basado en precios históricos, con aislamiento por local y políticas mínimas. | R05,R10 | D03-D06 | 1.5 h |
 | H5-T04 | **Completada (2026-08-29).** Función transaccional de cobro, constraint único, historial, liberación y rollback implementados y verificados; H5-TA11 satisfecha por concurrencia efectiva y persistencia de pago único. | R07-R10 | D05-D06,D10 | 2 h |
-| H5-T05 | Construir ruta `/caja`, listado, detalle, estados, precuenta y ticket postpago. | R05-R07 | D03,D07 | 2 h |
+| H5-T05 | **Completada (2026-08-29).** Construir ruta `/caja`, listado, detalle, estados, precuenta y ticket postpago. | R05-R07 | D03,D07 | 2 h |
 | H5-T06 | Integrar Realtime existente, snapshot/resync y estados de mozo/caja sin ampliar publicación. | R01,R05,R12 | D09 | 1 h |
 | H5-T07 | Crear vista imprimible y CSS 80 mm; probar navegador/PC e impresión degradada en pantalla. | R06,R11 | D07-D08 | 1 h |
 | H5-T08 | Ejecutar pruebas SQL/técnicas de seguridad, constraints, rollback y concurrencia; corregir defectos del alcance aprobado. | R03,R08-R10 | D01,D05,D06,D10-D11 | 1 h |

@@ -16,7 +16,7 @@ function createProfile(overrides = {}) {
     nombre: 'Usuario de prueba',
     activo: true,
     rol: { id: 1, codigo: 'ADMINISTRADOR', activo: true },
-    local: { id: 'test-local-own', activo: true },
+    local: { id: 'test-local-own', nombre: 'Local de prueba', activo: true },
     ...overrides,
   }
 }
@@ -68,6 +68,7 @@ test('acepta un perfil propio con rol y local activos y coherentes', async () =>
   assert.equal(controller.getSnapshot().status, 'valid')
   assert.equal(controller.getSnapshot().context.role.codigo, 'ADMINISTRADOR')
   assert.equal(controller.getSnapshot().context.local.id, 'test-local-own')
+  assert.equal(controller.getSnapshot().context.local.nombre, 'Local de prueba')
 })
 
 test('rechaza un usuario sin perfil sin revelar datos internos', async () => {
@@ -118,7 +119,7 @@ test('rechaza un código de rol no reconocido', async () => {
 
 test('rechaza un local inactivo', async () => {
   const fixture = createClient({
-    data: createProfile({ local: { id: 'test-local-own', activo: false } }),
+    data: createProfile({ local: { id: 'test-local-own', nombre: 'Local de prueba', activo: false } }),
     error: null,
   })
   const controller = createProfileContextController(fixture.client)
@@ -138,7 +139,7 @@ test('rechaza relaciones de rol o local incoherentes', async () => {
   assert.equal(controller.getSnapshot().status, 'invalid')
 
   fixture.setResult({
-    data: createProfile({ local: { id: 'another-local', activo: true } }),
+    data: createProfile({ local: { id: 'another-local', nombre: 'Otro local', activo: true } }),
     error: null,
   })
   await controller.retry()
@@ -169,7 +170,7 @@ test('consulta exclusivamente el UUID de la sesión y columnas mínimas', async 
   assert.deepEqual(fixture.calls.filter, { column: 'id', value: ownUserId })
   assert.equal(
     fixture.calls.columns,
-    'id,local_id,rol_id,nombre,activo,rol:rol_id(id,codigo,activo),local:local_id(id,activo)',
+    'id,local_id,rol_id,nombre,activo,rol:rol_id(id,codigo,activo),local:local_id(id,nombre,activo)',
   )
 })
 

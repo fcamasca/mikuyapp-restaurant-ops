@@ -40,11 +40,11 @@ test('TP-09: usuario anónimo es enviado a login y contexto inválido es rechaza
   assert.deepEqual(resolve('/tecnica', { contextStatus: 'invalid', role: null }), { status: 'invalid-context' })
 })
 
-test('TP-10 y H4-T06: cocina llega a su tablero y caja conserva técnica', () => {
+test('TP-10, H4-T06 y H5-T05: cocina y caja llegan a sus tableros', () => {
   assert.equal(getRoleDestination('COCINA'), '/cocina')
-  assert.equal(getRoleDestination('CAJA'), '/tecnica')
+  assert.equal(getRoleDestination('CAJA'), '/caja')
   assert.deepEqual(resolve('/login', { role: 'COCINA' }), { status: 'redirect', pathname: '/cocina' })
-  assert.deepEqual(resolve('/login', { role: 'CAJA' }), { status: 'redirect', pathname: '/tecnica' })
+  assert.deepEqual(resolve('/login', { role: 'CAJA' }), { status: 'redirect', pathname: '/caja' })
 })
 
 test('TP-27: rutas operativas ajenas al rol continúan enviando a 403', () => {

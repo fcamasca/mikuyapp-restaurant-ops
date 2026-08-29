@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AuthProvider, useAuthentication } from './components/AuthProvider'
 import AuthenticatedUserMenu from './components/AuthenticatedUserMenu'
 import CategoryAdministrationPage from './pages/CategoryAdministrationPage'
+import CashierPage from './pages/CashierPage'
 import LoginPage from './pages/LoginPage'
 import KitchenBoardPage from './pages/KitchenBoardPage'
 import VerificationPage from './pages/VerificationPage'
@@ -146,6 +147,11 @@ function ApplicationRouter() {
         onSignOut={() => { void signOut() }}
       />
     )
+  }
+
+  if (resolution.pathname === '/caja') {
+    if (!profileContext.context) return <LoadingScreen context />
+    return <CashierPage context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }} />
   }
 
   const waiterOrderId = getWaiterOrderId(resolution.pathname)
