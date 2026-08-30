@@ -1,0 +1,43 @@
+# MikuyApp — H6 MVP liberado: requisitos
+
+## 1. Objetivo
+
+Cerrar el MVP con ventas del día, exportaciones, respaldo manual, revisión final de seguridad y validación de instalación y operación en celular, tablet y PC. H6 conserva las reglas aprobadas en H1–H5; `ENTREGADO` solo es cobrable mientras no exista pago y `PAGADO`/`ANULADO` son terminales.
+
+## 2. Resultado verificable
+
+El flujo **MOZO → COCINA → MOZO → CAJA → PAGO → MESA LIBRE** funciona en los dispositivos previstos; el administrador consulta y exporta ventas/productos, caja consulta el resumen diario, la impresión funciona en 80 mm y la aplicación opera con Internet principal y router 4G de respaldo.
+
+## 3. Requerimientos funcionales
+
+| ID | Requisito | Tipo |
+|---|---|---|
+| H6-R01 | Mostrar total vendido, pedidos pagados y totales por `EFECTIVO`, `YAPE`, `PLIN`, `TARJETA`. Solo cuentan pagos de pedidos `PAGADO`, agrupados por `pago.pagado_en` en `America/Lima`. | Construcción |
+| H6-R02 | `ADMINISTRADOR` y `CAJA` consultan el resumen usando el local obtenido del contexto autenticado en servidor; ningún identificador de local enviado por frontend es confiable. `MOZO`/`COCINA` no acceden. | Construcción/regresión |
+| H6-R03 | `ADMINISTRADOR` descarga CSV de ventas del local autenticado, solo pagadas, con pedido, mesa, pago, medio e importe persistido. | Construcción |
+| H6-R04 | `ADMINISTRADOR` descarga CSV de productos del local con categoría, códigos, nombre, precio vigente y activo/inactivo. | Construcción |
+| H6-R05 | Documentar respaldo semanal: exportar, comprobar, guardar copia local y segunda copia externa, indicar conservación mínima de cuatro semanas y respaldar antes de publicar. La aceptación valida el procedimiento y las copias iniciales, sin esperar cuatro semanas reales. | Construcción humana |
+| H6-R06 | Mantener autenticación, rutas, privilegios, RLS, RPC, aislamiento, idempotencia, bloqueo postpago y protección contra doble cobro. | Regresión |
+| H6-R07 | PWA instalable con nombre/iconos/metadatos de MikuyApp y conexión requerida. | Configuración/validación |
+| H6-R08 | Validar celular de mozo, tablet de cocina, PC de caja, impresora térmica 80 mm y router 4G. | Humano |
+| H6-R09 | Validar operación integral y reapertura H5: `ENTREGADO → detalle ABIERTO → cocina → LISTO → nueva entrega → pago`; detalles previos permanecen `LISTO`. | Regresión humana/técnica |
+
+## 4. Requerimientos técnicos y seguridad
+
+Usar React + TypeScript, Supabase/PostgreSQL, Realtime existente y Cloudflare Pages. Las consultas de ventas/exportación deben derivar el local y rol desde `auth.uid()` en PostgreSQL, usar funciones `SECURITY DEFINER` con `search_path` fijo, privilegios mínimos y `EXECUTE` solo a `authenticated`. El frontend no es frontera de seguridad. No publicar `pago` en Realtime.
+
+## 5. Instalación, dependencias y exclusiones
+
+La liberación depende de celulares Android, tablet, PC, impresora de 80 mm, conectividad principal y router 4G. El dominio propio se configura y valida si está disponible; su indisponibilidad no bloquea las pruebas funcionales ni el cierre de H6, y se registra como pendiente operativo usando el despliegue vigente de Cloudflare Pages. No incluye SUNAT, inventario, delivery, reservas, QR, división de cuenta, propinas, apertura/cierre de caja, reportes avanzados, impresión automática de cocina, app nativa u operación offline.
+
+## 6. Criterios de salida
+
+Código H6, pruebas automatizadas/SQL, typecheck, build, seguridad y regresiones aprobados; exportaciones verificadas; dispositivos, impresión, 4G y flujo integral aprobados humanamente; cero defectos bloqueantes; aprobación explícita del usuario. No se crea `acceptance.md` antes de esa aprobación.
+
+## 7. Trazabilidad
+
+R01 → D01, T02, TP01–TP03; R02 → D01/D04, T02/T04, TP04/TP07; R03–R04 → D02, T02, TP05–TP07; R05 → D03, T03, TP08; R06 → D04, T04, TP09–TP12; R07–R09 → D05/D06, T05–T07, TP13–TP18. T01 solo inspecciona y contrasta el estado existente.
+
+### Asuntos pendientes de decisión
+
+No quedan asuntos pendientes de decisión funcional. `America/Lima` se hereda de H5; H6 mantiene únicamente las exportaciones CSV de ventas y productos. Si el dominio propio no está disponible, queda como pendiente operativo de liberación, no como bloqueante ni decisión abierta.
