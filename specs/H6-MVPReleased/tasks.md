@@ -2,7 +2,7 @@
 
 | ID | Objetivo | Dependencias | Resultado verificable | Pruebas | Est. |
 |---|---|---|---|---|---:|
-| H6-T01 | Contrastar main, plan, H1–H5, migraciones, RLS, RPC, frontend y pruebas. | H5 aceptado | Inventario y contradicciones documentados. | TP09–TP12 | 0.5 h |
+| H6-T01 | **Completada.** Contrastar main, plan, H1–H5, migraciones, RLS, RPC, frontend y pruebas; registrar que las verificaciones SQL remotas y humanas pertenecen a tareas posteriores. | H5 aceptado | Inventario y riesgos documentados: H1–H5 existentes y sus suites pasan; H6-T02 (ventas/exportaciones), H6-T05 (PWA mínima), verificaciones SQL remotas y pruebas humanas permanecen pendientes. | TP09–TP12 | 0.5 h |
 | H6-T02 | Construir resumen diario y exportaciones CSV servidoras/cliente. | T01, D01–D02 | Resumen y dos descargas aisladas por local. | TP01–TP07 | 1.5 h |
 | H6-T03 | Documentar y ejecutar el procedimiento de respaldo manual. | T02, D03 | Guía y primer conjunto de respaldos comprobado. | TP08 | 0.25 h |
 | H6-T04 | Ejecutar revisión final de seguridad, privilegios, RLS, RPC, duplicados y regresiones H1–H5. | T01–T03 | Sin acceso cruzado ni regresiones; defectos clasificados. | TP09–TP12 | 0.5 h |
