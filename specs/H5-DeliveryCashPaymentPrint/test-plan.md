@@ -1,6 +1,6 @@
 # MikuyApp — H5 Entrega, caja, cobro e impresión: plan de pruebas
 
-Este plan separa pruebas automatizadas/SQL-técnicas de pruebas humanas. H5 está en validación humana; la reapertura de `ENTREGADO` aprobada durante TH01 fue implementada y su cobertura técnica afectada quedó nuevamente aprobada antes de continuar con TH02.
+Este plan separa pruebas automatizadas/SQL-técnicas de pruebas humanas. La reapertura de `ENTREGADO` aprobada durante TH01 fue implementada y verificada; TH01–TH09 y la consolidación técnica T10 quedaron aprobadas. H5 fue cerrado, validado y aceptado el 2026-08-30.
 
 ## Pruebas automatizadas y SQL/técnicas
 
@@ -44,14 +44,26 @@ Se conserva la limitación ya documentada del entorno concurrente: las sesiones 
 | ID | Escenario | Evidencia |
 |---|---|---|
 | H5-TH01 | **APROBADA (2026-08-30).** Mozo observa un pedido completamente listo, confirma la entrega desde celular y la vista resincroniza `ENTREGADO`/mesa `PENDIENTE_PAGO`; durante la validación se aprobó que `ENTREGADO` pueda reabrirse por nuevos productos antes del pago. | Validación humana confirmada; la nueva regla fue implementada y verificada técnicamente antes de TH02. |
-| H5-TH02 | Mozo intenta entregar con una línea no lista y luego reintenta con estado actualizado. | Mensaje comprensible, sin falso éxito. |
-| H5-TH03 | Dos dispositivos intentan entregar/cobrar el mismo pedido. | Una sola transición/pago; segundo dispositivo muestra conflicto o estado ya procesado. |
-| H5-TH04 | Caja en PC consulta mesas pendientes, abre consumo, verifica total y estado `ENTREGADO`. | Flujo usable sin navegación insegura. |
-| H5-TH05 | Caja abre precuenta, cobra probando los cuatro medios en pedidos de prueba y abre ticket interno. | Documentos con todos los campos y medio correcto. |
-| H5-TH06 | Imprimir/vista previa en 80 mm desde navegador. | Ancho, legibilidad, ausencia de menú/acciones y corte razonable. |
-| H5-TH07 | Caja en tablet y PC; mozo ve `PENDIENTE_PAGO` y luego `LIBRE` sin refresh. | Video/capturas de Realtime y responsive. |
-| H5-TH08 | Usuario de otro rol/local intenta entrar, leer y operar caja/entrega. | Acceso denegado y datos aislados. |
-| H5-TH09 | Ejecutar regresión manual H1–H4 y flujo completo cocina→entrega→cobro. | Checklist firmado por revisor humano. |
+| H5-TH02 | **APROBADA (2026-08-30).** Mozo intenta entregar con una línea no lista y luego reintenta con estado actualizado. | Validación humana confirmó rechazo comprensible sin falso éxito y entrega posterior correcta. |
+| H5-TH03 | **APROBADA (2026-08-30).** Dos dispositivos intentan entregar/cobrar el mismo pedido. | Validación humana confirmó una sola operación ganadora y conflicto/estado ya procesado en el segundo cliente. |
+| H5-TH04 | **APROBADA (2026-08-30).** Caja en PC consulta mesas pendientes, abre consumo, verifica total y estado `ENTREGADO`. | Flujo validado humanamente sin navegación insegura. |
+| H5-TH05 | **APROBADA (2026-08-30).** Caja abre precuenta, cobra con un medio representativo y abre ticket interno. | Flujo y documentos validados humanamente con un medio representativo; los cuatro medios (`EFECTIVO`, `YAPE`, `PLIN`, `TARJETA`) están cubiertos por H5-TA07. |
+| H5-TH06 | **APROBADA (2026-08-30).** Imprimir/vista previa en 80 mm desde navegador. | Hubo un bloqueo temporal externo por respuesta 504 de Supabase; posteriormente se repitió la prueba y se aprobó ancho, legibilidad, ocultamiento de acciones y corte razonable. |
+| H5-TH07 | **APROBADA (2026-08-30).** Caja en tablet y PC; mozo ve `PENDIENTE_PAGO` y luego `LIBRE` sin refresh. | Realtime y presentación responsive aprobados humanamente. |
+| H5-TH08 | **APROBADA (2026-08-30).** Roles no autorizados y `CAJA` de un segundo local intentan entrar, leer y operar pedidos ajenos. | Acceso por rol denegado; el segundo local obtuvo cero pedidos ajenos y el cobro directo fue rechazado con `42501`. Fixtures temporales eliminados y residuos en cero. |
+| H5-TH09 | **APROBADA (2026-08-30).** Regresión manual H1–H4 y flujo completo cocina→entrega→cobro. | Validación humana final confirmada. |
+
+### Evidencia final H5-T10 — 2026-08-30
+
+- Suite automatizada completa: **289/289 aprobadas**, sin fallos ni omisiones.
+- SQL remoto final: **5/5 pruebas H5** y **14/14 regresiones H1–H4**, total **19/19**.
+- `npm run typecheck`, `npm run build` y `git diff --check`: aprobados. El build conserva únicamente el aviso no bloqueante ya conocido por tamaño de bundle.
+- `supabase db lint --linked --level error`: sin errores de esquema.
+- Migraciones: **26/26 local/remoto alineadas**, última `20260830000200_h5_reopen_delivered_order.sql`.
+- Auditoría final de fixtures H5, incluido el escenario temporal TH08: **0 residuos**.
+- Concurrencia y rollback conservan la evidencia técnica aprobada en T04/T08; no fue necesario modificar funciones productivas durante T10.
+- TH01–TH09: **9/9 aprobadas humanamente**.
+- T10 consolidó la evidencia que sustentó la aceptación formal registrada en `acceptance.md`.
 
 ## Datos y controles
 

@@ -6,7 +6,7 @@
 
 Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedido → cocina → entrega → pago**.
 
-**Estado actual:** H1, H2, H3 y H4 están cerrados, validados y aceptados. H5 — Caja e impresión es el siguiente hito y todavía no ha iniciado.
+**Estado actual:** H1–H5 están cerrados, validados y aceptados. H6 — MVP liberado es el siguiente hito y permanece pendiente.
 
 **Producción:** <https://mikuyapp.pages.dev/>
 
@@ -16,7 +16,7 @@ La operación de un restaurante requiere coordinar a mozos, cocina y caja. Cuand
 
 MikuyApp busca centralizar mesas, carta, pedidos, estados operativos y pagos para reducir esos problemas. El alcance inicial está diseñado para un solo local.
 
-H1 establece la base técnica verificable, H2 incorpora autenticación, roles, carta y mesas, H3 completa el flujo operativo del mozo y H4 incorpora la operación de cocina y su sincronización Realtime.
+H1 establece la base técnica verificable, H2 incorpora autenticación, roles, carta y mesas, H3 completa el flujo operativo del mozo, H4 incorpora cocina y Realtime, y H5 agrega entrega segura, caja, cobro e impresión.
 
 ## Estado del proyecto
 
@@ -26,10 +26,10 @@ H1 establece la base técnica verificable, H2 incorpora autenticación, roles, c
 | H2 | Usuarios, carta y mesas | Cerrado, validado y aceptado |
 | H3 | Flujo del mozo | Cerrado, validado y aceptado |
 | H4 | Cocina en tiempo real | Cerrado, validado y aceptado |
-| H5 | Caja e impresión | Siguiente hito; no iniciado |
-| H6 | MVP liberado | Pendiente |
+| H5 | Entrega, caja, cobro e impresión | Cerrado, validado y aceptado |
+| H6 | MVP liberado | Siguiente hito; pendiente |
 
-El plan base fue de **24 h**. La referencia de planificación vigente es **32.5 h**; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
+El plan base fue de **24 h**. La referencia de planificación vigente es **40.5 h**, incluida la reestimación aprobada de H5 de 4 h a 12 h; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
 
 ## Funcionalidades disponibles
 
@@ -52,11 +52,17 @@ La aplicación permite comprobar:
 - transición individual `ENVIADO → RECIBIDO_COCINA → EN_PREPARACION → LISTO`;
 - actualización de cocina y mozo mediante señales Realtime y recarga autoritativa desde PostgreSQL;
 - estados mixtos, agregados posteriores y derivación transaccional de la cabecera y la mesa;
+- entrega segura por `MOZO`, conservando detalles `LISTO` y pasando la mesa a `PENDIENTE_PAGO`;
+- reapertura de pedidos `ENTREGADO` antes del pago mediante nuevos detalles `ABIERTO`, retorno del pedido al flujo operativo y de la mesa a `OCUPADA`, con posibilidad de una nueva entrega;
+- ruta protegida `/caja` para `CAJA`, consumo y total autoritativos, precuenta, cobro único y ticket interno posterior al pago;
+- liberación automática de la mesa después del cobro y bloqueo terminal en `PAGADO`/`ANULADO`;
+- sincronización de mozo y caja mediante Realtime sobre `detalle_pedido`, `pedido` y `mesa`, sin publicar `pago`;
+- impresión estándar del navegador con presentación térmica de 80 mm;
 - administración completa de categorías, productos y mesas;
 - identidad autenticada compacta y página técnica disponible para los cuatro roles;
 - presentación responsive validada en celular, tablet y escritorio.
 
-Todavía no están implementados entrega, caja, cobro, impresión ni liberación automática posterior al pago. Esas capacidades corresponden a H5 y etapas posteriores.
+H5 está implementado y aceptado. Reportes, exportaciones, respaldo operativo e instalación/liberación final permanecen para H6.
 
 ## Roles y rutas
 
@@ -65,9 +71,9 @@ Todavía no están implementados entrega, caja, cobro, impresión ni liberación
 | `ADMINISTRADOR` | `/admin/catalogo` | Administración de categorías, productos y mesas; acceso a `/tecnica` |
 | `MOZO` | `/mozo/mesas` | Tablero, pedidos en `/mozo/pedidos/:id`, carta operativa y acceso a `/tecnica` |
 | `COCINA` | `/cocina` | Tablero Realtime de cocina y acceso a `/tecnica` |
-| `CAJA` | `/tecnica` | Página técnica autenticada |
+| `CAJA` | `/caja` | Pedidos pendientes de pago, consumo autoritativo, precuenta, cobro y ticket interno; acceso a `/tecnica` |
 
-Las rutas protegidas requieren sesión y contexto válidos. Un acceso de rol no autorizado se dirige a `/403`; una sesión ausente se dirige a `/login`.
+Las rutas protegidas requieren sesión y contexto válidos. Un acceso de rol no autorizado se dirige a `/403`; una sesión ausente se dirige a `/login`. `ADMINISTRADOR` conserva sus funciones administrativas, pero no ejecuta entrega ni cobro; `MOZO` entrega y `CAJA` cobra.
 
 ## Arquitectura
 
@@ -102,7 +108,7 @@ flowchart TB
 | Paquetes | npm `10.9.0` | Instalación reproducible mediante lockfile |
 | Hosting | Cloudflare Pages | Publicación del frontend estático |
 
-## Alcance implementado en H1–H4
+## Alcance implementado en H1–H5
 
 - Proyecto Vite con React y TypeScript.
 - Tailwind CSS con comportamiento responsive.
@@ -125,16 +131,19 @@ flowchart TB
 - Snapshot seguro y transiciones adyacentes para el rol `COCINA`.
 - Derivación transaccional de estados de pedido y mesa.
 - Tablero de cocina y resincronización Realtime para cocina y mozo.
+- Entrega transaccional, reapertura de `ENTREGADO` antes del pago y nueva entrega tras completar cocina.
+- Lectura segura de caja, pago único transaccional y liberación automática de mesa.
+- Precuenta y ticket interno imprimibles mediante navegador para 80 mm.
+- Realtime de caja reutilizando las tablas operativas; `pago` permanece fuera de la publicación.
 - Pruebas SQL de esquema, restricciones y seed.
-- 261 pruebas automatizadas en la consolidación integral de H4, además de verificaciones técnicas y humanas.
-- H1, H2, H3 y H4 aceptados e integrados en `main`.
+- 289 pruebas automatizadas en la consolidación integral de H5, 19 pruebas SQL remotas finales y TH01–TH09 aprobadas.
+- H1, H2, H3, H4 y H5 aceptados.
 
 ### Fuera del alcance implementado
 
-- Caja y pagos.
-- Impresión.
-- Entrega.
 - Reportes.
+- Exportaciones y respaldo operativo.
+- Instalación y liberación final del MVP.
 
 ## Modelo de datos
 
@@ -143,7 +152,7 @@ Las diez tablas se agrupan por responsabilidad:
 - **Configuración y catálogo:** `local`, `rol`, `mesa`, `categoria`, `producto`.
 - **Identidad:** `perfil_usuario`.
 - **Operación de pedidos:** `pedido`, `detalle_pedido`, `historial_estado`.
-- **Operación futura de caja:** `pago`.
+- **Operación de caja:** `pago`.
 
 Métricas verificadas en H1:
 
@@ -270,6 +279,7 @@ specs/
   H2-UsersCatalogTables/ Spec y aceptación de H2
   H3-WaiterFlow/       Spec, evidencia y aceptación de H3
   H4-KitchenRealtime/  Spec, evidencia y aceptación de H4
+  H5-DeliveryCashPaymentPrint/ Spec, evidencia y aceptación de H5
 scripts/               Verificaciones automatizadas
 src/
   data/                Códigos y dataset demo
@@ -300,7 +310,7 @@ Recursos de base de datos:
 | Pruebas SQL | Esquema, constraints, índices, seed e idempotencia |
 | GitHub Actions | Instalación limpia, typecheck y build en cada cambio relevante |
 
-H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, verificaciones reales con cuatro roles y TP-01–TP-53 conformes. H3 cerró con **238/238** pruebas integrales. H4 cerró con la suite integral H1–H4 en **261/261**, SQL remoto H4-T01–T05 aprobado, migraciones sincronizadas, fixtures residuales en `0` y H4-TH01–H4-TH06 aprobadas.
+H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, verificaciones reales con cuatro roles y TP-01–TP-53 conformes. H3 cerró con **238/238** pruebas integrales. H4 cerró con la suite integral H1–H4 en **261/261**. H5 cerró con **289/289** pruebas automatizadas, **19/19** SQL remotas, **9/9** pruebas humanas, 26/26 migraciones alineadas y fixtures residuales en `0`.
 
 ## Documentación
 
@@ -330,10 +340,15 @@ H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, 
 - [Plan de pruebas de H4](specs/H4-KitchenRealtime/h4_test-plan.md)
 - [Evidencia técnica de H4](specs/H4-KitchenRealtime/h4_t09_execution.md)
 - [Aceptación de H4](specs/H4-KitchenRealtime/acceptance.md)
+- [Requisitos de H5](specs/H5-DeliveryCashPaymentPrint/requirements.md)
+- [Diseño de H5](specs/H5-DeliveryCashPaymentPrint/design.md)
+- [Tareas de H5](specs/H5-DeliveryCashPaymentPrint/tasks.md)
+- [Plan de pruebas de H5](specs/H5-DeliveryCashPaymentPrint/test-plan.md)
+- [Aceptación de H5](specs/H5-DeliveryCashPaymentPrint/acceptance.md)
 
 ## Siguiente etapa
 
-H5 — Caja e impresión es el siguiente hito. Todavía no ha iniciado y deberá comenzar en Spec Mode.
+H6 — MVP liberado es el siguiente hito. Permanece pendiente y no se inició durante el cierre de H5.
 
 ## Licencia
 

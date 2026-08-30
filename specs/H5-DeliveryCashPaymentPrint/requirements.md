@@ -37,7 +37,7 @@ La secuencia base es `ABIERTO → ENVIADO → RECIBIDO_COCINA → EN_PREPARACION
 
 Fuera: SUNAT, boleta/factura, integraciones Yape/Plin/tarjeta, caja abierta/cerrada, movimientos de efectivo, descuentos, propinas, división, reportes/exportaciones/respaldo e infraestructura nueva.
 
-Durante la construcción se verifica el estado real de la base/repositorio y se aplica únicamente el ajuste técnico mínimo necesario para cumplir los contratos ya definidos: `UNIQUE(pago.pedido_id)`, pago único, aislamiento por local y RLS/privilegios. Esta verificación no representa una decisión funcional pendiente. H5 está en validación humana; la reapertura aprobada durante TH01 fue implementada y verificada antes de continuar con TH02.
+Durante la construcción se verificó el estado real de la base/repositorio y se aplicó únicamente el ajuste técnico mínimo necesario para cumplir los contratos ya definidos: `UNIQUE(pago.pedido_id)`, pago único, aislamiento por local y RLS/privilegios. Esta verificación no representa una decisión funcional pendiente. La reapertura aprobada durante TH01 fue implementada, verificada y aceptada como parte del cierre de H5.
 
 ## Trazabilidad
 

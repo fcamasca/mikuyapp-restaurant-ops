@@ -1,6 +1,6 @@
 # MikuyApp — H5 Entrega, caja, cobro e impresión: tareas
 
-Estimación final propuesta del Spec: **12 horas (6 jornadas de 2 h)**. Es una reestimación del alcance real de H5; no modifica `PLAN_MVP.md` ni `CHANGELOG_SCOPE.md`. La referencia del plan asigna 4 h originales (jornadas 12–13), pero el Spec exige función transaccional, seguridad, concurrencia, impresión y pruebas completas.
+Estimación final aprobada del Spec: **12 horas (6 jornadas de 2 h)**. Es una reestimación del alcance real de H5. La referencia anterior asignaba 4 h originales (jornadas 12–13); `PLAN_MVP.md` y `CHANGELOG_SCOPE.md` incorporan la desviación aprobada de +8 h.
 
 | ID | Trabajo | Req. | Diseño | Est. |
 |---|---|---|---|---:|
@@ -12,14 +12,14 @@ Estimación final propuesta del Spec: **12 horas (6 jornadas de 2 h)**. Es una r
 | H5-T06 | **Completada (2026-08-30).** Integrar Realtime existente, snapshot/resync y estados de mozo/caja sin ampliar publicación. | R01,R05,R12 | D09 | 1 h |
 | H5-T07 | **Completada (2026-08-30).** Crear vista imprimible y CSS 80 mm; probar navegador/PC e impresión degradada en pantalla. | R06,R11 | D07-D08 | 1 h |
 | H5-T08 | **Completada (2026-08-30).** Ejecutar pruebas SQL/técnicas de seguridad, constraints, rollback y concurrencia; corregir defectos del alcance aprobado. | R03,R08-R10 | D01,D05,D06,D10-D11 | 1 h |
-| H5-T09 | Ejecutar pruebas humanas de flujo completo en PC/tablet y regresión H1–H4. | R01-R12 | D01-D12 | 0.75 h |
-| H5-T10 | Preparar evidencias y revisión humana del Spec/implementación; no crear `acceptance.md` en esta fase. | Todos | D11-D12 | 0.25 h |
+| H5-T09 | **Completada (2026-08-30).** TH01–TH09 aprobadas humanamente; se validaron flujo completo, seguridad/aislamiento, concurrencia, Realtime, responsive, impresión y regresión H1–H4. | R01-R12 | D01-D12 | 0.75 h |
+| H5-T10 | **Completada (2026-08-30).** Evidencia técnica y humana consolidada: 289/289 automatizadas, 19/19 SQL finales, typecheck/build/lint/diff aprobados, 26 migraciones alineadas y fixtures residuales en cero. Esta evidencia sustentó la aceptación formal posterior. | Todos | D11-D12 | 0.25 h |
 
 ## Orden y dependencias
 
 T01 precede T02–T04. T02 debe cerrar antes de probar caja. T03 y T04 preceden T05. T06/T07 pueden ejecutarse después de T05. T08–T10 son cierre. Los estados de la tabla registran la ejecución real y cualquier reapertura aprobada durante validación.
 
-La decisión aprobada durante H5-TH01 reabrió exclusivamente la compatibilidad de H5-T02 y las regresiones afectadas. El ciclo `ENTREGADO → operación → LISTO → ENTREGADO` y la cobertura técnica afectada quedaron nuevamente en verde. H5-T09 puede reanudar TH02 en una ejecución posterior.
+La decisión aprobada durante H5-TH01 reabrió exclusivamente la compatibilidad de H5-T02 y las regresiones afectadas. El ciclo `ENTREGADO → operación → LISTO → ENTREGADO` y la cobertura técnica afectada quedaron nuevamente en verde. TH01–TH09 y T10 quedaron completadas; H5 fue cerrado, validado y aceptado el 2026-08-30.
 
 ## Criterio de terminado propuesto
 

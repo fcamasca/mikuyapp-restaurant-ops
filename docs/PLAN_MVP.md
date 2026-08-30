@@ -25,17 +25,17 @@ El nombre oficial de la aplicación será **MikuyApp**.
 
 | Condición | Definición |
 |---|---|
-| Duración | 2 semanas más 3 jornadas adicionales, manteniendo 2 horas máximas por jornada |
+| Duración | Calendario base histórico de 15 jornadas; la referencia revisada requiere jornadas adicionales manteniendo 2 horas máximas por jornada |
 | Días de trabajo | Lunes a sábado |
 | Dedicación diaria | 2 horas |
-| Esfuerzo total | 29 horas; H2 requiere 9 horas (540 minutos) en lugar de las 4 inicialmente previstas |
+| Esfuerzo total | Referencia planificada revisada de 40.5 horas; no representa tiempo real consumido |
 | Locales incluidos | 1 |
 | Mozos considerados | 2 |
 | Estaciones | Cocina y caja |
 | Backend | Supabase Free |
 | Renta tecnológica mensual | S/0 |
 
-> **Estado de planificación vigente (2026-08-27):** el plan base se conserva como referencia histórica. Las desviaciones aprobadas elevan la referencia actual de **24 h a 32.5 h**, sin implicar tiempo real consumido. El detalle se mantiene en [`docs/CHANGELOG_SCOPE.md`](CHANGELOG_SCOPE.md).
+> **Estado de planificación vigente (2026-08-30):** el plan base se conserva como referencia histórica. Las desviaciones aprobadas elevan la referencia actual de **24 h a 40.5 h**, incluida la reestimación de H5 de 4 h a 12 h, sin implicar tiempo real consumido. El detalle se mantiene en [`docs/CHANGELOG_SCOPE.md`](CHANGELOG_SCOPE.md).
 
 ## 2. Objetivo
 
@@ -65,15 +65,16 @@ Al finalizar las 15 jornadas de trabajo, correspondientes a dos semanas de lunes
 - Crea, edita, elimina, activa y desactiva categorías, productos y mesas de su local.
 - Consulta registros activos e inactivos; respeta dependencias históricas y restricciones de eliminación.
 - Configura mesas sin modificar manualmente sus estados operativos.
-- Consulta ventas.
-- Exporta información.
-- Accede a todas las funciones.
+- Conserva exclusivamente las funciones administrativas aprobadas hasta H5.
+- No ejecuta operaciones H5 de entrega ni cobro.
+- Los reportes, ventas y exportaciones permanecen para H6; no se infiere acceso operativo global.
 
 ### Mozo
 
 - Visualiza mesas.
 - Abre pedidos.
 - Agrega productos.
+- Puede agregar nuevos productos a un pedido `ENTREGADO` mientras todavía no esté pagado.
 - Registra observaciones.
 - Envía pedidos a cocina.
 - Consulta el estado.
@@ -153,6 +154,9 @@ El precio se copiará en el detalle del pedido. Una modificación posterior del 
 - El mozo visualiza los pedidos listos.
 - Puede marcar el pedido como entregado.
 - La mesa queda pendiente de pago.
+- `ENTREGADO` no es terminal: antes del pago, un producto nuevo nace `ABIERTO`, los detalles anteriores siguen `LISTO`, el pedido vuelve al flujo operativo y la mesa a `OCUPADA`.
+- Cuando el nuevo ciclo de cocina deja nuevamente todos los detalles `LISTO`, el mozo puede realizar otra entrega.
+- Solo `PAGADO` y `ANULADO` son terminales.
 
 ### 4.7 Caja
 
@@ -163,6 +167,7 @@ El precio se copiará en el detalle del pedido. Una modificación posterior del 
 - Cierre del pedido.
 - Liberación de la mesa.
 - Protección contra cobro duplicado.
+- El cobro corresponde exclusivamente a `CAJA`; el total autoritativo se calcula en PostgreSQL desde los detalles persistidos.
 
 El MVP solamente registra el medio utilizado. No se integra directamente con Yape, Plin ni una pasarela bancaria.
 
@@ -176,8 +181,11 @@ El MVP solamente registra el medio utilizado. No se integra directamente con Yap
 - Productos, cantidades y precios.
 - Total y forma de pago.
 - Impresión desde la computadora de caja.
+- Impresión estándar del navegador mediante `window.print()` y CSS para papel térmico de 80 mm.
 
 La impresión automática de comandas en cocina y la facturación electrónica no forman parte del MVP.
+
+Realtime usa `detalle_pedido`, `pedido` y `mesa` como señales para recargar el snapshot autoritativo. `pago` no se publica.
 
 ### 4.9 Ventas y exportación
 
@@ -283,8 +291,8 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 | H2. Usuarios, carta y mesas | Jornada 7 | Acceso por roles y administración completa de categorías, productos y mesas con integridad y RLS | Completado y aceptado |
 | H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado | Cerrado, validado y aceptado |
 | H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos | Cerrado, validado y aceptado |
-| H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso | Siguiente hito; no iniciado, debe comenzar en Spec Mode |
-| H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos | Pendiente |
+| H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso | Cerrado, validado y aceptado |
+| H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos | Siguiente hito; pendiente |
 
 ## 9. Plan de trabajo
 
@@ -331,7 +339,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 
 **Resultado:** acceso por roles y categorías, productos y mesas administrables con eliminación restringida e integridad verificada. **Hito H2.**
 
-**Replanificación:** H2 requiere 9 horas (540 minutos): 2 horas de autenticación/roles y 7 horas de catálogos, seguridad y pruebas. Frente a las 4 horas originales agrega 5 horas. Los hitos H3–H6 conservan íntegramente su esfuerzo; manteniendo un máximo de 2 horas por jornada, el proyecto pasa de 12 a 15 jornadas y de 24 a 29 horas efectivas.
+**Replanificación histórica de H2:** H2 requirió 9 horas (540 minutos): 2 horas de autenticación/roles y 7 horas de catálogos, seguridad y pruebas. Frente a las 4 horas originales agregó 5 horas. Las desviaciones posteriores de H3, H4 y H5 se consolidan en `CHANGELOG_SCOPE.md`; la referencia planificada vigente es 40.5 h y no equivale a tiempo real consumido.
 
 #### Jornada 8 — Creación del pedido (2 horas)
 
@@ -464,8 +472,8 @@ Referencia: Samsung Galaxy Tab A9 4/64 GB, aproximadamente S/621.
 
 | Concepto | Cantidad | Unitario | Subtotal |
 |---|---:|---:|---:|
-| Desarrollo del MVP | 29 horas | S/70 | S/2,030 |
-| Contingencia de desarrollo | 15% | — | S/304.50 |
+| Desarrollo del MVP | 40.5 horas planificadas | S/70 | S/2,835 |
+| Contingencia de desarrollo | 15% | — | S/425.25 |
 | Tablet de cocina | 1 | S/621 | S/621 |
 | Celulares para mozos | 2 | S/450 | S/900 |
 | Impresora térmica | 1 | S/337 | S/337 |
@@ -474,7 +482,7 @@ Referencia: Samsung Galaxy Tab A9 4/64 GB, aproximadamente S/621.
 | Fundas, soportes y cargadores | — | — | S/180 |
 | Papel térmico inicial | 10 rollos | — | S/60 |
 | Contingencia de hardware | — | — | S/240 |
-| **Total estimado** | | | **S/4,983.50** |
+| **Total estimado** | | | **S/5,909.25** |
 
 Los precios son referenciales y deberán confirmarse antes de la compra.
 
@@ -482,12 +490,12 @@ Los precios son referenciales y deberán confirmarse antes de la compra.
 
 | Escenario | Desembolso |
 |---|---:|
-| Desarrollo contratado y equipos completos | **S/4,983.50** |
-| Reutilizando celulares de los mozos | **S/4,083.50** |
+| Desarrollo contratado y equipos completos | **S/5,909.25** |
+| Reutilizando celulares de los mozos | **S/5,009.25** |
 | Desarrollo propio y equipos completos | **S/2,649** |
 | Desarrollo propio y celulares existentes | **S/1,749** |
 
-El desarrollo propio conserva un valor técnico estimado de S/2,334.50, incluida la contingencia.
+El desarrollo propio conserva un valor técnico planificado de S/3,260.25, incluida la contingencia. Esta valorización deriva de la referencia de planificación y no constituye tiempo real registrado.
 
 ## 12. Gastos posteriores
 
@@ -624,8 +632,8 @@ La primera versión tendrá:
 - Un router 4G prepago.
 - Dominio propio.
 - Renta tecnológica mensual fija de S/0.
-- Inversión inicial completa aproximada de S/4,983.50.
-- Duración de dos semanas más tres jornadas adicionales y 29 horas de desarrollo.
+- Inversión inicial completa aproximada de S/5,909.25 según la referencia planificada vigente.
+- Calendario base histórico de 15 jornadas y referencia revisada de 40.5 horas de planificación, no de tiempo real consumido.
 - Repositorio denominado `mikuyapp`.
 
 El alcance está concentrado en terminar correctamente el circuito de atención y cobro. Inventario, SUNAT, carta QR e integraciones de pago se implementarán después de validar el MVP.
