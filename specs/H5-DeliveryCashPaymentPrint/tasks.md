@@ -11,7 +11,7 @@ Estimación final propuesta del Spec: **12 horas (6 jornadas de 2 h)**. Es una r
 | H5-T05 | **Completada (2026-08-29).** Construir ruta `/caja`, listado, detalle, estados, precuenta y ticket postpago. | R05-R07 | D03,D07 | 2 h |
 | H5-T06 | **Completada (2026-08-30).** Integrar Realtime existente, snapshot/resync y estados de mozo/caja sin ampliar publicación. | R01,R05,R12 | D09 | 1 h |
 | H5-T07 | **Completada (2026-08-30).** Crear vista imprimible y CSS 80 mm; probar navegador/PC e impresión degradada en pantalla. | R06,R11 | D07-D08 | 1 h |
-| H5-T08 | Ejecutar pruebas SQL/técnicas de seguridad, constraints, rollback y concurrencia; corregir defectos del alcance aprobado. | R03,R08-R10 | D01,D05,D06,D10-D11 | 1 h |
+| H5-T08 | **Completada (2026-08-30).** Ejecutar pruebas SQL/técnicas de seguridad, constraints, rollback y concurrencia; corregir defectos del alcance aprobado. | R03,R08-R10 | D01,D05,D06,D10-D11 | 1 h |
 | H5-T09 | Ejecutar pruebas humanas de flujo completo en PC/tablet y regresión H1–H4. | R01-R12 | D01-D12 | 0.75 h |
 | H5-T10 | Preparar evidencias y revisión humana del Spec/implementación; no crear `acceptance.md` en esta fase. | Todos | D11-D12 | 0.25 h |
 

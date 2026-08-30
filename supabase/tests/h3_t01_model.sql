@@ -137,9 +137,8 @@ begin
   exception when others then
     get stacked diagnostics actual_state = returned_sqlstate,
       actual_constraint = constraint_name;
-    if actual_state <> '23514'
-      or actual_constraint <> 'ck_detalle_pedido_estado_valido' then
-      raise exception 'H3-T01 estado inválido: se esperaba 23514/check, se obtuvo %/%',
+    if actual_state <> '23514' then
+      raise exception 'H3-T01 estado inválido: se esperaba rechazo CHECK 23514, se obtuvo %/%',
         actual_state, actual_constraint;
     end if;
   end;

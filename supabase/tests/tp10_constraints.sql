@@ -17,6 +17,51 @@ begin
   order by codigo
   limit 1;
 
+  insert into auth.users (id, aud, role, email, encrypted_password)
+  values (
+    '00000000-0000-0000-0000-00000000a003',
+    'authenticated',
+    'authenticated',
+    'tp10-mozo@example.invalid',
+    'test'
+  );
+
+  insert into public.perfil_usuario (id, local_id, rol_id, nombre)
+  select
+    '00000000-0000-0000-0000-00000000a003',
+    demo_local_id,
+    role_row.id,
+    'Mozo TP-10'
+  from public.rol as role_row
+  where role_row.codigo = 'MOZO';
+
+  insert into public.mesa (id, local_id, codigo, nombre, estado, activo)
+  values (
+    '00000000-0000-0000-0000-00000000a002',
+    demo_local_id,
+    'TP10-MESA-AUTORIZADA',
+    'Mesa autorizada TP-10',
+    'OCUPADA',
+    true
+  );
+
+  perform pg_catalog.set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-00000000a003',
+    true
+  );
+  perform pg_catalog.set_config('request.jwt.claim.role', 'authenticated', true);
+
+  insert into public.pedido (id, local_id, mesa_id, creado_por, estado)
+  overriding system value
+  values (
+    -91001,
+    demo_local_id,
+    '00000000-0000-0000-0000-00000000a002',
+    '00000000-0000-0000-0000-00000000a003',
+    'ABIERTO'
+  );
+
   begin
     insert into public.rol (id, codigo, nombre, activo)
     values (-32000, 'ROL_INVALIDO_TP10', 'Rol inválido TP-10', true);
@@ -42,7 +87,7 @@ begin
   begin
     insert into public.pedido (id, local_id, mesa_id, creado_por, estado)
     overriding system value
-    values (-91001, demo_local_id, '00000000-0000-0000-0000-00000000a002', '00000000-0000-0000-0000-00000000a003', 'ESTADO_INVALIDO');
+    values (-91010, demo_local_id, '00000000-0000-0000-0000-00000000a002', '00000000-0000-0000-0000-00000000a003', 'ESTADO_INVALIDO');
     raise exception using errcode = 'P0001', message = 'TP-10: estado de pedido inválido fue aceptado';
   exception when others then
     get stacked diagnostics actual_state = returned_sqlstate, actual_constraint = constraint_name;
@@ -215,6 +260,7 @@ begin
 
   if actual_names <> array[
     'idx_categoria_local_id_activo_orden',
+    'idx_detalle_pedido_cocina_enviado_en',
     'idx_detalle_pedido_pedido_id',
     'idx_detalle_pedido_pedido_id_estado',
     'idx_detalle_pedido_producto_id',
@@ -231,7 +277,7 @@ begin
     raise exception 'TP-10: índices adicionales vigentes diferentes: %', actual_names;
   end if;
 
-  raise notice 'TP-10 aprobada: rechazos dinámicos, 9 UNIQUE y 13 índices idx_* verificados';
+  raise notice 'TP-10 aprobada: rechazos dinámicos, 9 UNIQUE y 14 índices idx_* verificados';
 end
 $tp10_catalogs$;
 

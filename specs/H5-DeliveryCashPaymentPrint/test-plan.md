@@ -30,6 +30,14 @@ H5-TA11 queda satisfecha. Dos solicitudes concurrentes alcanzaron backends Postg
 
 Limitación del entorno: PostgREST no devolvió al segundo cliente el código ni el mensaje del conflicto antes del timeout, aunque PostgreSQL mostró la transacción perdedora abortada. La validación del mensaje visible para el segundo cliente corresponde a H5-TH03 y no bloquea H5-T04 ni la propiedad funcional de pago único.
 
+### Evidencia H5-T08 — 2026-08-30
+
+La validación técnica integral quedó aprobada: cuatro pruebas SQL H5 remotas pasaron, la regresión SQL H1–H4 pasó 14/14 y la suite automatizada pasó 284/284. `supabase db lint --linked --level error`, typecheck, build y `git diff --check` finalizaron correctamente. Las 25 migraciones locales y remotas están alineadas y la auditoría posterior confirmó cero fixtures residuales H5/TP10.
+
+Se actualizaron únicamente pruebas históricas: H3-T01 valida el rechazo CHECK por SQLSTATE `23514` sin depender del orden entre constraints vigentes; TP10 crea contexto MOZO autorizado para alcanzar los constraints objetivo y reconoce el índice H4 `idx_detalle_pedido_cocina_enviado_en`. No se modificaron funciones, RLS, constraints, migraciones ni comportamiento productivo.
+
+Se conserva la limitación ya documentada del entorno concurrente: las sesiones ganadoras y el estado persistido único se comprobaron, pero el canal Management API agotó el timeout antes de devolver al cliente perdedor su código/mensaje. No afecta las propiedades verificadas de transición, historial y pago únicos; la evidencia visible para el cliente continúa asignada a H5-TH03.
+
 ## Pruebas humanas finales
 
 | ID | Escenario | Evidencia |
