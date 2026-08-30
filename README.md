@@ -339,3 +339,4 @@ H5 — Caja e impresión es el siguiente hito. Todavía no ha iniciado y deberá
 
 MikuyApp se distribuye bajo la [MIT License](LICENSE).
 
+
