@@ -8,6 +8,7 @@ import KitchenBoardPage from './pages/KitchenBoardPage'
 import VerificationPage from './pages/VerificationPage'
 import WaiterOrderPage from './pages/WaiterOrderPage'
 import WaiterTablesPage from './pages/WaiterTablesPage'
+import SalesPage from './pages/SalesPage'
 import { getRoleDestination, getWaiterOrderId, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
 
 function LoadingScreen({ context = false }: { readonly context?: boolean }) {
@@ -120,6 +121,10 @@ function ApplicationRouter() {
         onSignOut={() => { void signOut() }}
       />
     )
+  }
+  if (resolution.pathname === '/ventas') {
+    if (!profileContext.context) return <LoadingScreen context />
+    return <SalesPage context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }} />
   }
 
   if (resolution.pathname === '/mozo/mesas') {

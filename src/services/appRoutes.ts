@@ -6,6 +6,7 @@ export type ApplicationRoute =
   | '/login'
   | '/tecnica'
   | '/admin/catalogo'
+  | '/ventas'
   | '/cocina'
   | '/caja'
   | '/mozo/mesas'
@@ -30,6 +31,7 @@ const knownRoutes = new Set<ApplicationRoute>([
   '/login',
   '/tecnica',
   '/admin/catalogo',
+  '/ventas',
   '/cocina',
   '/caja',
   '/mozo/mesas',
@@ -105,6 +107,7 @@ export function resolveApplicationRoute(input: RouteAuthorizationInput): RouteAu
   if (pathname === '/admin/catalogo' && role !== 'ADMINISTRADOR') {
     return { status: 'redirect', pathname: '/403' }
   }
+  if (pathname === '/ventas' && !['ADMINISTRADOR', 'CAJA'].includes(role)) return { status: 'redirect', pathname: '/403' }
 
   if ((pathname === '/mozo/mesas' || waiterOrderId !== null) && role !== 'MOZO') {
     return { status: 'redirect', pathname: '/403' }
