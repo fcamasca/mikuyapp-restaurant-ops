@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
 import { createCashierService, type CashierPendingOrder, type PersistedPayment } from '../services/cashierService'
 import type { ValidatedProfileContext } from '../services/profileContext'
+import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
 import { getSupabaseClient } from '../services/supabaseClient'
 import type { PaymentMethodCode } from '../types/operations'
 
@@ -39,10 +40,11 @@ export default function CashierPage({ context, isSigningOut, onSignOut }: Props)
   const [paidOrder, setPaidOrder] = useState<CashierPendingOrder | null>(null)
   const [document, setDocument] = useState<'PRECUENTA' | 'TICKET' | null>(null)
 
-  const load = useCallback(async (showLoading = false): Promise<readonly CashierPendingOrder[] | null> => {
+  const load = useCallback(async (showLoading = false, isCurrent: () => boolean = () => true): Promise<readonly CashierPendingOrder[] | null> => {
     if (showLoading) setLoading(true)
     if (!service) { setLoading(false); setError('No pudimos conectar con caja.'); return null }
     const result = await service.getPendingOrders(context)
+    if (!isCurrent()) return null
     setLoading(false)
     if (!result.ok) { setError(result.error.message); return null }
     setOrders(result.data)
@@ -52,6 +54,27 @@ export default function CashierPage({ context, isSigningOut, onSignOut }: Props)
   }, [context, service])
 
   useEffect(() => { void load(true) }, [attempt, load])
+
+  useEffect(() => {
+    if (!clientResult.ok) return
+    let disposed = false
+    let handle: Awaited<ReturnType<typeof subscribeToOperationsChanges>> | null = null
+    void subscribeToOperationsChanges(
+      clientResult.client,
+      () => load(false, () => !disposed).then(() => undefined),
+      () => {
+        if (!disposed) setError('La conexión en tiempo real se interrumpió. Estamos recuperando la caja.')
+      },
+      { channelName: 'cashier-orders-signals', initialRefresh: false },
+    ).then((started) => {
+      if (disposed) void started.stop()
+      else handle = started
+    })
+    return () => {
+      disposed = true
+      if (handle) void handle.stop()
+    }
+  }, [clientResult, load])
   const selected = orders.find((order) => order.orderId === selectedId) ?? null
 
   async function pay(): Promise<void> {
