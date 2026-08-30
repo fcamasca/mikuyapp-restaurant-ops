@@ -47,31 +47,45 @@
     display: none !important;
   }
 
-  .print-document .document-table-scroll {
-    overflow: visible !important;
+  .print-document .consumption-list {
+    margin-top: 3mm;
+    padding: 0;
+    list-style: none;
+    border-color: #000 !important;
   }
 
-  .print-document .document-table {
-    width: 100% !important;
-    min-width: 0 !important;
-    table-layout: fixed;
-    border-collapse: collapse;
-  }
-
-  .print-document th,
-  .print-document td {
-    padding: 2mm 1mm;
+  .print-document .consumption-item {
+    padding: 2mm 0;
     border-color: #000 !important;
     color: #000 !important;
-    overflow-wrap: anywhere;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
-  .print-document th:first-child,
-  .print-document td:first-child {
-    width: 40%;
+  .print-document .product-name {
+    margin: 0;
+    overflow-wrap: break-word;
   }
 
-  .print-document tr,
+  .print-document .line-metadata {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 3mm;
+    margin-top: 1mm;
+  }
+
+  .print-document .quantity-unit,
+  .print-document .line-amount {
+    margin: 0;
+  }
+
+  .print-document .line-amount {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    text-align: right;
+  }
+
   .print-document .payment-summary {
     break-inside: avoid;
     page-break-inside: avoid;

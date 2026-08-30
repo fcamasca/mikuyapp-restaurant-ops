@@ -58,11 +58,20 @@ test('H5-T07 contrato térmico usa 80 mm, monocromo y saltos controlados', () =>
   assert.match(cssSource, /page-break-inside: avoid/)
 })
 
-test('H5-T07 oculta aplicación y acciones, y corrige tabla para impresión', () => {
+test('H5-TH06 usa dos líneas legibles por producto sin tabla comprimida', () => {
+  assert.match(pageSource, /className="product-name/)
+  assert.match(pageSource, /className="line-metadata/)
+  assert.match(pageSource, /\{line\.quantity\} × \{money\.format\(line\.unitPrice\)\}/)
+  assert.match(pageSource, /className="line-amount[^"]*">\{money\.format\(line\.lineAmount\)\}/)
+  assert.doesNotMatch(pageSource, /document-table|<table|P\. unitario/)
+  assert.match(cssSource, /\.print-document \.line-metadata\s*\{[\s\S]*display: flex[\s\S]*justify-content: space-between/)
+  assert.match(cssSource, /\.print-document \.line-amount\s*\{[\s\S]*white-space: nowrap/)
+  assert.match(cssSource, /\.print-document \.consumption-item\s*\{[\s\S]*break-inside: avoid[\s\S]*page-break-inside: avoid/)
+})
+
+test('H5-T07 oculta aplicación y acciones al imprimir', () => {
   assert.match(cssSource, /body \*\s*\{[\s\S]*visibility: hidden !important/)
   assert.match(cssSource, /\.print-document,\s*\.print-document \*\s*\{[\s\S]*visibility: visible !important/)
   assert.match(cssSource, /\.print-document \.no-print\s*\{[\s\S]*display: none !important/)
-  assert.match(cssSource, /\.document-table-scroll\s*\{[\s\S]*overflow: visible !important/)
-  assert.match(cssSource, /\.document-table\s*\{[\s\S]*min-width: 0 !important/)
   assert.match(pageSource, /className="no-print/)
 })
