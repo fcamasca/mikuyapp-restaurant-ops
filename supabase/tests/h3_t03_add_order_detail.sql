@@ -40,7 +40,8 @@ begin
     ]
     or function_definition !~* 'auth\.uid'
     or function_definition !~* 'obtener_contexto_autenticado'
-    or function_definition !~* 'product_row\.precio'
+    or function_definition !~* '(product_row\.precio|select pr\.precio into v_precio)'
+    or function_definition !~* 'p_cantidad,v_precio,p_observacion,''ABIERTO'''
     or function_definition !~* '''ABIERTO'''
     or function_definition ~* 'p_precio'
     or function_definition ~* 'p_estado' then

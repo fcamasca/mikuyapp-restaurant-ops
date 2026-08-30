@@ -15,6 +15,7 @@ const consolidationMigration = readFileSync(new URL('../supabase/migrations/2026
 const releaseMigration = readFileSync(new URL('../supabase/migrations/20260827000100_release_empty_order_table.sql', import.meta.url), 'utf8')
 const auditMigration = readFileSync(new URL('../supabase/migrations/20260827000200_order_audit_trail.sql', import.meta.url), 'utf8')
 const creatorLookupFixMigration = readFileSync(new URL('../supabase/migrations/20260827000300_fix_order_creator_lookup.sql', import.meta.url), 'utf8')
+const reopenDeliveredMigration = readFileSync(new URL('../supabase/migrations/20260830000200_h5_reopen_delivered_order.sql', import.meta.url), 'utf8')
 
 function context(role = 'MOZO') {
   return {
@@ -334,7 +335,7 @@ test('T07 muestra actualización local y rehabilita controles tras respuesta', (
   assert.match(orderPageSource, /Actualizando…/)
   assert.match(orderPageSource, /disabled=\{detailBusy\}/)
   assert.match(orderPageSource, /setBusyDetails\(\(ids\) => ids\.filter/)
-  assert.match(orderPageSource, /if \(!result\.ok\) \{ await reload\(\); setError/)
+  assert.match(orderPageSource, /const refreshed = await reload\(\)/)
 })
 
 test('T07 recarga persistencia tras cada mutación y no muestra éxito optimista', () => {
@@ -357,7 +358,7 @@ test('T07 alterna Pedido y Carta sin ruta adicional ni salida automática tras a
   assert.match(orderPageSource, /Volver al pedido/)
   assert.match(orderPageSource, /onClick=\{\(\) => setMode\('ORDER'\)\}/)
   const addFunction = orderPageSource.slice(orderPageSource.indexOf('async function add('), orderPageSource.indexOf('async function quantity('))
-  assert.doesNotMatch(addFunction, /setMode/)
+  assert.match(addFunction, /setMode\('ORDER'\)/)
   assert.match(orderPageSource, /\{details\.length\} líneas · Total/)
 })
 
@@ -404,6 +405,17 @@ test('T08 recupera mesa y cabecera vigente para la revisión', async () => {
   })
   const result = await createWaiterOrderService(fixture.client).getOrderReview(context(), 12)
   assert.deepEqual(result, { ok: true, data: { id: 12, estado: 'EN_PREPARACION', mesa: { id: 'table-1', codigo: 'M-01', nombre: 'Terraza', estado: 'PEDIDO_LISTO' } } })
+})
+
+test('H5-TA18 alta posterior a ENTREGADO resincroniza el snapshot autoritativo', () => {
+  const addFunction = orderPageSource.slice(orderPageSource.indexOf('async function add('), orderPageSource.indexOf('async function quantity('))
+  assert.match(addFunction, /await reloadOrderSnapshot\(\)/)
+  assert.match(addFunction, /setMode\('ORDER'\)/)
+  assert.match(reopenDeliveredMigration, /p\.estado in \('ABIERTO','ENVIADO','RECIBIDO_COCINA','EN_PREPARACION','LISTO','ENTREGADO'\)/)
+  assert.match(reopenDeliveredMigration, /values\(p_pedido_id,p_producto_id,p_cantidad,v_precio,p_observacion,'ABIERTO'\)/)
+  assert.match(reopenDeliveredMigration, /perform public\.sincronizar_estado_operativo_pedido\(p_pedido_id,v_usuario_id\)/)
+  assert.match(reopenDeliveredMigration, /v_pedido\.estado = 'ENTREGADO' and v_estado_derivado = 'LISTO'/)
+  assert.match(reopenDeliveredMigration, /v_pedido\.estado in \('PAGADO', 'ANULADO'\)/)
 })
 
 test('H5-TH01 entrega exclusivamente mediante entregar_pedido y conserva autoridad PostgreSQL', async () => {
@@ -515,7 +527,7 @@ test('T09 errores de alta y envío no producen éxito local y permiten recargar'
   const send = await createWaiterOrderService(sendFixture.client).sendOrderToKitchen(context(), 12)
   assert.equal(add.ok, false)
   assert.equal(send.ok, false)
-  assert.match(orderPageSource, /if \(!result\.ok\) \{ await reload\(\); setError\(result\.error\.message\) \}/)
+  assert.match(orderPageSource, /await reloadOrderSnapshot\(\)\s*if \(!result\.ok\) setError\(result\.error\.message\)/)
   assert.match(orderPageSource, /const refreshed = await reload\(\)/)
   assert.match(orderPageSource, /Reintentar/)
 })

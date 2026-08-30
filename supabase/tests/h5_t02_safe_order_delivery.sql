@@ -80,10 +80,10 @@ begin
     and function_row.proname = 'crear_o_recuperar_pedido_mesa'
     and function_row.proargtypes = '2950'::pg_catalog.oidvector;
 
-  if v_add_function ~* '''ENTREGADO'''
-    or v_send_function ~* '''ENTREGADO'''
-    or v_open_function ~* '''ENTREGADO''' then
-    raise exception 'H5-T02 persiste ENTREGADO en una función incompatible';
+  if v_add_function !~* '''ENTREGADO'''
+    or v_open_function !~* '''ENTREGADO'''
+    or v_send_function ~* '''ENTREGADO''' then
+    raise exception 'H5-T02 no refleja el contrato vigente de reapertura';
   end if;
 
   if exists (
@@ -229,21 +229,9 @@ begin
 
   perform pg_temp.h5_t02_set_user(v_waiter_a);
   begin
-    perform public.agregar_detalle_pedido(-50205, v_product_a, 1, null);
-    raise exception 'H5-T02 permitió alta después de ENTREGADO';
-  exception when sqlstate '42501' then null;
-  end;
-  begin
     perform public.enviar_pedido_cocina(-50205);
-    raise exception 'H5-T02 permitió envío después de ENTREGADO';
+    raise exception 'H5-T02 permitió envío directo de ENTREGADO sin reapertura';
   exception when sqlstate '42501' then null;
-  end;
-  begin
-    perform public.crear_o_recuperar_pedido_mesa(
-      '00000000-0000-0000-0000-00000000e215'
-    );
-    raise exception 'H5-T02 recuperó pedido ENTREGADO';
-  exception when sqlstate '55000' then null;
   end;
 
   if (select count(*) from public.historial_estado

@@ -130,7 +130,9 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     setBusy(`p-${productId}`); setError(null)
     try {
       const result = await orders.addOrderDetail(context, orderId, productId)
-      if (!result.ok) { await reload(); setError(result.error.message) } else await reload()
+      await reloadOrderSnapshot()
+      if (!result.ok) setError(result.error.message)
+      else setMode('ORDER')
     } finally {
       pendingProductIds.current.delete(productId); setBusy(null)
     }

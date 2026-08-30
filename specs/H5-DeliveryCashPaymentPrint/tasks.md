@@ -5,7 +5,7 @@ Estimación final propuesta del Spec: **12 horas (6 jornadas de 2 h)**. Es una r
 | ID | Trabajo | Req. | Diseño | Est. |
 |---|---|---|---|---:|
 | H5-T01 | **Completada (2026-08-29).** Verificar esquema desplegado, constraints, índices, privilegios, RLS, funciones y publicación Realtime; registrar contradicciones. | R08-R12 | D11 | 1 h |
-| H5-T02 | **Completada (2026-08-29).** Diseñar/implementar función segura de entrega, historial, lock e idempotencia; bloquear modificaciones posteriores. | R01-R04 | D01-D02,D10 | 1.5 h |
+| H5-T02 | **Completada nuevamente (2026-08-30).** Se mantuvo la entrega segura y se implementó la reapertura de `ENTREGADO` mediante nuevo detalle `ABIERTO`, retorno atómico a flujo operativo/mesa `OCUPADA`, nueva cocina y nueva entrega; solo `PAGADO`/`ANULADO` son terminales. TA13/TA18, carrera alta-versus-cobro y regresión afectada aprobadas. | R01-R04 | D01-D02,D09-D10 | 1.5 h |
 | H5-T03 | **Completada (2026-08-29).** Implementar lectura autoritativa de caja y total basado en precios históricos, con aislamiento por local y políticas mínimas. | R05,R10 | D03-D06 | 1.5 h |
 | H5-T04 | **Completada (2026-08-29).** Función transaccional de cobro, constraint único, historial, liberación y rollback implementados y verificados; H5-TA11 satisfecha por concurrencia efectiva y persistencia de pago único. | R07-R10 | D05-D06,D10 | 2 h |
 | H5-T05 | **Completada (2026-08-29).** Construir ruta `/caja`, listado, detalle, estados, precuenta y ticket postpago. | R05-R07 | D03,D07 | 2 h |
@@ -17,7 +17,9 @@ Estimación final propuesta del Spec: **12 horas (6 jornadas de 2 h)**. Es una r
 
 ## Orden y dependencias
 
-T01 precede T02–T04. T02 debe cerrar antes de probar caja. T03 y T04 preceden T05. T06/T07 pueden ejecutarse después de T05. T08–T10 son cierre. Las tareas describen trabajo futuro; este Spec no lo ejecuta.
+T01 precede T02–T04. T02 debe cerrar antes de probar caja. T03 y T04 preceden T05. T06/T07 pueden ejecutarse después de T05. T08–T10 son cierre. Los estados de la tabla registran la ejecución real y cualquier reapertura aprobada durante validación.
+
+La decisión aprobada durante H5-TH01 reabrió exclusivamente la compatibilidad de H5-T02 y las regresiones afectadas. El ciclo `ENTREGADO → operación → LISTO → ENTREGADO` y la cobertura técnica afectada quedaron nuevamente en verde. H5-T09 puede reanudar TH02 en una ejecución posterior.
 
 ## Criterio de terminado propuesto
 

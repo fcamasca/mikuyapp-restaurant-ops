@@ -4,15 +4,17 @@
 
 Reutilizar `pedido`, `detalle_pedido`, `mesa` e `historial_estado`. `entregar_pedido(p_pedido_id)` será una función `SECURITY DEFINER`: obtiene actor/contexto, exige `MOZO` y mismo local, bloquea pedido y mesa en orden determinista, exige pedido `LISTO`, al menos un detalle y que todos los detalles del pedido estén `LISTO`, y cambia `LISTO → ENTREGADO` y `PEDIDO_LISTO → PENDIENTE_PAGO` en una transacción. Los detalles permanecen `LISTO`; no se inventa estado de entrega de detalle. Inserta un único `historial_estado`.
 
-La segunda sesión espera el lock y luego ve `ENTREGADO`; falla sin cambios. Un snapshot obsoleto recibe conflicto/estado no válido. La UI puede bloquear el botón, pero no es la garantía.
+La segunda sesión espera el lock y luego ve `ENTREGADO`; falla sin cambios. Un snapshot obsoleto recibe conflicto/estado no válido. Si posteriormente se agrega un producto y el pedido vuelve a completar cocina, la misma transición puede ejecutarse otra vez como una nueva entrega real, con un nuevo historial. La UI puede bloquear el botón, pero no es la garantía.
 
-## H5-D02 — Restricción posterior a entrega
+## H5-D02 — Reapertura posterior a entrega
 
-Las operaciones H3 de alta/envío deben rechazar `ENTREGADO` aunque hoy algunas lecturas lo consideren pedido vigente. Proponer ajustar la regla funcional de alta para permitir solo `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION` y `LISTO`; `ENTREGADO` y `PAGADO` son terminales comerciales. No modificar H3 en este Spec: queda como tarea de compatibilidad H5 y pendiente de implementación.
+`ENTREGADO` sigue siendo un pedido vigente mientras no exista pago. `agregar_detalle_pedido` debe aceptar `ENTREGADO` para el `MOZO` del mismo local, bloquear pedido y mesa con el mismo orden de concurrencia del flujo H5, crear el nuevo detalle en `ABIERTO`, conservar sin cambios los detalles anteriores `LISTO`, recalcular la cabecera al estado operativo derivado y cambiar la mesa `PENDIENTE_PAGO → OCUPADA` atómicamente. Alta, recuperación y envío vuelven a seguir las reglas H3/H4 normales; el nuevo detalle recorre `ABIERTO → ENVIADO → RECIBIDO_COCINA → EN_PREPARACION → LISTO`. Cuando todos los detalles están nuevamente `LISTO`, `entregar_pedido` permite otra transición a `ENTREGADO` y mesa `PENDIENTE_PAGO`.
+
+Solo `PAGADO` y `ANULADO` son terminales. Ninguna operación de alta, modificación, retiro, envío, cocina, recuperación operativa o entrega puede reabrirlos. Las políticas RLS y privilegios deben permitir únicamente las mutaciones normales del nuevo detalle `ABIERTO`, sin habilitar cambios sobre detalles anteriores `LISTO`.
 
 ## H5-D03 — Vista de caja
 
-Agregar la ruta protegida `/caja`, con listado de mesas `PENDIENTE_PAGO`, número de pedido, estado `ENTREGADO` y selección de detalle. El servicio de lectura devuelve solo el local autorizado y líneas persistidas, incluyendo `producto.nombre` resoluble aunque el producto esté inactivo, cantidad, `precio_unitario`, importe de línea y total. El nombre no es un snapshot histórico: si cambia posteriormente, el MVP mostrará el nombre vigente. Debe funcionar en PC y tablet; la operación primaria se optimiza para PC de caja.
+Agregar la ruta protegida `/caja`, con listado de mesas `PENDIENTE_PAGO`, número de pedido, estado `ENTREGADO` y selección de detalle. Si se agrega un producto, el pedido deja de estar disponible para cobro hasta completar cocina y ser entregado nuevamente. El servicio de lectura devuelve solo el local autorizado y líneas persistidas, incluyendo `producto.nombre` resoluble aunque el producto esté inactivo, cantidad, `precio_unitario`, importe de línea y total. El nombre no es un snapshot histórico: si cambia posteriormente, el MVP mostrará el nombre vigente. Debe funcionar en PC y tablet; la operación primaria se optimiza para PC de caja.
 
 ## H5-D04 — Total autoritativo
 
@@ -22,7 +24,7 @@ El total se calcula en PostgreSQL con `sum(cantidad * precio_unitario)`, preferi
 
 Proponer `registrar_pago_pedido(p_pedido_id, p_medio)` como función `SECURITY DEFINER`, propietaria de `postgres`, `search_path` fijo, `PUBLIC`/`anon` revocados y `EXECUTE` solo a `authenticated`. Debe: obtener `auth.uid()` y contexto; exigir usuario activo, `CAJA`, local y medio permitido; bloquear pedido y mesa en orden determinista; exigir `ENTREGADO`; comprobar que no existe pago; calcular total desde detalles; insertar un pago con el total y actor servidor; cambiar `ENTREGADO → PAGADO`; insertar historial; cambiar `PENDIENTE_PAGO → LIBRE`; devolver total, pago y estados. Cualquier error revierte todo.
 
-`UNIQUE(pago.pedido_id)`, pago único, aislamiento por local y protección mediante RLS/privilegios son contratos requeridos. Durante la construcción se verificará el estado real y, solo si falta algo, se aplicará el ajuste técnico mínimo. La inserción y el lock resuelven doble cobro concurrente: una sesión confirma y la otra observa `PAGADO`/pago existente y falla sin segunda fila. No se acepta importe del cliente.
+`UNIQUE(pago.pedido_id)`, pago único, aislamiento por local y protección mediante RLS/privilegios son contratos requeridos. Durante la construcción se verificará el estado real y, solo si falta algo, se aplicará el ajuste técnico mínimo. Cobro y alta posterior a entrega deben bloquear de forma compatible: solo una operación puede confirmar sobre el snapshot `ENTREGADO`; si gana el alta, el cobro observa el pedido reabierto y falla; si gana el cobro, el alta observa `PAGADO` y falla. La inserción y el lock resuelven doble cobro concurrente: una sesión confirma y la otra observa `PAGADO`/pago existente y falla sin segunda fila. No se acepta importe del cliente.
 
 ## H5-D06 — Lecturas, RLS y administrador
 
@@ -30,7 +32,7 @@ Las lecturas transaccionales deben cubrir `CAJA` por local para pedidos `ENTREGA
 
 ## H5-D07 — Precuenta y ticket
 
-Ambas vistas consumen el mismo snapshot autoritativo de líneas y total. La precuenta muestra restaurante, pedido, mesa, fecha/hora, productos, cantidades, precios y total, y está disponible con `ENTREGADO` antes del pago. El ticket muestra esos datos más forma de pago y solo se habilita tras `PAGADO`. El nombre del restaurante proviene de `local.nombre`; presentación e impresión usan locale `es-PE` y zona horaria `America/Lima`.
+Ambas vistas consumen el mismo snapshot autoritativo de líneas y total. La precuenta muestra restaurante, pedido, mesa, fecha/hora, productos, cantidades, precios y total, y está disponible mientras el snapshot vigente sea `ENTREGADO` antes del pago. Si el pedido se reabre por un nuevo producto, esa precuenta deja de ser el snapshot cobrable hasta la nueva entrega. El ticket muestra esos datos más forma de pago y solo se habilita tras `PAGADO`. El nombre del restaurante proviene de `local.nombre`; presentación e impresión usan locale `es-PE` y zona horaria `America/Lima`.
 
 ## H5-D08 — Impresión
 
@@ -38,11 +40,11 @@ Crear componentes/vistas de documento con clases de impresión. `@media print` o
 
 ## H5-D09 — Realtime mínimo
 
-Reutilizar la publicación existente de `detalle_pedido`, `pedido` y `mesa`. Mozo resincro cuando `pedido` pasa a `LISTO` y cuando la mesa cambia a `PENDIENTE_PAGO`; caja resincro cuando aparece `PENDIENTE_PAGO`/`ENTREGADO` y después de cobro; mozo resincro cuando la mesa vuelve a `LIBRE`. Eventos son señales: snapshot posterior, conciliación por ID y recuperación tras reconexión, siguiendo H4. No agregar `pago` a Realtime.
+Reutilizar la publicación existente de `detalle_pedido`, `pedido` y `mesa`. Mozo resincro cuando `pedido` pasa a `LISTO`, cuando la mesa cambia a `PENDIENTE_PAGO` y cuando una entrega se reabre a operación/`OCUPADA`; caja resincro cuando aparece `PENDIENTE_PAGO`/`ENTREGADO`, cuando desaparece por reapertura y después de cobro; cocina recibe el nuevo detalle por el patrón H4. Mozo resincro cuando la mesa vuelve a `LIBRE`. Eventos son señales: snapshot posterior, conciliación por ID y recuperación tras reconexión, siguiendo H4. No agregar `pago` a Realtime.
 
 ## H5-D10 — Auditoría e idempotencia
 
-La entrega y el cobro escriben `historial_estado` solo ante cambios reales, con actor servidor y timestamps de PostgreSQL. No se crea historial de detalle porque los detalles permanecen `LISTO`. Las funciones devuelven resultado persistido; un error nunca se muestra como éxito.
+La entrega y el cobro escriben `historial_estado` solo ante cambios reales, con actor servidor y timestamps de PostgreSQL. La reapertura registra la transición real de cabecera conforme al mecanismo de derivación/auditoría vigente; no altera estados históricos de detalles anteriores. Cada entrega posterior registra una nueva transición real a `ENTREGADO`, nunca un duplicado por reintento. Las funciones devuelven resultado persistido; un error nunca se muestra como éxito.
 
 ## H5-D11 — Dependencias y compatibilidad
 
