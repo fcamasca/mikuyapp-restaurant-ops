@@ -32,6 +32,10 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
   const [free, setFree] = useState('')
   const [sending, setSending] = useState(false)
   const sendingRef = useRef(false)
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false)
+  const [delivering, setDelivering] = useState(false)
+  const deliveringRef = useRef(false)
+  const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null)
   const [confirmingRelease, setConfirmingRelease] = useState(false)
   const [releasing, setReleasing] = useState(false)
   const releasingRef = useRef(false)
@@ -117,6 +121,8 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
   const openDetails = details.filter((detail) => detail.estado === 'ABIERTO')
   const orderedDetails = [...requestedDetails, ...openDetails]
   const total = details.reduce((sum, detail) => sum + detail.cantidad * Number(detail.precio_unitario), 0)
+  const canDeliver = review?.estado === 'LISTO' && details.length > 0
+    && details.every((detail) => detail.estado === 'LISTO')
 
   async function add(productId: string) {
     if (!orders || pendingProductIds.current.has(productId)) return
@@ -206,10 +212,26 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     }
   }
 
+  async function deliverOrder() {
+    if (!orders || deliveringRef.current || !canDeliver) return
+    deliveringRef.current = true; setDelivering(true); setError(null); setDeliveryMessage(null)
+    try {
+      const result = await orders.deliverOrder(context, orderId)
+      await reloadOrderSnapshot()
+      setConfirmingDelivery(false)
+      if (!result.ok) { setError(result.error.message); return }
+      setDeliveryMessage('Pedido entregado. La mesa está pendiente de pago.')
+    } finally {
+      deliveringRef.current = false; setDelivering(false)
+    }
+  }
+
   return <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 lg:px-8"><div className="mx-auto min-w-0 max-w-7xl">
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Pedido vigente</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">{review ? `${review.mesa.codigo} · ${review.mesa.nombre}` : `Pedido #${orderId}`}</h1><p className="mt-1 text-sm text-stone-600">Pedido #{orderId}</p></div><div className="grid gap-2 sm:flex">{review?.estado === 'ABIERTO' && details.length === 0 && <button className="min-h-11 w-full rounded-xl border border-rose-300 bg-white px-4 py-3 font-semibold text-rose-800 disabled:opacity-60 sm:w-auto" disabled={releasing} onClick={() => setConfirmingRelease(true)} type="button">Liberar mesa</button>}<button className="min-h-11 w-full rounded-xl border bg-white px-4 py-3 font-semibold sm:w-auto" onClick={onBack} type="button">Volver a mesas</button><AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onSignOut={onSignOut} /></div></header>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Pedido vigente</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">{review ? `${review.mesa.codigo} · ${review.mesa.nombre}` : `Pedido #${orderId}`}</h1><p className="mt-1 text-sm text-stone-600">Pedido #{orderId}{review && ` · ${review.estado} · Mesa ${review.mesa.estado}`}</p></div><div className="grid gap-2 sm:flex">{canDeliver && <button className="min-h-11 w-full rounded-xl bg-sky-800 px-4 py-3 font-bold text-white disabled:opacity-60 sm:w-auto" disabled={delivering} onClick={() => setConfirmingDelivery(true)} type="button">Entregar pedido</button>}{review?.estado === 'ABIERTO' && details.length === 0 && <button className="min-h-11 w-full rounded-xl border border-rose-300 bg-white px-4 py-3 font-semibold text-rose-800 disabled:opacity-60 sm:w-auto" disabled={releasing} onClick={() => setConfirmingRelease(true)} type="button">Liberar mesa</button>}<button className="min-h-11 w-full rounded-xl border bg-white px-4 py-3 font-semibold sm:w-auto" onClick={onBack} type="button">Volver a mesas</button><AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onSignOut={onSignOut} /></div></header>
+    {confirmingDelivery && review && <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 p-4" role="dialog" aria-modal="true" aria-labelledby="deliver-order-title"><p className="font-semibold text-sky-950" id="deliver-order-title">¿Entregar el pedido #{orderId} de {review.mesa.codigo}?</p><p className="mt-1 text-sm text-sky-900">La mesa quedará pendiente de pago y los detalles permanecerán LISTO.</p><div className="mt-4 grid grid-cols-2 gap-2 sm:max-w-sm"><button className="min-h-11 rounded-xl border border-stone-300 bg-white font-semibold" disabled={delivering} onClick={() => setConfirmingDelivery(false)} type="button">Cancelar</button><button aria-busy={delivering} className="min-h-11 rounded-xl bg-sky-800 font-semibold text-white disabled:opacity-60" disabled={delivering} onClick={() => { void deliverOrder() }} type="button">{delivering ? 'Entregando…' : 'Confirmar entrega'}</button></div></div>}
     {confirmingRelease && review && <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4" role="dialog" aria-modal="true" aria-labelledby="release-table-title"><p className="font-semibold text-rose-950" id="release-table-title">¿Liberar {review.mesa.codigo}? El pedido vacío será anulado y la mesa volverá a estar disponible.</p><div className="mt-4 grid grid-cols-2 gap-2 sm:max-w-sm"><button className="min-h-11 rounded-xl border border-stone-300 bg-white font-semibold" disabled={releasing} onClick={() => setConfirmingRelease(false)} type="button">Cancelar</button><button aria-busy={releasing} className="min-h-11 rounded-xl bg-rose-700 font-semibold text-white disabled:opacity-60" disabled={releasing} onClick={() => { void releaseTable() }} type="button">{releasing ? 'Liberando…' : 'Liberar mesa'}</button></div></div>}
     {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800" role="alert"><p>{error}</p><button className="mt-2 min-h-11 rounded-xl border border-rose-300 px-4 font-semibold" onClick={() => setAttempt((n) => n + 1)} type="button">Reintentar</button></div>}
+    {deliveryMessage && <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-900" role="status">{deliveryMessage}</p>}
     {loading ? <p aria-busy="true" className="mt-8">Cargando pedido y productos…</p> : <div className="mt-8 min-w-0">
       {mode === 'CATALOG' && <section className="min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-bold">Agregar productos</h2>{details.length > 0 && <p className="mt-1 text-sm text-stone-600">{details.length} líneas · Total {money.format(total)}</p>}</div>{details.length > 0 && <button className="min-h-11 rounded-xl border border-stone-300 px-4 font-semibold" onClick={() => setMode('ORDER')} type="button">Volver al pedido</button>}</div><div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Filtrar por categoría"><button className={`min-h-11 shrink-0 rounded-full px-4 font-semibold ${category === 'TODAS' ? 'bg-emerald-800 text-white' : 'border'}`} onClick={() => setCategory('TODAS')} type="button">Todas</button>{groups.map((group) => <button className={`min-h-11 shrink-0 rounded-full px-4 font-semibold ${category === group.category.id ? 'bg-emerald-800 text-white' : 'border'}`} key={group.category.id} onClick={() => setCategory(group.category.id)} type="button">{group.category.nombre}</button>)}</div>
         {visible.length === 0 ? <p className="mt-6">No hay productos disponibles.</p> : visible.map((group) => <div className="mt-6" key={group.category.id}><h3 className="font-bold">{group.category.nombre}</h3><ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">{group.products.map((product) => <li className="flex min-w-0 flex-col rounded-2xl border p-4" key={product.id}><strong className="break-words text-lg">{product.nombre}</strong><span className="mt-1 text-stone-600">{money.format(product.precio)}</span><button aria-busy={busy === `p-${product.id}`} className="mt-4 min-h-12 rounded-xl bg-emerald-800 px-4 font-bold text-white disabled:opacity-60" disabled={Boolean(busy)} onClick={() => { void add(product.id) }} type="button">{busy === `p-${product.id}` ? 'Agregando…' : 'Agregar'}</button></li>)}</ul></div>)}

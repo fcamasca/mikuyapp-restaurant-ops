@@ -399,11 +399,53 @@ test('T07 usa card compacta ABIERTO y cantidad de solo lectura para enviados', (
 
 test('T08 recupera mesa y cabecera vigente para la revisión', async () => {
   const fixture = createClient({
-    tables: [{ id: 'table-1', codigo: 'M-01', nombre: 'Terraza' }],
+    tables: [{ id: 'table-1', codigo: 'M-01', nombre: 'Terraza', estado: 'PEDIDO_LISTO' }],
     orders: [{ id: 12, mesa_id: 'table-1', estado: 'EN_PREPARACION' }],
   })
   const result = await createWaiterOrderService(fixture.client).getOrderReview(context(), 12)
-  assert.deepEqual(result, { ok: true, data: { id: 12, estado: 'EN_PREPARACION', mesa: { id: 'table-1', codigo: 'M-01', nombre: 'Terraza' } } })
+  assert.deepEqual(result, { ok: true, data: { id: 12, estado: 'EN_PREPARACION', mesa: { id: 'table-1', codigo: 'M-01', nombre: 'Terraza', estado: 'PEDIDO_LISTO' } } })
+})
+
+test('H5-TH01 entrega exclusivamente mediante entregar_pedido y conserva autoridad PostgreSQL', async () => {
+  const fixture = createClient({
+    rpcData: [{ pedido_id: 12, pedido_estado: 'ENTREGADO', mesa_id: 'table-1', mesa_estado: 'PENDIENTE_PAGO' }],
+  })
+  const result = await createWaiterOrderService(fixture.client).deliverOrder(context(), 12)
+  assert.deepEqual(result, { ok: true, data: { mesaId: 'table-1' } })
+  assert.deepEqual(fixture.rpcCalls, [{ name: 'entregar_pedido', args: { p_pedido_id: 12 } }])
+  assert.doesNotMatch(serviceSource, /deliverOrder[\s\S]*?from\('detalle_pedido'\)\.update/)
+})
+
+test('H5-TH01 entrega rechaza rol ajeno y traduce conflicto sin falso éxito', async () => {
+  const unauthorized = createClient()
+  const denied = await createWaiterOrderService(unauthorized.client).deliverOrder(context('CAJA'), 12)
+  assert.equal(denied.ok, false)
+  assert.equal(unauthorized.rpcCalls.length, 0)
+
+  const conflictFixture = createClient({ rpcData: null, rpcError: { code: '40001' } })
+  const conflict = await createWaiterOrderService(conflictFixture.client).deliverOrder(context(), 12)
+  assert.equal(conflict.ok, false)
+  assert.equal(conflict.error.kind, 'concurrent-conflict')
+  assert.match(conflict.error.message, /ya fue procesado/)
+
+  const unconfirmed = createClient({ rpcData: [] })
+  const failed = await createWaiterOrderService(unconfirmed.client).deliverOrder(context(), 12)
+  assert.equal(failed.ok, false)
+  assert.match(failed.error.message, /No pudimos confirmar la entrega/)
+})
+
+test('H5-TH01 UI muestra, confirma y resincroniza la entrega solo cuando todo está LISTO', () => {
+  assert.match(orderPageSource, /review\?\.estado === 'LISTO' && details\.length > 0/)
+  assert.match(orderPageSource, /details\.every\(\(detail\) => detail\.estado === 'LISTO'\)/)
+  assert.match(orderPageSource, />Entregar pedido<\/button>/)
+  assert.match(orderPageSource, /¿Entregar el pedido #\{orderId\}/)
+  assert.match(orderPageSource, /Confirmar entrega/)
+  assert.match(orderPageSource, /deliveringRef\.current/)
+  assert.match(orderPageSource, /Entregando…/)
+  assert.match(orderPageSource, /const result = await orders\.deliverOrder\(context, orderId\)/)
+  assert.match(orderPageSource, /await reloadOrderSnapshot\(\)/)
+  assert.match(orderPageSource, /review\.estado.*review\.mesa\.estado/)
+  assert.match(orderPageSource, /Pedido entregado\. La mesa está pendiente de pago\./)
 })
 
 test('T08 envía exclusivamente mediante enviar_pedido_cocina', async () => {

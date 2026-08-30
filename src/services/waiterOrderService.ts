@@ -43,7 +43,7 @@ export interface WaiterOrderDetail {
 export interface WaiterOrderReview {
   readonly id: number
   readonly estado: OrderStatusCode
-  readonly mesa: { readonly id: string; readonly codigo: string; readonly nombre: string }
+  readonly mesa: { readonly id: string; readonly codigo: string; readonly nombre: string; readonly estado: TableStatusCode }
 }
 
 export type WaiterOrderResult<T> =
@@ -57,8 +57,9 @@ interface OrderCreatorRow { readonly pedido_id: number; readonly creador_nombre:
 interface OpenOrderRow { readonly pedido_id: number; readonly fue_creado: boolean }
 interface AddedDetailRow extends WaiterOrderDetail { readonly detalle_id: number }
 interface ReviewOrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
-interface ReviewTableRow { readonly id: string; readonly codigo: string; readonly nombre: string }
+interface ReviewTableRow { readonly id: string; readonly codigo: string; readonly nombre: string; readonly estado: TableStatusCode }
 interface SentOrderRow { readonly pedido_id: number; readonly detalles_enviados: number }
+interface DeliveredOrderRow { readonly pedido_id: number; readonly pedido_estado: 'ENTREGADO'; readonly mesa_id: string; readonly mesa_estado: 'PENDIENTE_PAGO' }
 interface ReleasedTableRow { readonly pedido_id: number; readonly mesa_id: string; readonly pedido_estado: 'ANULADO'; readonly mesa_estado: 'LIBRE' }
 type WaiterOrderClient = Pick<SupabaseClient, 'from' | 'rpc'>
 
@@ -190,7 +191,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
           .eq('id', orderId).eq('local_id', context.local.id).in('estado', currentOrderStatuses).returns<ReviewOrderRow[]>()
         const order = orderResult.data?.[0]
         if (orderResult.error || !order) return connectionError('No pudimos cargar el pedido vigente. Intenta nuevamente.')
-        const tableResult = await client.from('mesa').select('id,codigo,nombre')
+        const tableResult = await client.from('mesa').select('id,codigo,nombre,estado')
           .eq('id', order.mesa_id).eq('local_id', context.local.id).eq('activo', true).returns<ReviewTableRow[]>()
         const table = tableResult.data?.[0]
         if (tableResult.error || !table) return connectionError('No pudimos identificar la mesa del pedido.')
@@ -264,6 +265,33 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         return { ok: true, data: { detallesEnviados: row.detalles_enviados } }
       } catch {
         return connectionError('No pudimos enviar el pedido a cocina. Los productos permanecen por enviar.')
+      }
+    },
+
+    async deliverOrder(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<{ mesaId: string }>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para entregar pedidos.')
+      try {
+        const result = await client.rpc('entregar_pedido', { p_pedido_id: orderId })
+        const row = (result.data as DeliveredOrderRow[] | null)?.[0]
+        if (result.error) {
+          if (result.error.code === '40001') {
+            return {
+              ok: false,
+              error: {
+                kind: 'concurrent-conflict',
+                message: 'Este pedido ya fue procesado. Cargamos el estado más reciente.',
+                recoverable: true,
+              },
+            }
+          }
+          return connectionError('No pudimos entregar el pedido. No se realizó ningún cambio.')
+        }
+        if (!row || row.pedido_estado !== 'ENTREGADO' || row.mesa_estado !== 'PENDIENTE_PAGO') {
+          return connectionError('No pudimos confirmar la entrega. No se mostrará un éxito hasta verificar el estado.')
+        }
+        return { ok: true, data: { mesaId: row.mesa_id } }
+      } catch {
+        return connectionError('No pudimos entregar el pedido. No se realizó ningún cambio.')
       }
     },
 
