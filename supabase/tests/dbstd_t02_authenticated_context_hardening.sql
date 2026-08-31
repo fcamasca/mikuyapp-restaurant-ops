@@ -63,7 +63,7 @@ begin
       and function_metadata.proname = v_function_name
       and pg_catalog.pg_get_function_identity_arguments(function_metadata.oid) = ''
       and function_metadata.prosecdef = true
-      and function_metadata.provolatile = 'v'
+      and function_metadata.provolatile = 's'
       and function_metadata.proowner = (
         select role_metadata.oid
         from pg_catalog.pg_roles as role_metadata

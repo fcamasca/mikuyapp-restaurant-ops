@@ -7,6 +7,7 @@ returns table (
   importe numeric
 )
 language plpgsql
+stable
 security definer
 set search_path = pg_catalog
 as $obtener_resumen_ventas_hoy$
@@ -56,6 +57,7 @@ returns table (
   importe numeric
 )
 language plpgsql
+stable
 security definer
 set search_path = pg_catalog
 as $exportar_ventas_hoy$
@@ -109,6 +111,7 @@ returns table (
   activo boolean
 )
 language plpgsql
+stable
 security definer
 set search_path = pg_catalog
 as $exportar_productos_local$
@@ -148,6 +151,12 @@ alter function public.exportar_productos_local() owner to postgres;
 revoke all on function public.exportar_productos_local() from public;
 revoke all on function public.exportar_productos_local() from anon;
 grant execute on function public.exportar_productos_local() to authenticated;
+
+alter function public.obtener_creadores_pedidos_vigentes(bigint[]) stable;
+alter function public.obtener_creadores_pedidos_vigentes(bigint[]) owner to postgres;
+revoke all on function public.obtener_creadores_pedidos_vigentes(bigint[]) from public;
+revoke all on function public.obtener_creadores_pedidos_vigentes(bigint[]) from anon;
+grant execute on function public.obtener_creadores_pedidos_vigentes(bigint[]) to authenticated;
 
 notify pgrst, 'reload schema';
 
