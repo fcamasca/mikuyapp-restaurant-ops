@@ -1,7 +1,7 @@
 # MikuyApp
 
 [![CI](https://github.com/fcamasca/mikuyapp-restaurant-ops/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fcamasca/mikuyapp-restaurant-ops/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/fcamasca/mikuyapp-restaurant-ops)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 [![Node.js 22](https://img.shields.io/badge/node.js-22-339933)](.nvmrc)
 
 Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedido → cocina → entrega → pago**.
@@ -366,4 +366,4 @@ H6 — MVP liberado está cerrado, validado y aceptado. Cualquier evolución pos
 
 ## Licencia
 
-MikuyApp se distribuye bajo la [MIT License](LICENSE).
+MikuyApp está protegido por una [licencia propietaria](LICENSE). Copyright © 2026 Frankz Camasca. All Rights Reserved. El código puede visualizarse con fines de demostración, evaluación y portafolio; cualquier uso, copia, modificación, distribución, sublicenciamiento o explotación comercial requiere autorización previa y escrita del titular.
