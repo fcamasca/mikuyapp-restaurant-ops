@@ -125,7 +125,7 @@ function ApplicationRouter() {
   }
   if (resolution.pathname === '/ventas') {
     if (!profileContext.context) return <LoadingScreen context />
-    return <SalesPage context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }} />
+    return <SalesPage context={profileContext.context} isSigningOut={isSigningOut} onBack={() => navigate(getRoleDestination(role))} onSignOut={() => { void signOut() }} />
   }
 
   if (resolution.pathname === '/mozo/mesas') {
