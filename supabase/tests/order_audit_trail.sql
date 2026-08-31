@@ -160,10 +160,67 @@ begin
 end;
 $verify_order_audit$;
 
+do $verify_content_update_and_delete$
+declare
+  v_order_id bigint;
+  v_modified_before timestamptz;
+  v_modified_after timestamptz;
+begin
+  select id, modificado_en
+  into strict v_order_id, v_modified_before
+  from public.pedido
+  where mesa_id = '00000000-0000-0000-0000-00000000a207';
+
+  update public.detalle_pedido
+  set observacion = 'Con limón'
+  where pedido_id = v_order_id
+    and producto_id = '00000000-0000-0000-0000-00000000a205';
+
+  select modificado_en
+  into strict v_modified_after
+  from public.pedido
+  where id = v_order_id;
+
+  if v_modified_after <= v_modified_before
+    or (select modificado_por from public.pedido where id = v_order_id)
+      <> '00000000-0000-0000-0000-00000000a203'
+    or (select observacion from public.detalle_pedido
+        where pedido_id = v_order_id
+          and producto_id = '00000000-0000-0000-0000-00000000a205')
+      <> 'Con limón' then
+    raise exception 'TP19 modificación de observación no propagó la auditoría actual';
+  end if;
+
+  v_modified_before := v_modified_after;
+
+  delete from public.detalle_pedido
+  where pedido_id = v_order_id
+    and producto_id = '00000000-0000-0000-0000-00000000a206';
+
+  select modificado_en
+  into strict v_modified_after
+  from public.pedido
+  where id = v_order_id;
+
+  if v_modified_after <= v_modified_before
+    or (select modificado_por from public.pedido where id = v_order_id)
+      <> '00000000-0000-0000-0000-00000000a203'
+    or exists (
+      select 1
+      from public.detalle_pedido
+      where pedido_id = v_order_id
+        and producto_id = '00000000-0000-0000-0000-00000000a206'
+    ) then
+    raise exception 'TP19 DELETE no propagó la auditoría actual';
+  end if;
+end;
+$verify_content_update_and_delete$;
+
 do $verify_state_audit_scope$
 declare
   v_order_id bigint;
   v_order_modified_at timestamptz;
+  v_content_modified_at timestamptz;
 begin
   select id, modificado_en
   into strict v_order_id, v_order_modified_at
@@ -184,7 +241,59 @@ begin
   ) then
     raise exception 'El cambio de estado no actualizó la auditoría individual del detalle';
   end if;
+
+  begin
+    update public.detalle_pedido
+    set enviado_en = pg_catalog.clock_timestamp()
+    where pedido_id = v_order_id
+      and producto_id = '00000000-0000-0000-0000-00000000a205';
+    raise exception 'TP21 permitió reemplazar enviado_en después del primer envío';
+  exception
+    when sqlstate '22000' then
+      null;
+  end;
+
+  perform public.agregar_detalle_pedido(
+    v_order_id,
+    '00000000-0000-0000-0000-00000000a206',
+    1,
+    'Reposición'
+  );
+
+  begin
+    update public.detalle_pedido
+    set enviado_en = pg_catalog.clock_timestamp()
+    where pedido_id = v_order_id
+      and producto_id = '00000000-0000-0000-0000-00000000a206';
+    raise exception 'TP21 permitió fijar enviado_en sin transición ABIERTO a ENVIADO';
+  exception
+    when sqlstate '22000' then
+      null;
+  end;
+
+  select modificado_en
+  into strict v_content_modified_at
+  from public.pedido
+  where id = v_order_id;
+
+  update public.detalle_pedido
+  set estado = 'ENVIADO',
+      enviado_en = pg_catalog.clock_timestamp()
+  where pedido_id = v_order_id
+    and producto_id = '00000000-0000-0000-0000-00000000a206'
+    and estado = 'ABIERTO';
+
+  if not found
+    or (select enviado_en from public.detalle_pedido
+        where pedido_id = v_order_id
+          and producto_id = '00000000-0000-0000-0000-00000000a206') is null
+    or (select modificado_en from public.pedido where id = v_order_id)
+      <> v_content_modified_at then
+    raise exception 'TP20 transición ABIERTO a ENVIADO alteró la semántica actual';
+  end if;
 end;
 $verify_state_audit_scope$;
+
+select 'DBSTD-TP18..TP21 OK' as resultado;
 
 rollback;
