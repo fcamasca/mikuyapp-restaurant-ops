@@ -12,7 +12,7 @@
 
 ## Orden y límites
 
-T01 precede construcción y pruebas. T02 precede T03. T04 requiere el estado técnico construido. T05–T06 requieren despliegue y equipamiento. T07 es el cierre humano. No se incluyen evoluciones ni `acceptance.md`.
+T01 precede construcción y pruebas. T02 precede T03. T04 requiere el estado técnico construido. T05–T06 requieren despliegue y equipamiento. T07 es el cierre humano. No se incluyen evoluciones; `acceptance.md` fue creado únicamente después de la aprobación explícita del usuario.
 
 ## Estimación
 

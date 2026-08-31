@@ -8,4 +8,5 @@ Los documentos pueden conservar prefijos históricos del hito. Cada paquete reú
 - [H2 — Usuarios, carta y mesas](H2-UsersCatalogTables/): aceptado.
 - [H3 — Flujo del mozo](H3-WaiterFlow/): cerrado, validado y aceptado.
 - [H4 — Cocina en tiempo real](H4-KitchenRealtime/): cerrado, validado y aceptado.
-- H5 — Caja e impresión: siguiente hito; no iniciado y debe comenzar en Spec Mode.
+- [H5 — Caja e impresión](H5-DeliveryCashPaymentPrint/): cerrado, validado y aceptado.
+- [H6 — MVP liberado](H6-MVPReleased/): cerrado, validado y aceptado.

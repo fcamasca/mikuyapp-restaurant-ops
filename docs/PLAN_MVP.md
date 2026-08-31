@@ -292,7 +292,7 @@ Cada cambio quedará registrado con el estado anterior, estado nuevo, usuario, f
 | H3. Flujo del mozo | Jornada 9 | Pedido registrado y enviado | Cerrado, validado y aceptado |
 | H4. Cocina en tiempo real | Jornada 11 | Cocina recibe y actualiza pedidos | Cerrado, validado y aceptado |
 | H5. Caja e impresión | Jornada 13 | Pedido cobrado y ticket impreso | Cerrado, validado y aceptado |
-| H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos | Siguiente hito; pendiente |
+| H6. MVP liberado | Jornada 15 | Flujo completo probado en dispositivos | Cerrado, validado y aceptado |
 
 ## 9. Plan de trabajo
 
