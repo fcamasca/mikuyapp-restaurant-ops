@@ -158,6 +158,54 @@ revoke all on function public.obtener_creadores_pedidos_vigentes(bigint[]) from 
 revoke all on function public.obtener_creadores_pedidos_vigentes(bigint[]) from anon;
 grant execute on function public.obtener_creadores_pedidos_vigentes(bigint[]) to authenticated;
 
+comment on column public.pedido.estado is
+  'Estado actual de la cabecera del pedido. Durante el flujo operativo se sincroniza a partir de los estados de sus detalles; un pedido ENTREGADO sin nuevos detalles conserva su estado. PAGADO y ANULADO son estados terminales.';
+
+comment on column public.pedido.enviado_en is
+  'Instante del primer envío del pedido a cocina. Los envíos posteriores de nuevos detalles no reemplazan este valor.';
+
+comment on column public.pedido.modificado_en is
+  'Comportamiento actual: se inicializa con creado_en y se actualiza al insertar o eliminar detalles, o al modificar cantidad, observacion, pedido_id o producto_id de un detalle. No cambia por una transición aislada de estado del detalle. Su semántica definitiva permanece pendiente de decisión.';
+
+comment on column public.pedido.modificado_por is
+  'Comportamiento actual: se inicializa con creado_por y se actualiza con el actor que inserta o elimina detalles, o modifica cantidad, observacion, pedido_id o producto_id de un detalle. No cambia por una transición aislada de estado del detalle. Su semántica definitiva permanece pendiente de decisión.';
+
+comment on column public.detalle_pedido.estado is
+  'Estado operativo individual del detalle. El conjunto de estados de los detalles se utiliza para derivar los estados operativos del pedido y de la mesa.';
+
+comment on column public.detalle_pedido.precio_unitario is
+  'Snapshot del precio unitario aplicado al crear el detalle; no depende de cambios posteriores en producto.precio.';
+
+comment on column public.detalle_pedido.enviado_en is
+  'Instante del primer envío individual del detalle a cocina. Solo puede establecerse en la transición ABIERTO a ENVIADO y, una vez fijado, es inmutable.';
+
+comment on column public.pago.importe is
+  'Snapshot del importe registrado al cobrar el pedido; constituye el valor persistido utilizado por los reportes de ventas.';
+
+comment on function public.obtener_contexto_autenticado() is
+  'Devuelve el local y rol del usuario autenticado únicamente cuando perfil, rol y local están activos y el rol pertenece al conjunto autorizado; en otro caso no devuelve filas.';
+
+comment on function public.sincronizar_estado_operativo_pedido(bigint, uuid) is
+  'Deriva y sincroniza los estados operativos del pedido y de su mesa a partir de los estados de sus detalles, y registra en historial_estado los cambios de estado de la cabecera.';
+
+comment on function public.registrar_auditoria_detalle_pedido() is
+  'Mantiene la auditoría de detalle_pedido, protege sus campos de creación, valida la asignación e inmutabilidad de enviado_en y propaga a pedido únicamente las modificaciones de contenido definidas por el comportamiento actual.';
+
+comment on function public.exportar_productos_local() is
+  'Devuelve al ADMINISTRADOR los productos de su local autenticado, incluidos activos e inactivos, ordenados por categoría y producto; rechaza contextos inexistentes o inválidos.';
+
+comment on function public.exportar_ventas_hoy() is
+  'Devuelve al ADMINISTRADOR las ventas PAGADO de su local correspondientes al día en America/Lima, ordenadas por fecha de pago; rechaza contextos inexistentes o inválidos.';
+
+comment on function public.obtener_resumen_ventas_hoy() is
+  'Agrupa por medio de pago las ventas PAGADO del día en America/Lima para ADMINISTRADOR y CAJA de su local autenticado; rechaza contextos inexistentes o inválidos.';
+
+comment on function public.obtener_creadores_pedidos_vigentes(bigint[]) is
+  'Devuelve al MOZO los nombres de los creadores de los pedidos solicitados que permanecen vigentes y pertenecen a su local autenticado.';
+
+comment on trigger detalle_pedido_registrar_auditoria on public.detalle_pedido is
+  'Trigger BEFORE INSERT, UPDATE o DELETE que ejecuta registrar_auditoria_detalle_pedido() para mantener auditoría, validar enviado_en y propagar al pedido las modificaciones de contenido definidas por el comportamiento actual.';
+
 notify pgrst, 'reload schema';
 
 commit;
