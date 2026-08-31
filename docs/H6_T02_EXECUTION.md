@@ -1,10 +1,10 @@
 # MikuyApp — Evidencia H6-T02
 
-Fecha de reapertura: 2026-08-30.
+Fecha de reapertura y cierre: 2026-08-30.
 
 ## Estado
 
-H6-T02 queda reabierta por el defecto detectado durante H6-TP17: la ruta protegida `/ventas` existía y funcionaba, pero `ADMINISTRADOR` y `CAJA` no tenían un acceso visible desde su flujo normal.
+H6-T02 queda completada nuevamente. El defecto detectado durante H6-TP17 fue corregido y la navegación funcional hacia `/ventas` quedó validada en el deployment para `ADMINISTRADOR` y `CAJA`.
 
 ## Corrección
 
@@ -26,6 +26,6 @@ H6-T02 queda reabierta por el defecto detectado durante H6-TP17: la ruta protegi
 | Interfaz responsive | 14/14 pruebas aprobadas |
 | Typecheck | Aprobado |
 | Build | Aprobado; genera `index-5vrb77kv.js` y conserva únicamente el aviso conocido de bundle >500 kB |
-| Acceso funcional publicado | Pendiente de desplegar el build corregido y comprobar la opción con usuarios `ADMINISTRADOR` y `CAJA` |
+| Acceso funcional publicado | Aprobado para `ADMINISTRADOR` y `CAJA`; navegación separada del menú de usuario, `/ventas` operativo y retorno visible a la sección correspondiente |
 
-H6-T02 no se cierra mientras la validación funcional publicada permanezca pendiente. H6-TP17 continúa detenido y no debe reanudarse antes del despliegue de esta corrección.
+La evidencia técnica previa H6-TP01–TP07 se mantiene aprobada. H6-T02 se cierra nuevamente sin cambios en RPC, RLS, aislamiento por local ni exportaciones.
