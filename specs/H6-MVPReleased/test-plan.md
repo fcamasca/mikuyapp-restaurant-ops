@@ -25,7 +25,7 @@
 |---|---|---|
 | H6-TP15 | Android de mozo: login, mesa, pedido, envío, seguimiento y reapertura. | Capturas/registro de ejecución sin fallos. |
 | H6-TP16 | Tablet cocina: recepción Realtime, observaciones, estados y nuevos detalles sin refresh. | Pedido cambia en vivo y nuevo detalle vuelve a cocina. |
-| H6-TP17 | PC caja: pendientes, precuenta, cobro, ticket, resumen e impresión 80 mm; repetir con router 4G. | Ticket legible, mesa libre, venta visible y operación con 4G. |
+| H6-TP17 | PC caja: pendientes, precuenta, cobro, ticket, resumen e impresión 80 mm; cambiar desde la conexión principal hacia una conexión móvil de respaldo mediante router 4G o hotspot móvil 4G autorizado y repetir la operación. Wi-Fi doméstico no es válido. | Evidencia real de conexión móvil 4G, acceso al deployment publicado, operación de caja completada, ticket legible, mesa libre y venta visible bajo 4G. |
 | H6-TP18 | **Dos escenarios separados:** (A) flujo normal `MOZO → COCINA → MOZO → CAJA → PAGO → MESA LIBRE`; (B) regresión H5: llegar a `ENTREGADO`, antes de pagar agregar nuevo detalle `ABIERTO`, verificar mesa `OCUPADA` y retorno al flujo operativo, pasar por cocina hasta `LISTO`, realizar nueva entrega y recién después cobrar. | En B los detalles anteriores permanecen `LISTO`, el nuevo detalle recorre cocina, la mesa vuelve a `PENDIENTE_PAGO`, se cobra una sola vez y queda `LIBRE`; después de `PAGADO` cualquier reapertura es rechazada. |
 
 ## Criterio humano de aceptación

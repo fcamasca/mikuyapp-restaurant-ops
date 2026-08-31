@@ -4,7 +4,7 @@ Fecha de ejecución: 2026-08-30.
 
 ## Estado
 
-H6-T05 queda parcialmente ejecutada. La configuración mínima PWA y H6-TP13 están aprobadas localmente; H6-TP14 y el cierre de la tarea permanecen pendientes porque el candidato todavía no ha sido publicado en Cloudflare Pages.
+H6-T05 queda completada. La configuración mínima PWA, H6-TP13 y H6-TP14 están aprobadas sobre el build candidato publicado en Cloudflare Pages.
 
 ## Configuración inspeccionada y completada
 
@@ -28,13 +28,24 @@ H6-T05 queda parcialmente ejecutada. La configuración mínima PWA y H6-TP13 est
 
 ## Evidencia H6-TP14
 
-El despliegue vigente `https://mikuyapp.pages.dev/` responde y muestra el inicio de sesión funcional, por lo que sigue siendo el endpoint operativo para pruebas. Sin embargo, al 2026-08-30 todavía no contiene los metadatos PWA del candidato: no expone enlace de manifest, `theme-color` ni `apple-touch-icon`, y `/manifest.webmanifest` devuelve el fallback HTML de la SPA.
+Se validó el deployment candidato `https://a6911511.mikuyapp.pages.dev/login` ya publicado en Cloudflare Pages.
 
-El repositorio no contiene configuración ni credenciales de despliegue de Cloudflare Pages y la sesión no dispone de una conexión autorizada al proyecto. En consecuencia, no se publicó el candidato y H6-TP14 queda pendiente. No se identificó un dominio propio configurado; su validación queda como pendiente operativo no bloqueante, conforme al Spec.
+| Verificación | Resultado |
+|---|---|
+| Correspondencia con build H6 | Aprobada: publica `index-Donh2LlN.js` e `index-Cj0F1Gun.css`, los mismos artefactos generados por el build validado |
+| Aplicación operativa | Aprobada: HTTPS responde en `/login` y muestra el formulario de inicio de sesión de MikuyApp |
+| Metadatos | Título `MikuyApp`, descripción, `theme-color: #065f46`, manifest, favicon y `apple-touch-icon` presentes |
+| Manifest publicado | Aprobado: nombre/nombre corto `MikuyApp`, `display: standalone`, inicio y alcance `/`, idioma `es-PE` y colores esperados |
+| Icono 192 | Responde y el navegador confirma 192x192 px |
+| Icono 512 | Responde y el navegador confirma 512x512 px |
+| Service worker | Publicado y limitado a instalación/activación; sin `fetch`, caché, sincronización ni funcionamiento offline |
+| Instalabilidad | Aprobada por HTTPS, manifest instalable con identidad/iconos y service worker registrado por el build |
+
+No se identificó un dominio propio disponible para esta validación. `pages.dev` queda confirmado como despliegue funcional y el dominio propio permanece como pendiente operativo no bloqueante, conforme al Spec.
 
 ## Cierre y alcance
 
-- H6-T05 no se marca como completada mientras H6-TP14 continúe pendiente.
+- H6-T05 se marca como completada con H6-TP13 y H6-TP14 aprobadas.
 - No se inició H6-T06.
 - No se implementó funcionamiento offline, sincronización ni caché.
 - No se modificaron decisiones H1-H5 ni se amplió el MVP.

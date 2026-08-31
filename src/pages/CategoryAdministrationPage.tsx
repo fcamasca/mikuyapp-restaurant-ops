@@ -17,6 +17,7 @@ import { getSupabaseClient } from '../services/supabaseClient'
 interface CategoryAdministrationPageProps {
   readonly context: ValidatedProfileContext
   readonly isSigningOut: boolean
+  readonly onNavigateToSales: () => void
   readonly onSignOut: () => void
   readonly onNavigateToTechnical: () => void
 }
@@ -74,6 +75,7 @@ const inputClassName =
 export default function CategoryAdministrationPage({
   context,
   isSigningOut,
+  onNavigateToSales,
   onSignOut,
   onNavigateToTechnical,
 }: CategoryAdministrationPageProps) {
@@ -526,7 +528,7 @@ export default function CategoryAdministrationPage({
             >
               Verificación técnica
             </button>
-            <AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onSignOut={onSignOut} />
+            <AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onNavigateToSales={onNavigateToSales} onSignOut={onSignOut} />
           </div>
         </header>
 

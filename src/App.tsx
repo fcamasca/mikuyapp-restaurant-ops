@@ -117,6 +117,7 @@ function ApplicationRouter() {
       <CategoryAdministrationPage
         context={profileContext.context}
         isSigningOut={isSigningOut}
+        onNavigateToSales={() => navigate('/ventas')}
         onNavigateToTechnical={() => navigate('/tecnica')}
         onSignOut={() => { void signOut() }}
       />
@@ -156,7 +157,7 @@ function ApplicationRouter() {
 
   if (resolution.pathname === '/caja') {
     if (!profileContext.context) return <LoadingScreen context />
-    return <CashierPage context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }} />
+    return <CashierPage context={profileContext.context} isSigningOut={isSigningOut} onNavigateToSales={() => navigate('/ventas')} onSignOut={() => { void signOut() }} />
   }
 
   const waiterOrderId = getWaiterOrderId(resolution.pathname)

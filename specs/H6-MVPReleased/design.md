@@ -18,7 +18,7 @@ Mantener RLS, privilegios y patrones RPC H1–H5. Revocar `PUBLIC`/`anon`, conce
 
 ## D05. PWA, impresión y conectividad
 
-Inspeccionar primero manifest, iconos, título y configuración de instalación existentes; completar únicamente lo mínimo faltante para que MikuyApp sea instalable y validar el resultado en el despliegue candidato. No implementar funcionamiento offline. Configurar y validar el dominio propio si está disponible; si no lo está, usar el despliegue vigente de Cloudflare Pages y registrar el dominio como pendiente operativo no bloqueante. Reutilizar `window.print` y CSS de H5 para papel de 80 mm. La PWA requiere red: 4G se valida cambiando la conexión. Realtime continúa usando señales de `pedido`, `detalle_pedido` y `mesa` con resync autoritativo.
+Inspeccionar primero manifest, iconos, título y configuración de instalación existentes; completar únicamente lo mínimo faltante para que MikuyApp sea instalable y validar el resultado en el despliegue candidato. No implementar funcionamiento offline. Configurar y validar el dominio propio si está disponible; si no lo está, usar el despliegue vigente de Cloudflare Pages y registrar el dominio como pendiente operativo no bloqueante. Reutilizar `window.print` y CSS de H5 para papel de 80 mm. La PWA requiere red: validar 4G cambiando desde la conexión principal hacia una conexión móvil de respaldo mediante router 4G o hotspot móvil 4G autorizado; Wi-Fi doméstico no es válido. Registrar evidencia real de acceso al deployment publicado y operación de caja bajo la conexión 4G. Realtime continúa usando señales de `pedido`, `detalle_pedido` y `mesa` con resync autoritativo.
 
 ## D06. Flujo de validación
 
