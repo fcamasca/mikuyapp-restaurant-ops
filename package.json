@@ -21,6 +21,7 @@
     "test:responsive": "node --test tests/responsiveInterface.test.mjs",
     "test:technical": "node --experimental-strip-types --test tests/technicalPage.test.mjs",
     "test:sales": "node --experimental-strip-types --test tests/salesService.test.mjs",
+    "test:pwa": "node --test tests/pwa.test.mjs",
     "test:profile": "node --experimental-strip-types --test tests/profileContext.test.mjs",
     "test:routes": "node --experimental-strip-types --test tests/appRoutes.test.mjs",
     "typecheck": "tsc --noEmit",
