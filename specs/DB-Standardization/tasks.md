@@ -13,7 +13,7 @@
 | DBSTD-T07 | **Completada.** Se ejecutó un reset completo de Supabase local, se aplicaron las 28 migraciones en orden hasta DBSTD y se ejecutaron los 43 archivos SQL de `supabase/tests` con sus secuencias concurrentes. | T06 | TP22–TP23 aprobaron: 28/28 migraciones, 25/25 suites autocontenidas, cinco escenarios concurrentes, DBSTD-TP01–TP21 y regresión H1–H6 sin fallos; residuos concurrentes en cero. | TP22–TP23 |
 | DBSTD-T08 | **Completada.** Se ejecutaron la regresión automatizada completa, el lint de PostgreSQL contra Supabase local, typecheck y build de producción. | T07 | TP24 aprobó con 297/297 pruebas automatizadas, lint sin errores de esquema, typecheck limpio y build exitoso; las llamadas RPC, contratos y consumidores frontend permanecen sin regresiones. | TP24 |
 | DBSTD-T09 | **Completada.** Se preparó y ensayó en Supabase local el rollback compensatorio explícito, sin editar ni eliminar migraciones, y se reaplicó DBSTD al finalizar. | T07, D09 | TP25–TP26 aprobaron: se restauraron cuerpos y metadatos H6, `VOLATILE`, comentarios nulos, owner/grants y recarga PostgREST sin cambios de datos, tablas, RLS, 27 policies, triggers ni auditoría; las regresiones H6 aprobaron y el estado final DBSTD quedó confirmado. | TP25–TP26 |
-| DBSTD-T10 | Revisión final humana del diff y evidencia; autorizar separadamente cualquier aplicación remota. | T07–T09 | Alcance respetado, pendientes abiertos visibles y cero cambios funcionales. | Checklist final |
+| DBSTD-T10 | **Completada.** Se revisó el diff y la evidencia consolidada, y se recibió aprobación humana explícita AH-01–AH-06. Esta aceptación no autoriza ni registra una aplicación remota. | T07–T09 | Alcance respetado, pendientes fuera de alcance visibles y cero cambios funcionales no aprobados; el hardening `42501 / No autorizado` es el único cambio de comportamiento intencional aprobado. | Checklist final |
 
 ## Orden de ejecución
 
@@ -26,16 +26,16 @@
 
 ## Checklist de implementación
 
-- [ ] Elegir timestamp/nombre de migración posterior a H6 sin editar archivos históricos.
-- [ ] Copiar firmas y tipos de retorno exactos desde las definiciones efectivas.
-- [ ] Usar `public.obtener_contexto_autenticado()` en las tres RPC, sin joins duplicados de autenticación.
-- [ ] Conservar SQLSTATE/mensaje `42501`, roles y filtros actuales.
-- [ ] Añadir `STABLE`, conservar `SECURITY DEFINER` y `SET search_path = pg_catalog`.
-- [ ] Reafirmar owner y grants por firma exacta.
-- [ ] Mantener cuerpos/nombres de trigger function y trigger sin cambios.
-- [ ] Revisar cada `COMMENT ON` contra el catálogo actual y la decisión humana.
-- [ ] Incluir `notify pgrst, 'reload schema'`.
-- [ ] Añadir pruebas antes de ejecutar la migración en cualquier entorno compartido.
+- [x] Elegir timestamp/nombre de migración posterior a H6 sin editar archivos históricos.
+- [x] Copiar firmas y tipos de retorno exactos desde las definiciones efectivas.
+- [x] Usar `public.obtener_contexto_autenticado()` en las tres RPC, sin joins duplicados de autenticación.
+- [x] Conservar SQLSTATE/mensaje `42501`, roles y filtros actuales.
+- [x] Añadir `STABLE`, conservar `SECURITY DEFINER` y `SET search_path = pg_catalog`.
+- [x] Reafirmar owner y grants por firma exacta.
+- [x] Mantener cuerpos/nombres de trigger function y trigger sin cambios.
+- [x] Revisar cada `COMMENT ON` contra el catálogo actual y la decisión humana.
+- [x] Incluir `notify pgrst, 'reload schema'`.
+- [x] Añadir pruebas antes de ejecutar la migración en cualquier entorno compartido.
 - [x] Guardar script/guía de rollback compensatorio y evidencia local.
 
 ## Pendientes bloqueantes para tareas futuras
