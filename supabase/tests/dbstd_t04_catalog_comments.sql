@@ -96,6 +96,59 @@ begin
 end;
 $dbstd_tp16_trigger_comment$;
 
+do $dbstd_tp16_only_approved_comments$
+declare
+  v_comment_count integer;
+begin
+  select pg_catalog.count(*)::integer
+  into v_comment_count
+  from (
+    select 1
+    from pg_catalog.pg_attribute as attribute_metadata
+    inner join pg_catalog.pg_class as object_metadata
+      on object_metadata.oid = attribute_metadata.attrelid
+    inner join pg_catalog.pg_namespace as object_schema
+      on object_schema.oid = object_metadata.relnamespace
+    where object_schema.nspname = 'public'
+      and attribute_metadata.attnum > 0
+      and not attribute_metadata.attisdropped
+      and pg_catalog.col_description(
+        attribute_metadata.attrelid,
+        attribute_metadata.attnum
+      ) is not null
+    union all
+    select 1
+    from pg_catalog.pg_class as object_metadata
+    inner join pg_catalog.pg_namespace as object_schema
+      on object_schema.oid = object_metadata.relnamespace
+    where object_schema.nspname = 'public'
+      and pg_catalog.obj_description(object_metadata.oid, 'pg_class') is not null
+    union all
+    select 1
+    from pg_catalog.pg_proc as object_metadata
+    inner join pg_catalog.pg_namespace as object_schema
+      on object_schema.oid = object_metadata.pronamespace
+    where object_schema.nspname = 'public'
+      and pg_catalog.obj_description(object_metadata.oid, 'pg_proc') is not null
+    union all
+    select 1
+    from pg_catalog.pg_trigger as object_metadata
+    inner join pg_catalog.pg_class as table_metadata
+      on table_metadata.oid = object_metadata.tgrelid
+    inner join pg_catalog.pg_namespace as object_schema
+      on object_schema.oid = table_metadata.relnamespace
+    where object_schema.nspname = 'public'
+      and not object_metadata.tgisinternal
+      and pg_catalog.obj_description(object_metadata.oid, 'pg_trigger') is not null
+  ) as catalog_comment;
+
+  if v_comment_count <> 16 then
+    raise exception 'DBSTD-TP16 existen comentarios adicionales o faltantes: %',
+      v_comment_count;
+  end if;
+end;
+$dbstd_tp16_only_approved_comments$;
+
 do $dbstd_tp17_rls_unchanged$
 declare
   v_policy_count integer;

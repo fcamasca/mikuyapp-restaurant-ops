@@ -63,6 +63,7 @@ $dbstd_tp13_function_metadata$;
 do $dbstd_tp14_function_grants$
 declare
   v_signature text;
+  v_privilege_fingerprint text;
 begin
   foreach v_signature in array array[
     'public.exportar_productos_local()',
@@ -83,6 +84,29 @@ begin
       raise exception 'DBSTD-TP14 grants inesperados: %', v_signature;
     end if;
   end loop;
+
+  select pg_catalog.md5(pg_catalog.string_agg(grant_row.line, E'\n' order by grant_row.line))
+  into v_privilege_fingerprint
+  from (
+    select pg_catalog.concat_ws(
+      '|', 'TABLE', grantor, grantee, table_schema, table_name,
+      privilege_type, is_grantable, with_hierarchy
+    ) as line
+    from information_schema.role_table_grants
+    where table_schema = 'public'
+    union all
+    select pg_catalog.concat_ws(
+      '|', 'COLUMN', grantor, grantee, table_schema, table_name,
+      column_name, privilege_type, is_grantable
+    ) as line
+    from information_schema.role_column_grants
+    where table_schema = 'public'
+  ) as grant_row;
+
+  if v_privilege_fingerprint is distinct from 'd64f59917898b2943d5119205d55e110' then
+    raise exception 'DBSTD-TP14 grants de tablas o columnas cambiaron: %',
+      v_privilege_fingerprint;
+  end if;
 end;
 $dbstd_tp14_function_grants$;
 

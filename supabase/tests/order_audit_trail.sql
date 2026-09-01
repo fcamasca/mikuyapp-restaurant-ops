@@ -11,6 +11,51 @@ begin
 end;
 $set_audit_user$;
 
+do $verify_audit_trigger_definition$
+begin
+  if not exists (
+    select 1
+    from pg_catalog.pg_proc as function_metadata
+    inner join pg_catalog.pg_namespace as function_schema
+      on function_schema.oid = function_metadata.pronamespace
+    where function_schema.nspname = 'public'
+      and function_metadata.proname = 'registrar_auditoria_detalle_pedido'
+      and pg_catalog.pg_get_function_identity_arguments(function_metadata.oid) = ''
+      and pg_catalog.md5(function_metadata.prosrc)
+        = 'e5995bb64d37ba0f5f3a255e84fa354f'
+  ) then
+    raise exception 'TP21 cambió el cuerpo de registrar_auditoria_detalle_pedido()';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_catalog.pg_trigger as trigger_metadata
+    inner join pg_catalog.pg_class as table_metadata
+      on table_metadata.oid = trigger_metadata.tgrelid
+    inner join pg_catalog.pg_namespace as table_schema
+      on table_schema.oid = table_metadata.relnamespace
+    inner join pg_catalog.pg_proc as function_metadata
+      on function_metadata.oid = trigger_metadata.tgfoid
+    inner join pg_catalog.pg_namespace as function_schema
+      on function_schema.oid = function_metadata.pronamespace
+    where table_schema.nspname = 'public'
+      and table_metadata.relname = 'detalle_pedido'
+      and trigger_metadata.tgname = 'detalle_pedido_registrar_auditoria'
+      and function_schema.nspname = 'public'
+      and function_metadata.proname = 'registrar_auditoria_detalle_pedido'
+      and (trigger_metadata.tgtype & 1) <> 0
+      and (trigger_metadata.tgtype & 2) <> 0
+      and (trigger_metadata.tgtype & 4) <> 0
+      and (trigger_metadata.tgtype & 8) <> 0
+      and (trigger_metadata.tgtype & 16) <> 0
+      and (trigger_metadata.tgtype & 32) = 0
+      and not trigger_metadata.tgisinternal
+  ) then
+    raise exception 'TP21 cambió nombre, eventos, momento, nivel o vínculo del trigger';
+  end if;
+end;
+$verify_audit_trigger_definition$;
+
 do $prepare_audit_fixtures$
 declare
   v_local_id uuid := '00000000-0000-0000-0000-00000000a201';
@@ -58,6 +103,50 @@ begin
   end if;
 end;
 $verify_initial_order_audit$;
+
+select pg_temp.set_audit_user(null);
+
+insert into public.detalle_pedido (
+  pedido_id,
+  producto_id,
+  cantidad,
+  precio_unitario
+)
+values (
+  (select id from public.pedido
+   where mesa_id = '00000000-0000-0000-0000-00000000a207'),
+  '00000000-0000-0000-0000-00000000a205',
+  1,
+  10
+);
+
+do $verify_internal_insert_without_jwt$
+begin
+  if not exists (
+    select 1
+    from public.detalle_pedido
+    where pedido_id = (
+        select id from public.pedido
+        where mesa_id = '00000000-0000-0000-0000-00000000a207'
+      )
+      and producto_id = '00000000-0000-0000-0000-00000000a205'
+      and creado_por = '00000000-0000-0000-0000-00000000a202'
+      and modificado_por = '00000000-0000-0000-0000-00000000a202'
+      and creado_en = modificado_en
+  ) then
+    raise exception 'TP18 ejecución interna sin JWT no resolvió al creador del pedido';
+  end if;
+end;
+$verify_internal_insert_without_jwt$;
+
+delete from public.detalle_pedido
+where pedido_id = (
+    select id from public.pedido
+    where mesa_id = '00000000-0000-0000-0000-00000000a207'
+  )
+  and producto_id = '00000000-0000-0000-0000-00000000a205';
+
+select pg_temp.set_audit_user('00000000-0000-0000-0000-00000000a202');
 
 select * from public.agregar_detalle_pedido(
   (select id from public.pedido where mesa_id = '00000000-0000-0000-0000-00000000a207'),
