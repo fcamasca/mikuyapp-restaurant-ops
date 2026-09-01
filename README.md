@@ -6,7 +6,7 @@
 
 Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedido → cocina → entrega → pago**.
 
-**Estado actual:** H1–H6 están cerrados, validados y aceptados. El MVP está liberado.
+**Estado actual:** MVP v1.0.0 H1–H6 cerrado, validado, aceptado y operativo en producción. Los cambios posteriores se registran en la [bitácora post-MVP](docs/POST_MVP_CHANGELOG.md).
 
 **Producción:** <https://mikuyapp.pages.dev/>
 
@@ -28,8 +28,11 @@ H1 establece la base técnica verificable, H2 incorpora autenticación, roles, c
 | H4 | Cocina en tiempo real | Cerrado, validado y aceptado |
 | H5 | Entrega, caja, cobro e impresión | Cerrado, validado y aceptado |
 | H6 | MVP liberado | Cerrado, validado y aceptado |
+| PM-001 | DB Standardization | Aceptado y desplegado |
 
 El plan base fue de **24 h**. La referencia de planificación vigente es **40.5 h**, incluida la reestimación aprobada de H5 de 4 h a 12 h; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
+
+Los cambios `PM-###` son posteriores al MVP y no reemplazan ni renumeran las Evoluciones 1–5 de [PLAN_MVP.md](docs/PLAN_MVP.md). PM-001 centralizó tres RPC de consulta mediante el contexto autenticado, incorporó el hardening `42501 / No autorizado` y estandarizó metadatos PostgreSQL sin ampliar el alcance funcional del MVP.
 
 ## Funcionalidades disponibles
 
@@ -145,7 +148,7 @@ flowchart TB
 - Validación humana en Android, tablet, PC, Realtime, navegador/PDF de 80 mm y hotspot móvil 4G.
 - Realtime de caja reutilizando las tablas operativas; `pago` permanece fuera de la publicación.
 - Pruebas SQL de esquema, restricciones y seed.
-- 293 pruebas automatizadas en la revisión final H6, 20 verificaciones SQL remotas aplicables y TP01–TP18 aprobadas.
+- 297/297 pruebas automatizadas vigentes después de PM-001; H6 conserva su evidencia histórica de 293/293, 20 verificaciones SQL remotas aplicables y TP01–TP18 aprobadas.
 - H1, H2, H3, H4, H5 y H6 aceptados.
 
 ### Fuera del alcance implementado
@@ -162,6 +165,8 @@ Las diez tablas se agrupan por responsabilidad:
 - **Identidad:** `perfil_usuario`.
 - **Operación de pedidos:** `pedido`, `detalle_pedido`, `historial_estado`.
 - **Operación de caja:** `pago`.
+
+El estado productivo vigente contiene 28 migraciones y mantiene RLS en las 10 tablas públicas con 27 policies.
 
 Métricas verificadas en H1:
 
@@ -319,11 +324,14 @@ Recursos de base de datos:
 | Pruebas SQL | Esquema, constraints, índices, seed e idempotencia |
 | GitHub Actions | Instalación limpia, typecheck y build en cada cambio relevante |
 
-H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, verificaciones reales con cuatro roles y TP-01–TP-53 conformes. H3 cerró con **238/238** pruebas integrales. H4 cerró con la suite integral H1–H4 en **261/261**. H5 cerró con **289/289** pruebas automatizadas, **19/19** SQL remotas, **9/9** pruebas humanas, 26/26 migraciones alineadas y fixtures residuales en `0`. H6 cerró con **293/293** pruebas automatizadas, **20/20** verificaciones SQL remotas aplicables y **TP01–TP18** aprobadas.
+H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, verificaciones reales con cuatro roles y TP-01–TP-53 conformes. H3 cerró con **238/238** pruebas integrales. H4 cerró con la suite integral H1–H4 en **261/261**. H5 cerró con **289/289** pruebas automatizadas, **19/19** SQL remotas, **9/9** pruebas humanas, 26/26 migraciones alineadas y fixtures residuales en `0`. H6 cerró con **293/293** pruebas automatizadas, **20/20** verificaciones SQL remotas aplicables y **TP01–TP18** aprobadas. Después del MVP, PM-001 aprobó **297/297** pruebas automatizadas, regresión SQL, lint, typecheck, build, rollback compensatorio y validación remota.
 
 ## Documentación
 
 - [Plan general del MVP](docs/PLAN_MVP.md)
+- [Bitácora de cambios post-MVP](docs/POST_MVP_CHANGELOG.md)
+- [Estándar de base de datos](docs/DATABASE_STANDARD.md)
+- [Matriz de cumplimiento de base de datos](docs/DATABASE_COMPLIANCE_MATRIX.md)
 - [Índice de especificaciones](specs/README.md)
 - [Portada de H1](specs/H1-TechnicalBasis/README.md)
 - [Requerimientos de H1](specs/H1-TechnicalBasis/requirements.md)
@@ -362,7 +370,7 @@ H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, 
 
 ## Estado de liberación
 
-H6 — MVP liberado está cerrado, validado y aceptado. Cualquier evolución posterior requiere alcance y especificación propios.
+MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado, aceptado y operativo. PM-001 — DB Standardization es el primer cambio post-MVP aceptado y desplegado; los cambios siguientes requieren alcance, evidencia y registro propios.
 
 ## Licencia
 

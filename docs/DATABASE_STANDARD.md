@@ -1,7 +1,7 @@
 # MikuyApp — Estándar de Base de Datos
 
 **Versión:** 1.0  
-**Estado:** Propuesta inicial para revisión  
+**Estado:** Vigente — adoptado después de PM-001 / DB Standardization
 **Motor:** PostgreSQL / Supabase  
 **Ámbito:** objetos propios de MikuyApp en el esquema `public`
 

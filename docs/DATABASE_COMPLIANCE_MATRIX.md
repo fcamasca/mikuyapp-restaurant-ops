@@ -1,7 +1,7 @@
 # MikuyApp — Matriz de Cumplimiento del Estándar de Base de Datos
 
 **Versión:** 1.0  
-**Estado:** Análisis inicial del modelo actual  
+**Estado:** Actualizada después de PM-001 / DB Standardization (`ACCEPTED + DEPLOYED`)
 **Referencia:** `docs/DATABASE_STANDARD.md`  
 **Motor:** PostgreSQL / Supabase  
 **Esquema evaluado:** `public`
@@ -19,6 +19,8 @@ Comparar los objetos actuales de MikuyApp contra el estándar de base de datos d
 - qué cambios requieren una decisión funcional previa.
 
 Esta matriz **no autoriza cambios en producción**. Cualquier modificación deberá implementarse mediante una migración nueva y con análisis de impacto.
+
+PM-001 aplicó únicamente los ajustes técnicos aprobados en esta matriz. El modelo físico y las recomendaciones deliberadamente pendientes se conservan.
 
 ---
 
@@ -93,7 +95,7 @@ También se consideran snapshots válidos y no violaciones de diseño:
 | Usuario creador/modificador | ✅ Cumple | MANTENER | — | `creado_por`, `modificado_por` |
 | Importes/precios `numeric(10,2)` | ✅ Cumple | MANTENER | — | Apropiado para el MVP |
 | `pedido.modificado_en/modificado_por` | 🟠 Revisar | REVISAR | Media | Falta definir si significa última modificación de cualquier campo o solo modificación funcional del contenido |
-| Comentarios de catálogo | ❌ No cumple | DOCUMENTAR | Baja | Tablas y columnas del inventario tienen `comment = null` |
+| Comentarios de catálogo seleccionados | ✅ Cumple | MANTENER | — | PM-001 incorporó los 16 `COMMENT ON` aprobados para reglas no evidentes |
 
 ---
 
@@ -182,10 +184,10 @@ La recomendación de `rpc_` sirve para distinguir la API de aplicación de las f
 | `obtener_contexto_autenticado` | `STABLE` | `STABLE` | MANTENER | — |
 | `obtener_pedidos_pendientes_pago_caja` | `STABLE` | `STABLE` | MANTENER | — |
 | `obtener_tablero_cocina` | `STABLE` | `STABLE` | MANTENER | — |
-| `exportar_productos_local` | `VOLATILE` | `STABLE` | AJUSTAR | Baja |
-| `exportar_ventas_hoy` | `VOLATILE` | `STABLE` | AJUSTAR | Baja |
-| `obtener_resumen_ventas_hoy` | `VOLATILE` | `STABLE` | AJUSTAR | Baja |
-| `obtener_creadores_pedidos_vigentes` | `VOLATILE` | `STABLE` | AJUSTAR | Baja |
+| `exportar_productos_local` | `STABLE` | `STABLE` | MANTENER | — |
+| `exportar_ventas_hoy` | `STABLE` | `STABLE` | MANTENER | — |
+| `obtener_resumen_ventas_hoy` | `STABLE` | `STABLE` | MANTENER | — |
+| `obtener_creadores_pedidos_vigentes` | `STABLE` | `STABLE` | MANTENER | — |
 | Funciones transaccionales de escritura | `VOLATILE` | `VOLATILE` | MANTENER | — |
 | Trigger functions | `VOLATILE` | `VOLATILE` | MANTENER | — |
 
@@ -210,14 +212,14 @@ Este patrón debe conservarse como estándar obligatorio.
 
 | Función | Estado | Acción | Prioridad | Observación |
 |---|---|---|---|---|
-| `exportar_productos_local` | 🟡 | REFACTORIZAR | Media | Resuelve perfil/rol directamente en lugar de reutilizar contexto común |
-| `exportar_ventas_hoy` | 🟡 | REFACTORIZAR | Media | Misma duplicación |
-| `obtener_resumen_ventas_hoy` | 🟡 | REFACTORIZAR | Media | Misma duplicación |
+| `exportar_productos_local` | ✅ | MANTENER | — | PM-001 reutiliza `obtener_contexto_autenticado()` |
+| `exportar_ventas_hoy` | ✅ | MANTENER | — | PM-001 reutiliza `obtener_contexto_autenticado()` |
+| `obtener_resumen_ventas_hoy` | ✅ | MANTENER | — | PM-001 reutiliza `obtener_contexto_autenticado()` |
 | Resto de funciones operativas | ✅ | MANTENER | — | Reutilizan `obtener_contexto_autenticado()` |
 
-### Recomendación
+### Estado después de PM-001
 
-Centralizar en una única función autoritativa la resolución de:
+La resolución quedó centralizada en una única función autoritativa para:
 
 ```text
 usuario
@@ -226,7 +228,7 @@ rol
 estado activo
 ```
 
-para evitar divergencias futuras.
+Esto evita divergencias futuras. La centralización fue implementada y desplegada para las tres RPC H6, incluido el hardening aprobado `42501 / No autorizado` ante contextos inválidos.
 
 ---
 
@@ -254,7 +256,7 @@ No se recomienda dividirla automáticamente. Primero debe revisarse si estas inv
 
 # 12. RLS Policies
 
-El inventario entregado contiene **26 policies** en el esquema `public`.
+El estado efectivo contiene **27 policies** en el esquema `public`.
 
 La seguridad funcional es correcta, pero la nomenclatura mezcla:
 
@@ -392,27 +394,34 @@ Solo deben crearse cuando exista una necesidad funcional o técnica real.
 
 # 16. Comentarios de catálogo
 
-El inventario muestra `comment = null` en tablas y columnas.
+PM-001 incorporó exactamente 16 comentarios de catálogo para reglas no evidentes en columnas, funciones y el trigger seleccionado.
 
-## Recomendación
+## Estado aplicado
 
-Agregar `COMMENT ON` únicamente en objetos donde aporte contexto real.
+Se aplicaron `COMMENT ON` únicamente en objetos donde aportan contexto real.
 
-Prioridad inicial:
+Objetos documentados:
 
 ```text
 pedido.estado
 pedido.enviado_en
 pedido.modificado_en
+pedido.modificado_por
 detalle_pedido.estado
 detalle_pedido.precio_unitario
 detalle_pedido.enviado_en
 pago.importe
+obtener_contexto_autenticado
 sincronizar_estado_operativo_pedido
 registrar_auditoria_detalle_pedido
+exportar_productos_local
+exportar_ventas_hoy
+obtener_resumen_ventas_hoy
+obtener_creadores_pedidos_vigentes
+detalle_pedido_registrar_auditoria
 ```
 
-**Prioridad:** Baja.
+No se recomiendan comentarios adicionales sin una regla no evidente que los justifique.
 
 ---
 
@@ -437,14 +446,15 @@ registrar_auditoria_detalle_pedido
 2. Responsabilidades de:
    - `registrar_auditoria_detalle_pedido()`.
 
-## Refactor recomendado en evolución técnica
+## Ajustes implementados por PM-001
 
-1. Centralizar contexto autenticado en:
+1. Contexto autenticado centralizado en:
    - `exportar_productos_local`;
    - `exportar_ventas_hoy`;
    - `obtener_resumen_ventas_hoy`.
 
-2. Evaluar `STABLE` para funciones de solo lectura actualmente declaradas `VOLATILE`.
+2. Las cuatro funciones read-only evaluadas fueron declaradas `STABLE`.
+3. Se incorporaron los 16 comentarios seleccionados y se desplegó DBSTD.
 
 ## Normalización de nombres de baja prioridad
 
@@ -462,9 +472,9 @@ registrar_auditoria_detalle_pedido
 |---|---|---|
 | Media | Definir semántica de auditoría `modificado_*` | Puede afectar significado funcional de datos |
 | Media | Revisar trigger de `detalle_pedido` | Acumula varias responsabilidades |
-| Media | Centralizar contexto autenticado | Evita divergencias futuras de seguridad |
-| Baja | Ajustar volatilidad de funciones read-only | Mejora semántica PostgreSQL |
-| Baja | Incorporar `COMMENT ON` | Mejora mantenibilidad |
+| Completado | Centralizar contexto autenticado | Implementado y desplegado en PM-001 |
+| Completado | Ajustar volatilidad de cuatro funciones read-only | Implementado y desplegado en PM-001 |
+| Completado | Incorporar 16 `COMMENT ON` | Implementado y desplegado en PM-001 |
 | Baja | Renombrar RPC/funciones/triggers/policies | Mejora catálogo, no funcionalidad |
 | Ninguna | Renombrar tablas existentes | Impacto superior al beneficio |
 | Ninguna | Eliminar `local_id` redundantes | Desnormalización justificada |
@@ -475,6 +485,8 @@ registrar_auditoria_detalle_pedido
 # 19. Dictamen
 
 El modelo actual de MikuyApp es apto para continuar evolucionando.
+
+PM-001 — DB Standardization fue aceptado y desplegado sin rediseñar el modelo ni ampliar el alcance funcional del MVP.
 
 No se detecta necesidad de reestructuración general ni de una campaña de normalización.
 
