@@ -12,7 +12,7 @@
 | DBSTD-T06 | **Completada.** Se inventarió y consolidó la cobertura SQL existente, ajustando únicamente aserciones faltantes de grants, exclusividad de comentarios, ejecución interna sin JWT e identidad estructural de la función/trigger de auditoría. | T02–T05 | DBSTD-TP01–TP21 tienen cobertura explícita sin suites redundantes; compatibilidad válida, hardening, metadatos, grants, 27 policies/RLS, 16 comentarios y auditoría aprobaron como conjunto dirigido en Supabase local. | TP01–TP21 |
 | DBSTD-T07 | **Completada.** Se ejecutó un reset completo de Supabase local, se aplicaron las 28 migraciones en orden hasta DBSTD y se ejecutaron los 43 archivos SQL de `supabase/tests` con sus secuencias concurrentes. | T06 | TP22–TP23 aprobaron: 28/28 migraciones, 25/25 suites autocontenidas, cinco escenarios concurrentes, DBSTD-TP01–TP21 y regresión H1–H6 sin fallos; residuos concurrentes en cero. | TP22–TP23 |
 | DBSTD-T08 | **Completada.** Se ejecutaron la regresión automatizada completa, el lint de PostgreSQL contra Supabase local, typecheck y build de producción. | T07 | TP24 aprobó con 297/297 pruebas automatizadas, lint sin errores de esquema, typecheck limpio y build exitoso; las llamadas RPC, contratos y consumidores frontend permanecen sin regresiones. | TP24 |
-| DBSTD-T09 | Preparar y ensayar rollback compensatorio en entorno local desechable; verificar restauración de definiciones/metadatos. | T07, D09 | Rollback sin pérdida de datos y estado H6 funcional restaurado. | TP25–TP26 |
+| DBSTD-T09 | **Completada.** Se preparó y ensayó en Supabase local el rollback compensatorio explícito, sin editar ni eliminar migraciones, y se reaplicó DBSTD al finalizar. | T07, D09 | TP25–TP26 aprobaron: se restauraron cuerpos y metadatos H6, `VOLATILE`, comentarios nulos, owner/grants y recarga PostgREST sin cambios de datos, tablas, RLS, 27 policies, triggers ni auditoría; las regresiones H6 aprobaron y el estado final DBSTD quedó confirmado. | TP25–TP26 |
 | DBSTD-T10 | Revisión final humana del diff y evidencia; autorizar separadamente cualquier aplicación remota. | T07–T09 | Alcance respetado, pendientes abiertos visibles y cero cambios funcionales. | Checklist final |
 
 ## Orden de ejecución
@@ -36,7 +36,7 @@
 - [ ] Revisar cada `COMMENT ON` contra el catálogo actual y la decisión humana.
 - [ ] Incluir `notify pgrst, 'reload schema'`.
 - [ ] Añadir pruebas antes de ejecutar la migración en cualquier entorno compartido.
-- [ ] Guardar script/guía de rollback compensatorio y evidencia local.
+- [x] Guardar script/guía de rollback compensatorio y evidencia local.
 
 ## Pendientes bloqueantes para tareas futuras
 
