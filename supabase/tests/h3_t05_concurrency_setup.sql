@@ -2,8 +2,8 @@ begin;
 
 do $h3_t05_concurrency_setup$
 declare
-  v_waiter_id uuid;
-  v_local_id uuid;
+  v_waiter_id uuid := '00000000-0000-0000-0000-00000000f5c4';
+  v_local_id uuid := '00000000-0000-0000-0000-00000000f5c5';
   v_category_id uuid := '00000000-0000-0000-0000-00000000f5c1';
   v_product_id uuid := '00000000-0000-0000-0000-00000000f5c2';
   v_table_id uuid := '00000000-0000-0000-0000-00000000f5c3';
@@ -14,16 +14,26 @@ begin
   delete from public.mesa where id = v_table_id;
   delete from public.producto where id = v_product_id;
   delete from public.categoria where id = v_category_id;
+  delete from public.perfil_usuario where id = v_waiter_id;
+  delete from auth.users where id = v_waiter_id;
+  delete from public.local where id = v_local_id;
 
-  select user_profile.id, user_profile.local_id
-  into strict v_waiter_id, v_local_id
-  from public.perfil_usuario as user_profile
-  inner join public.rol as role_row on role_row.id = user_profile.rol_id
-  where role_row.codigo = 'MOZO'
-    and user_profile.activo = true
-    and role_row.activo = true
-  order by user_profile.creado_en
-  limit 1;
+  insert into auth.users (id, aud, role, email, encrypted_password)
+  values (
+    v_waiter_id,
+    'authenticated',
+    'authenticated',
+    'h3-t05-concurrency@example.invalid',
+    'test'
+  );
+
+  insert into public.local (id, codigo, nombre)
+  values (v_local_id, 'H3-T05-CONC', 'Local concurrencia H3 T05');
+
+  insert into public.perfil_usuario (id, local_id, rol_id, nombre)
+  select v_waiter_id, v_local_id, role_row.id, 'Mozo concurrencia H3 T05'
+  from public.rol as role_row
+  where role_row.codigo = 'MOZO';
 
   insert into public.categoria (id, local_id, codigo, nombre)
   values (v_category_id, v_local_id, 'T05-CONC', 'Fixture concurrencia T05');

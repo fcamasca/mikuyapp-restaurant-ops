@@ -6,6 +6,9 @@ delete from public.pedido where id = -95501;
 delete from public.mesa where id = '00000000-0000-0000-0000-00000000f5c3';
 delete from public.producto where id = '00000000-0000-0000-0000-00000000f5c2';
 delete from public.categoria where id = '00000000-0000-0000-0000-00000000f5c1';
+delete from public.perfil_usuario where id = '00000000-0000-0000-0000-00000000f5c4';
+delete from auth.users where id = '00000000-0000-0000-0000-00000000f5c4';
+delete from public.local where id = '00000000-0000-0000-0000-00000000f5c5';
 
 do $h3_t05_cleanup_verified$
 begin
@@ -23,6 +26,14 @@ begin
     or exists (
       select 1 from public.categoria
       where id = '00000000-0000-0000-0000-00000000f5c1'
+    )
+    or exists (
+      select 1 from auth.users
+      where id = '00000000-0000-0000-0000-00000000f5c4'
+    )
+    or exists (
+      select 1 from public.local
+      where id = '00000000-0000-0000-0000-00000000f5c5'
     ) then
     raise exception 'H3-T05 no limpió completamente el fixture concurrente';
   end if;

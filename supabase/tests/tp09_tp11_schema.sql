@@ -78,6 +78,8 @@ begin
       ('pedido', 'estado', 'text', true, '''ABIERTO''::text', ''),
       ('pedido', 'creado_en', 'timestamp with time zone', true, 'now()', ''),
       ('pedido', 'enviado_en', 'timestamp with time zone', false, null, ''),
+      ('pedido', 'modificado_por', 'uuid', true, null, ''),
+      ('pedido', 'modificado_en', 'timestamp with time zone', true, null, ''),
       ('detalle_pedido', 'id', 'bigint', true, null, 'a'),
       ('detalle_pedido', 'pedido_id', 'bigint', true, null, ''),
       ('detalle_pedido', 'producto_id', 'uuid', true, null, ''),
@@ -85,6 +87,11 @@ begin
       ('detalle_pedido', 'precio_unitario', 'numeric(10,2)', true, null, ''),
       ('detalle_pedido', 'observacion', 'text', false, null, ''),
       ('detalle_pedido', 'estado', 'text', true, '''ABIERTO''::text', ''),
+      ('detalle_pedido', 'creado_por', 'uuid', true, null, ''),
+      ('detalle_pedido', 'creado_en', 'timestamp with time zone', true, 'now()', ''),
+      ('detalle_pedido', 'modificado_por', 'uuid', true, null, ''),
+      ('detalle_pedido', 'modificado_en', 'timestamp with time zone', true, 'now()', ''),
+      ('detalle_pedido', 'enviado_en', 'timestamp with time zone', false, null, ''),
       ('historial_estado', 'id', 'bigint', true, null, 'a'),
       ('historial_estado', 'pedido_id', 'bigint', true, null, ''),
       ('historial_estado', 'estado_anterior', 'text', false, null, ''),
@@ -146,16 +153,16 @@ begin
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'f';
-  if actual_count <> 16 then
-    raise exception 'TP-11: expected 16 FK, found %', actual_count;
+  if actual_count <> 19 then
+    raise exception 'TP-11: expected 19 FK, found %', actual_count;
   end if;
 
   select count(*) into actual_count
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'f' and con.confdeltype = 'r';
-  if actual_count <> 16 then
-    raise exception 'TP-11: expected 16 FK ON DELETE RESTRICT, found %', actual_count;
+  if actual_count <> 19 then
+    raise exception 'TP-11: expected 19 FK ON DELETE RESTRICT, found %', actual_count;
   end if;
 
   select count(*) into actual_count
@@ -197,8 +204,8 @@ begin
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'c';
-  if actual_count <> 24 then
-    raise exception 'TP-11: expected 24 CHECK constraints, found %', actual_count;
+  if actual_count <> 25 then
+    raise exception 'TP-11: expected 25 CHECK constraints, found %', actual_count;
   end if;
 
   select count(*), array_agg(index_name order by index_name)
@@ -217,8 +224,9 @@ begin
         'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago'
       )
   ) indexes;
-  if actual_count <> 14 or actual_names <> array[
+  if actual_count <> 15 or actual_names <> array[
     'idx_categoria_local_id_activo_orden',
+    'idx_detalle_pedido_cocina_enviado_en',
     'idx_detalle_pedido_pedido_id',
     'idx_detalle_pedido_pedido_id_estado',
     'idx_detalle_pedido_producto_id',
@@ -233,7 +241,7 @@ begin
     'idx_producto_local_id_activo',
     'uq_pedido_mesa_id_vigente'
   ]::text[] then
-    raise exception 'TP-11: expected 14 exact additional indexes, found %: %', actual_count, actual_names;
+    raise exception 'TP-11: expected 15 exact additional indexes, found %: %', actual_count, actual_names;
   end if;
 
   select count(*) into actual_count
