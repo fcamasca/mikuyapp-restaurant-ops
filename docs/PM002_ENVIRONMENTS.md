@@ -2,7 +2,9 @@
 
 ## Estado registrado
 
-Estado vigente: **`LEGACY_SHARED`**.
+Estado vigente: **`TRANSITIONING`**.
+
+`mikuyapp-prod` fue creado en T09 con project ref redactado `snfm…pavp`. Todavía no tiene el esquema MikuyApp ni recibe tráfico de Cloudflare. El proyecto actual continúa atendiendo Local, Preview y Production.
 
 El contexto confirmado para este bloque es:
 
@@ -22,7 +24,7 @@ El proyecto actual todavía presta Production. No se denomina DEV exclusivo hast
 | `TRANSITIONING` | actual / `DEV` | actual / `DEV` | actual / `SHARED` |
 | `SEPARATED` | DEV actual / `DEV` | DEV actual / `DEV` | PROD nuevo / `PROD` |
 
-No existe replicación, refresh ni sincronización. PM-002 permanece en `LEGACY_SHARED` durante T02–T07.
+No existe replicación, refresh ni sincronización. T02–T07 se ejecutaron en `LEGACY_SHARED`; la creación aislada de PROD en T09 inició `TRANSITIONING` sin cutover.
 
 ## Variables
 
