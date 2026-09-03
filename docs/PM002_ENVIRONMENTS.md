@@ -4,7 +4,7 @@
 
 Estado vigente: **`TRANSITIONING`**.
 
-`mikuyapp-prod` fue creado en T09 con project ref redactado `snfm…pavp`. Todavía no tiene el esquema MikuyApp ni recibe tráfico de Cloudflare. El proyecto actual continúa atendiendo Local, Preview y Production.
+`mikuyapp-prod` fue creado en T09 con project ref redactado `snfm…pavp`. T10 aplicó las 28 migraciones y validó el baseline técnico sin seed ni datos; todavía no recibe tráfico de Cloudflare. El proyecto actual continúa atendiendo Local, Preview y Production.
 
 El contexto confirmado para este bloque es:
 
