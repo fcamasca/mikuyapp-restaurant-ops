@@ -375,3 +375,4 @@ MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado, aceptado y operativo. P
 ## Licencia
 
 MikuyApp está protegido por una [licencia propietaria](LICENSE). Copyright © 2026 Frankz Camasca. All Rights Reserved. El código puede visualizarse con fines de demostración, evaluación y portafolio; cualquier uso, copia, modificación, distribución, sublicenciamiento o explotación comercial requiere autorización previa y escrita del titular.
+
