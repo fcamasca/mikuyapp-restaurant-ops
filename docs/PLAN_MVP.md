@@ -601,6 +601,15 @@ El MVP se considerará terminado si:
 - Configuración por negocio.
 - Panel central e indicadores comparativos.
 
+### Evolución 6 — Usuarios multirol y multilocal
+- Un usuario puede tener más de un rol.
+- Un usuario puede estar asignado a más de un local.
+- Asignaciones basadas en la combinación usuario + local + rol.
+- Cambio de contexto entre locales autorizados.
+- Permisos y RLS según el local y rol activo.
+- Conservación de trazabilidad de las operaciones realizadas por cada usuario.
+- Administración de asignaciones de usuarios, roles y locales.
+
 ## 16. Riesgos y mitigación
 
 | Riesgo | Mitigación |
