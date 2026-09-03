@@ -15,6 +15,13 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://abcdefghijklmnopqrst.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: public-ci-placeholder
+      MIKUY_ENVIRONMENT_STATE: LEGACY_SHARED
+      MIKUY_LOGICAL_ENVIRONMENT: DEV
+      MIKUY_EXPECTED_SUPABASE_PROJECT_REF: abcdefghijklmnopqrst
+      MIKUY_DEV_SUPABASE_PROJECT_REF: abcdefghijklmnopqrst
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,6 +37,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Environment guard tests
+        run: npm run test:environment
 
       - name: Build
         run: npm run build

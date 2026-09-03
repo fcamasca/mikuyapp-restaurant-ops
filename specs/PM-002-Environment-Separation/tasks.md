@@ -1,16 +1,16 @@
 # MikuyApp — PM-002 Separación de ambientes DEV/Preview y PROD: tareas
 
-> Este documento es planificación. Solo PM002-T01 fue completada en Spec Mode. Ninguna tarea de construcción, configuración o despliegue ha sido iniciada.
+> PM002-T01 fue completada en Spec Mode. T02–T06 fueron ejecutadas localmente en la rama `feature/Environment-Separation`; T07 permanece pendiente. No se creó PROD ni se modificaron Supabase remoto, Cloudflare o sus variables.
 
 | ID | Objetivo | Dependencias | Resultado verificable | Pruebas |
 |---|---|---|---|---|
 | PM002-T01 | **Completada en Spec Mode.** Inventariar repositorio, planes, H6, PM-001, Cloudflare versionado, variables, Supabase, migraciones, seed, Auth, RLS, Realtime, CI, pruebas y carga inicial; documentar hechos, brechas y decisiones abiertas. | H6 y PM-001 aceptados | Cuatro documentos de Spec creados; sin cambios de runtime/remotos. | Revisión documental |
-| PM002-T02 | Registrar `LEGACY_SHARED`, inventariar la matriz actual Local/Preview/Production y documentar el criterio de transición a `TRANSITIONING`/`SEPARATED`. | T01, acceso de lectura cuando corresponda | Estado vigente y rutas permitidas por fase documentados sin cambiar variables. | PM002-TP01–TP06 |
-| PM002-T03 | Definir la matriz objetivo y las variables públicas por ámbito, preservando Production vigente durante la transición. | T01–T02 | Refs esperados y contextos por estado explícitos; valores sensibles no entran en evidencia. | TP03–TP06 |
-| PM002-T04 | Implementar la guardia build-time acotada: contexto, estado/identidad lógica, URL/ref efectivo y ref esperado. | T03, D02–D03 | Preview → PROD, Local → PROD y Production → DEV en `SEPARATED` fallan; Production vigente sigue permitido antes del cutover. | TP07–TP12 |
-| PM002-T05 | Actualizar `.env.example`, documentación local y scripts de validación para que local use DEV y secretos PROD queden fuera del flujo habitual. | T04, D04 | Desarrollo local arranca contra DEV; PROD no aparece en archivos locales requeridos. | TP10–TP12 |
-| PM002-T06 | Reconstruir el baseline desde cero en instancia local/desechable, sin seed demo, y capturar catálogo esperado. | T01, D05 | 28 migraciones o baseline posterior aprobado aplican en orden; catálogo completo reconciliado. | TP13–TP20 |
-| PM002-T07 | Auditar de forma no destructiva el drift entre DEV alojado y baseline; inventariar configuración no SQL. | T06, acceso lectura DEV | Cada diferencia clasificada; cero dependencia necesaria sin resolución. | TP21–TP23 |
+| PM002-T02 | **Completada.** Registrar `LEGACY_SHARED`, inventariar la matriz actual Local/Preview/Production y documentar el criterio de transición a `TRANSITIONING`/`SEPARATED`. | T01, acceso de lectura cuando corresponda | Estado vigente y rutas permitidas por fase documentados sin cambiar variables. | PM002-TP01–TP06 |
+| PM002-T03 | **Completada.** Definir la matriz objetivo y las variables públicas por ámbito, preservando Production vigente durante la transición. | T01–T02 | Refs esperados y contextos por estado explícitos; valores sensibles no entran en evidencia. | TP03–TP06 |
+| PM002-T04 | **Completada.** Implementar la guardia build-time acotada: contexto, estado/identidad lógica, URL/ref efectivo y ref esperado. | T03, D02–D03 | TP07–TP12 aprobaron 8/8: bloqueos obligatorios y Production vigente permitida antes del cutover. | TP07–TP12 |
+| PM002-T05 | **Completada.** Actualizar `.env.example`, documentación local, CI y scripts de validación para que local use DEV y secretos PROD queden fuera del flujo habitual. | T04, D04 | Guardia aprobada en prebuild; configuración pública sintética en CI; scan sin secretos detectados. | TP10–TP12 |
+| PM002-T06 | **Completada.** Reconstruir el baseline desde cero en instancia local/desechable, sin seed demo, y capturar catálogo esperado. | T01, D05 | 28/28 migraciones; 10 tablas con RLS, 27 policies, 17 funciones, 2 triggers y Realtime esperado; lint, 25 suites SQL, 5 concurrencias, 305 tests, typecheck y build aprobados. | TP13–TP20 |
+| PM002-T07 | **Completada.** La auditoría no destructiva confirmó 28/28 migraciones alineadas, clasificó grants/default privileges e inventarió Supabase alojado y Cloudflare. Production/Preview permanecen en el proyecto compartido `LEGACY_SHARED`; las variables adicionales de la guardia son dependencias conocidas de T12/T13. El historial de variables no disponible se registra N/A sin asumir datos. | T06, acceso lectura DEV/Cloudflare | Diferencias y configuración alojada clasificadas en `docs/PM002_T07_HOSTED_AUDIT.md`; no queda una dependencia productiva desconocida exclusiva del proyecto actual. | TP21–TP23 |
 | PM002-T08 | Preparar el mecanismo más sencillo, controlado, reproducible y seguro para cargar los maestros iniciales aprobados necesarios para habilitar PROD. | T06–T07, decisión de maestros antes de habilitar | Fuente validada, carga transaccional, duplicados/idempotencia cuando corresponda y reconciliación; sin arquitectura genérica de importación. | TP24–TP27 |
 | PM002-T09 | Crear el proyecto PROD con acceso restringido y configuración alojada aprobada. | T06–T07; organización, región, plan, administradores y secretos aprobados | Proyecto nuevo, credenciales nuevas, administradores mínimos y matriz de configuración registrada; estado `TRANSITIONING`. | TP28–TP30 |
 | PM002-T10 | Aplicar migraciones a PROD, sin seed demo; validar catálogo, grants, RLS, policies, funciones y Realtime. | T09, aprobación explícita de ejecución | PROD reconstruido y validado sin datos DEV. | TP13–TP23, TP28–TP31 |
@@ -31,11 +31,11 @@
 
 ## Checklist de construcción
 
-- [ ] Estado vigente y matriz por fase documentados.
-- [ ] Variables públicas y secretos clasificados por ambiente/ámbito.
-- [ ] Guardias positivas y negativas cubiertas por pruebas.
-- [ ] Ningún secreto con prefijo `VITE_`.
-- [ ] Baseline limpio sin `seed.sql` aprobado.
+- [x] Estado vigente y matriz por fase documentados.
+- [x] Variables públicas y secretos clasificados por ambiente/ámbito.
+- [x] Guardias positivas y negativas cubiertas por pruebas.
+- [x] Ningún secreto con prefijo `VITE_`.
+- [x] Baseline limpio sin `seed.sql` aprobado.
 - [ ] Drift DEV ↔ repositorio resuelto.
 - [ ] Configuración alojada de Supabase registrada.
 - [ ] Mecanismo acotado de carga inicial validado, transaccional y reconciliado.

@@ -9,8 +9,11 @@
     "npm": ">=10.9.0 <11"
   },
   "scripts": {
+    "predev": "node --env-file-if-exists=.env.local scripts/validateEnvironment.mjs",
     "dev": "vite",
+    "prebuild": "node --env-file-if-exists=.env.local scripts/validateEnvironment.mjs",
     "build": "tsc --noEmit && vite build",
+    "test:environment": "node --test tests/environmentGuard.test.mjs",
     "test:auth": "node --experimental-strip-types --test tests/authSession.test.mjs",
     "test:catalog": "node --experimental-strip-types --test tests/catalogService.test.mjs",
     "test:categories": "node --experimental-strip-types --test tests/categoryAdministration.test.mjs",
