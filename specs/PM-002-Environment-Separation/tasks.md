@@ -1,6 +1,6 @@
 # MikuyApp — PM-002 Separación de ambientes DEV/Preview y PROD: tareas
 
-> PM002-T01 fue completada en Spec Mode. T02–T06 fueron ejecutadas localmente en la rama `feature/Environment-Separation`; T07 permanece pendiente. No se creó PROD ni se modificaron Supabase remoto, Cloudflare o sus variables.
+> PM002-T01 fue completada en Spec Mode. T02–T07 y T09–T10 están completadas; T12 fue validada funcionalmente con evidencia manual del usuario. PM-002 permanece en `TRANSITIONING`, sin cutover.
 
 | ID | Objetivo | Dependencias | Resultado verificable | Pruebas |
 |---|---|---|---|---|
@@ -15,7 +15,7 @@
 | PM002-T09 | **Completada.** Se creó `mikuyapp-prod` en la organización actual, región `sa-east-1`, plan Free y administración restringida al propietario vigente. Project ref PROD distinto, credenciales propias, PostgreSQL 17, proyecto vacío y defaults alojados inventariados sin aplicar migraciones, seed, usuarios o datos. | T06–T07; organización, región, plan, administradores y secretos aprobados | Evidencia en `docs/PM002_T09_EXECUTION.md`; PM-002 entra en `TRANSITIONING` mientras Local, Preview y Production permanecen en el proyecto actual. | TP28–TP30 aplicables; validaciones de esquema/Auth/datos diferidas a T10/T11 |
 | PM002-T10 | **Completada.** Se aplicaron 28/28 migraciones versionadas a `mikuyapp-prod`, sin seed ni datos. Historial, 10 tablas, RLS 10/10, 27 policies, 17 funciones, 2 triggers, constraints/índices, owners y Realtime fueron reconciliados; lint remoto aprobó. Los grants/default privileges adicionales se clasificaron como comportamiento administrado de Supabase. | T09, aprobación explícita de ejecución | Evidencia en `docs/PM002_T10_EXECUTION.md`; PROD reconstruido sin usuarios, demo, maestros ni transacciones y PM-002 permanece `TRANSITIONING`. | TP13–TP23 y TP28–TP31 aplicables; pruebas con Auth/maestros diferidas a T11/T13 |
 | PM002-T11 | Configurar Auth, ejecutar la carga inicial acotada y crear usuarios/perfiles productivos mediante procedimiento controlado. | T08, T10; Auth, maestros y usuarios aprobados antes de habilitar | Maestros y cuatro capacidades de rol reconciliados; cero cuenta de prueba copiada. | TP24–TP30, TP32 |
-| PM002-T12 | Configurar Cloudflare Preview → DEV, probar la guardia negativa y mantener Production sin cambios hasta aprobación. | T03–T05 | Todo Preview verificado contra DEV; Preview → PROD bloqueado. | TP03–TP12, TP33 |
+| PM002-T12 | **Completada.** Cloudflare Preview quedó configurado para DEV bajo `TRANSITIONING`; un deployment nuevo finalizó correctamente y el usuario validó el flujo completo hasta cobro en caja sin incidencias. Production permaneció sin cambios sobre el proyecto actual compartido y `mikuyapp-prod` no fue modificado. | T03–T05 | Evidencia en `docs/PM002_T12_EXECUTION.md`; Preview verificado contra DEV, guardia negativa cubierta y ausencia de cutover confirmada. | TP03–TP12, TP33; validación humana de Preview |
 | PM002-T13 | En ventana aprobada, configurar Cloudflare Production → PROD y ejecutar smoke, regresión técnica y validación humana. | T10–T12; ventana, responsables, rollback/recuperación y aprobación explícita | Production usa PROD; Preview/local siguen DEV; `SEPARATED` declarado solo tras verificación. | TP31–TP39, TP41 |
 | PM002-T14 | Actualizar README, plan general, documentación Supabase/despliegue, changelog e índice; consolidar evidencia y solicitar aceptación. | T13 | Arquitectura oficial reflejada; PM-002 no se cierra sin aprobación. | TP40 y checklist humana |
 
@@ -40,7 +40,7 @@
 - [ ] Configuración alojada de Supabase registrada.
 - [ ] Mecanismo acotado de carga inicial validado, transaccional y reconciliado.
 - [ ] Usuarios PROD nuevos y perfiles vinculados sin persistir secretos/UUID.
-- [ ] Preview confirmado en DEV antes de cambiar Production.
+- [x] Preview confirmado en DEV antes de cambiar Production.
 - [ ] Production confirmado en PROD.
 - [ ] Secret scan de Git, bundle, sourcemaps, artefactos y logs aprobado.
 - [ ] Regresión funcional y validación humana aprobadas.

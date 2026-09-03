@@ -4,15 +4,15 @@
 
 Estado vigente: **`TRANSITIONING`**.
 
-`mikuyapp-prod` fue creado en T09 con project ref redactado `snfm…pavp`. T10 aplicó las 28 migraciones y validó el baseline técnico sin seed ni datos; todavía no recibe tráfico de Cloudflare. El proyecto actual continúa atendiendo Local, Preview y Production.
+`mikuyapp-prod` fue creado en T09 con project ref redactado `snfm…pavp`. T10 aplicó las 28 migraciones y validó el baseline técnico sin seed ni datos; todavía no recibe tráfico de Cloudflare. En T12, Cloudflare Preview fue configurado para DEV bajo `TRANSITIONING`, un deployment nuevo terminó correctamente y el usuario validó el flujo completo hasta cobro en caja. Production no fue modificada y continúa en el proyecto actual compartido.
 
 El contexto confirmado para este bloque es:
 
 | Consumidor | Proyecto actual | Identidad lógica | Evidencia disponible |
 |---|---|---|---|
 | Desarrollo local | Supabase actual compartido | `DEV` como destino | `.env.local` ignorado y vínculo local de Supabase CLI; refs coincidentes verificados sin publicar valores. |
-| Cloudflare Preview | Supabase actual compartido | `DEV` como destino | Contexto operativo confirmado; valores/scopes del proveedor no están versionados. |
-| Cloudflare Production | Supabase actual compartido | `SHARED` | Contexto operativo confirmado; no se modificó ni inspeccionó un valor sensible. |
+| Cloudflare Preview | Supabase actual compartido | `DEV` como destino | Variables requeridas para `TRANSITIONING` confirmadas por el usuario; deployment nuevo y flujo completo hasta cobro validados sin incidencias. No se registran valores sensibles. |
+| Cloudflare Production | Supabase actual compartido | `SHARED` | Confirmado sin cambios durante T12; no hubo cutover ni se registraron valores sensibles. |
 
 El proyecto actual todavía presta Production. No se denomina DEV exclusivo hasta el cutover verificado.
 
@@ -24,7 +24,7 @@ El proyecto actual todavía presta Production. No se denomina DEV exclusivo hast
 | `TRANSITIONING` | actual / `DEV` | actual / `DEV` | actual / `SHARED` |
 | `SEPARATED` | DEV actual / `DEV` | DEV actual / `DEV` | PROD nuevo / `PROD` |
 
-No existe replicación, refresh ni sincronización. T02–T07 se ejecutaron en `LEGACY_SHARED`; la creación aislada de PROD en T09 inició `TRANSITIONING` sin cutover.
+No existe replicación, refresh ni sincronización. T02–T07 se ejecutaron en `LEGACY_SHARED`; la creación aislada de PROD en T09 inició `TRANSITIONING`. T12 validó Preview → DEV sin cambiar Production, por lo que no hubo cutover y el estado continúa siendo `TRANSITIONING`.
 
 ## Variables
 
