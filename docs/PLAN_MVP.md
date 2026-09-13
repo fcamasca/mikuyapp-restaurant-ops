@@ -567,7 +567,6 @@ El MVP se considerará terminado si:
 - Anulaciones supervisadas.
 - División de cuentas y propinas.
 - Auditoría.
-- Impresión automática de comandas.
 
 ### Evolución 2 — Inventario (40–60 horas)
 
@@ -616,6 +615,9 @@ El MVP se considerará terminado si:
 - Mozo puede cancelar un producto mientras todavía no haya iniciado preparación.
 - Trazabilidad de cancelaciones y cambios de estado.
 - Consistencia entre estado de detalle y estado general del pedido.
+- Impresión opcional de comandas como apoyo al flujo digital de cocina.
+- La impresión no reemplaza el uso de la tablet ni la actualización de estados.
+- El momento exacto de impresión, deduplicación, reimpresión y mecanismo técnico se definirán en el Spec Mode de Evolución 7.
 
 ### Evolución 8 — Métricas operativas y analítica
 
