@@ -610,6 +610,39 @@ El MVP se considerará terminado si:
 - Conservación de trazabilidad de las operaciones realizadas por cada usuario.
 - Administración de asignaciones de usuarios, roles y locales.
 
+### Evolución 7 — Mejoras operativas de pedidos
+
+- Cocina puede recibir un pedido completo en una sola acción, manteniendo el tratamiento individual por producto cuando corresponda.
+- Mozo puede cancelar un producto mientras todavía no haya iniciado preparación.
+- Trazabilidad de cancelaciones y cambios de estado.
+- Consistencia entre estado de detalle y estado general del pedido.
+
+### Evolución 8 — Métricas operativas y analítica
+
+- Medición del tiempo entre cambios de estado.
+- Tiempo hasta recepción en cocina.
+- Tiempo de preparación.
+- Tiempo desde listo hasta entrega.
+- Tiempo desde entrega hasta pago.
+- Tiempo total de atención.
+- Métricas por producto, pedido, mozo, cocina, mesa, local y franja horaria.
+- Evaluación de almacenamiento orientado a eventos/analítica, incluyendo NoSQL como alternativa, no como decisión cerrada.
+- Base para tableros, detección de cuellos de botella y análisis histórico.
+
+### Evolución 9 — Jornada operativa del local
+
+- Apertura de jornada operativa por ADMINISTRADOR.
+- Cierre de jornada operativa por ADMINISTRADOR.
+- Registro de usuario, fecha y hora de apertura/cierre.
+- Mientras la jornada esté cerrada, los usuarios pueden autenticarse pero no ejecutar operaciones del restaurante.
+- Mozo, Cocina y Caja deben visualizar que la operación está cerrada.
+- Las operaciones críticas deben validar la jornada abierta también en PostgreSQL/servidor.
+- La apertura de sesión de caja requiere una jornada operativa abierta.
+- El cierre de jornada deberá considerar las condiciones operativas pendientes que se definan en su futuro Spec Mode.
+- Historial y trazabilidad de aperturas y cierres.
+
+La numeración de las evoluciones es identificadora y no implica necesariamente su orden de ejecución.
+
 ## 16. Riesgos y mitigación
 
 | Riesgo | Mitigación |
