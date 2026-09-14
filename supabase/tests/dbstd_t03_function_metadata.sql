@@ -85,6 +85,8 @@ begin
     end if;
   end loop;
 
+  -- El fingerprint protege las diez tablas del baseline DBSTD, no las tablas
+  -- aditivas de E1, cuyos grants se verifican en su propia suite. No cambia el hash.
   select pg_catalog.md5(pg_catalog.string_agg(grant_row.line, E'\n' order by grant_row.line))
   into v_privilege_fingerprint
   from (
@@ -94,6 +96,8 @@ begin
     ) as line
     from information_schema.role_table_grants
     where table_schema = 'public'
+      and table_name in ('local', 'rol', 'perfil_usuario', 'mesa', 'categoria',
+        'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago')
     union all
     select pg_catalog.concat_ws(
       '|', 'COLUMN', grantor, grantee, table_schema, table_name,
@@ -101,6 +105,8 @@ begin
     ) as line
     from information_schema.role_column_grants
     where table_schema = 'public'
+      and table_name in ('local', 'rol', 'perfil_usuario', 'mesa', 'categoria',
+        'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago')
   ) as grant_row;
 
   if v_privilege_fingerprint is distinct from 'd64f59917898b2943d5119205d55e110' then

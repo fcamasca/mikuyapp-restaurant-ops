@@ -99,6 +99,9 @@ $dbstd_tp16_trigger_comment$;
 do $dbstd_tp16_only_approved_comments$
 declare
   v_comment_count integer;
+  -- Snapshot DBSTD: E1 puede añadir objetos documentados por su propia suite.
+  v_baseline_tables constant text[] := array['local', 'rol', 'perfil_usuario', 'mesa',
+    'categoria', 'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago'];
 begin
   select pg_catalog.count(*)::integer
   into v_comment_count
@@ -110,6 +113,7 @@ begin
     inner join pg_catalog.pg_namespace as object_schema
       on object_schema.oid = object_metadata.relnamespace
     where object_schema.nspname = 'public'
+      and object_metadata.relname = any(v_baseline_tables)
       and attribute_metadata.attnum > 0
       and not attribute_metadata.attisdropped
       and pg_catalog.col_description(
@@ -122,6 +126,7 @@ begin
     inner join pg_catalog.pg_namespace as object_schema
       on object_schema.oid = object_metadata.relnamespace
     where object_schema.nspname = 'public'
+      and object_metadata.relname = any(v_baseline_tables)
       and pg_catalog.obj_description(object_metadata.oid, 'pg_class') is not null
     union all
     select 1
@@ -129,6 +134,13 @@ begin
     inner join pg_catalog.pg_namespace as object_schema
       on object_schema.oid = object_metadata.pronamespace
     where object_schema.nspname = 'public'
+      and object_metadata.proname in ('obtener_contexto_autenticado', 'crear_o_recuperar_pedido_mesa',
+        'agregar_detalle_pedido', 'enviar_pedido_cocina', 'conservar_auditoria_pedido',
+        'registrar_auditoria_detalle_pedido', 'obtener_creadores_pedidos_vigentes',
+        'liberar_mesa_pedido_vacio', 'obtener_tablero_cocina', 'actualizar_estado_detalle_cocina',
+        'sincronizar_estado_operativo_pedido', 'entregar_pedido', 'registrar_pago_pedido',
+        'obtener_pedidos_pendientes_pago_caja', 'obtener_resumen_ventas_hoy',
+        'exportar_ventas_hoy', 'exportar_productos_local')
       and pg_catalog.obj_description(object_metadata.oid, 'pg_proc') is not null
     union all
     select 1
@@ -138,6 +150,7 @@ begin
     inner join pg_catalog.pg_namespace as object_schema
       on object_schema.oid = table_metadata.relnamespace
     where object_schema.nspname = 'public'
+      and table_metadata.relname = any(v_baseline_tables)
       and not object_metadata.tgisinternal
       and pg_catalog.obj_description(object_metadata.oid, 'pg_trigger') is not null
   ) as catalog_comment;
@@ -154,6 +167,8 @@ declare
   v_policy_count integer;
   v_policy_fingerprint text;
   v_rls_fingerprint text;
+  v_baseline_tables constant text[] := array['local', 'rol', 'perfil_usuario', 'mesa',
+    'categoria', 'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago'];
 begin
   select
     pg_catalog.count(*)::integer,
@@ -177,7 +192,8 @@ begin
     on table_metadata.oid = policy_metadata.polrelid
   inner join pg_catalog.pg_namespace as table_schema
     on table_schema.oid = table_metadata.relnamespace
-  where table_schema.nspname = 'public';
+  where table_schema.nspname = 'public'
+    and table_metadata.relname = any(v_baseline_tables);
 
   select pg_catalog.md5(pg_catalog.string_agg(
     pg_catalog.concat_ws(
@@ -193,6 +209,7 @@ begin
   inner join pg_catalog.pg_namespace as table_schema
     on table_schema.oid = table_metadata.relnamespace
   where table_schema.nspname = 'public'
+    and table_metadata.relname = any(v_baseline_tables)
     and table_metadata.relkind = 'r';
 
   if v_policy_count <> 27

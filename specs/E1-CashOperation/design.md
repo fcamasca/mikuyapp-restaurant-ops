@@ -32,6 +32,8 @@ RPC conceptual `abrir_sesion_caja(p_caja_id, p_monto_inicial, p_idempotency_key)
 
 La restricción única parcial es la defensa final ante doble apertura por caja física. La sesión no pertenece exclusivamente a `abierta_por`: un cambio de cajero no provoca cierre ni arqueo. Toda operación posterior valida un actor `CAJA` activo del mismo local y lo registra independientemente.
 
+Homologación TP03/TP04: recuperar una sesión ya abierta no es un error funcional y no altera `abierta_por`. En aperturas concurrentes ambas llamadas devuelven el mismo `sesion_caja.id`; sólo una crea la sesión. La RPC resuelve de forma segura un eventual conflicto interno `23505`, sin exponerlo como respuesta funcional normal.
+
 ## D04. Movimientos y saldo esperado
 
 RPC `registrar_movimiento_caja(p_sesion_id, p_tipo, p_importe, p_motivo, p_idempotency_key)` bloquea sesión, exige que continúe abierta, corresponda a la caja indicada y pertenezca al local del actor `CAJA` activo. No exige que el actor sea `abierta_por`. Inserta movimiento con su actor y auditoría en la misma transacción. No hay edición/borrado.

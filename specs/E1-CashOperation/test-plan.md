@@ -6,6 +6,18 @@ La construcción futura combinará pruebas SQL transaccionales, Node/React, conc
 
 Mientras PM-002 permanezca `TRANSITIONING`, las pruebas se ejecutarán primero en local/DEV y deployment Preview dirigido a DEV. Este plan no autoriza tocar PROD, Cloudflare Production, variables, datos ni completar PM-002.
 
+### Validación incremental de construcción
+
+La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP propios de la tarea y sólo las regresiones directamente afectadas por los archivos, esquema o contratos modificados. Una prueba aprobada no se repite en la misma tarea salvo que un cambio posterior pueda invalidarla, haya requerido una corrección o sea necesaria para comprobar una interacción nueva.
+
+- No se ejecuta automáticamente la suite Node completa tras cada tarea.
+- Un cambio exclusivamente SQL no obliga automáticamente a repetir `typecheck` o `build`.
+- Las carreras usan conexiones independientes sólo cuando este plan las exige explícitamente para la tarea.
+- Los fingerprints completos de datos legacy sólo se repiten cuando la tarea altera datos, esquema o contrato legacy.
+- Las comprobaciones incrementales reutilizan una baseline local validada; el replay limpio completo se reserva para migraciones que lo requieran y checkpoints.
+- T08 refuerza compatibilidad legacy por modificar `pago`; T09 es checkpoint ampliado del núcleo financiero T03–T09.
+- T13 mantiene la puerta integral definitiva con TP01–TP61, SQL, seguridad, concurrencia, regresión H1–H6/PM-001, `typecheck` y `build`.
+
 ## 2. Matriz de pruebas técnicas
 
 ### Apertura, sesión y permisos
@@ -14,8 +26,8 @@ Mientras PM-002 permanezca `TRANSITIONING`, las pruebas se ejecutarán primero e
 |---|---|---|---|
 | E1-TP01 | R01 | Caja física vs sesión. | Varias sesiones históricas pertenecen a una caja; sólo una puede estar abierta. |
 | E1-TP02 | R01–R03 | Apertura normal con monto inicial cero/positivo. | Sesión abierta con actor/local/hora servidor y auditoría. |
-| E1-TP03 | R02 | Doble apertura secuencial. | Segundo intento falla e identifica sesión vigente sin insertar fila. |
-| E1-TP04 | R02 | Doble apertura concurrente. | Una confirma; restricción/lock impide dos abiertas. |
+| E1-TP03 | R02 | Doble apertura secuencial. | La segunda apertura sobre la misma caja devuelve el snapshot autorizado de la sesión vigente, sin error funcional, sin insertar otra sesión y sin alterar `abierta_por`. |
+| E1-TP04 | R02 | Doble apertura concurrente. | Sólo una llamada crea la sesión; la otra recupera esa misma sesión. Ambas observan el mismo `sesion_caja.id` y queda exactamente una `ABIERTA`. La RPC resuelve de forma segura cualquier conflicto interno `23505`, sin exponerlo como resultado funcional normal; la restricción única parcial permanece como defensa final. |
 | E1-TP05 | R01–R03 | Cajero B accede a la caja con sesión abierta por Cajero A. | Recupera y continúa la misma sesión sin cierre ni arqueo; `abierta_por` permanece Cajero A. |
 | E1-TP06 | R02–R03 | Reintento con misma idempotencia tras timeout. | Devuelve la misma apertura; no duplica auditoría. |
 | E1-TP07 | R02 | Monto inicial negativo/null/NaN conceptual. | Rechazo servidor sin cambios. |
@@ -134,3 +146,24 @@ Las pruebas concurrentes usarán conexiones/sesiones distintas y barreras reprod
 | R19–R20 | D10 | T11 | TP49–TP55 |
 | R21 | D11 | T12 | TP56–TP58 |
 | R22 | D12 | T10, T13–T14 | TP59–TP64 |
+
+## 7. Evidencia incremental de E1-T04
+
+La primera validación aprobada de T04 se ejecutó sobre PostgreSQL local aislado, sin tocar DEV alojado ni PROD. Aplicó T04 sobre la baseline T03, preservó las 12 tablas preexistentes, aprobó **132 comprobaciones SQL**, **tres carreras reales con conexiones independientes** y **22 suites SQL directamente relacionadas o de contratos de base afectados**. En esa misma ejecución ya estaban cubiertos todos los casos aplicables de TP03–TP12.
+
+| TP | Evidencia disponible | Estado para T04 |
+|---|---|---|
+| TP03 | Segunda apertura secuencial devolvió exactamente el snapshot/ID vigente; quedó una fila `ABIERTA`, sin cambiar `abierta_por`. | Aprobada |
+| TP04 | Carreras `different-actors`, `same-key` y recuperación tras `23505` interno: dos respuestas exitosas con el mismo ID, una `ABIERTA`, una auditoría y cero conexiones residuales. | Aprobada |
+| TP05 | Cajero B recuperó la sesión abierta por A y la consultó mediante la lectura activa; el snapshot conservó `abierta_por=A`. | Aprobada |
+| TP06 | Reintentos del creador y del recuperador devolvieron el mismo resultado; una auditoría de apertura y solicitudes idempotentes sin duplicación. La carrera con la misma clave cubrió el reintento mientras la primera transacción estaba pendiente. | Aprobada |
+| TP07 | `null`, negativo, `NaN`, infinitos, exceso de precisión/rango y clave nula fueron rechazados sin apertura. | Aprobada |
+| TP08 | Sesión cerrada/esperada incorrecta, otra caja, caja inactiva, caja inexistente y otro local fueron rechazados sin filtrar datos. | Aprobada para T04 |
+| TP09 | B recuperó/continuó la sesión de A y `abierta_por` permaneció intacto. Los actores de pagos y movimientos se validarán cuando existan esas operaciones en T05/T09. | Aspecto T04 aprobado; resto diferido por dependencia |
+| TP10 | El histórico básico conservó y mostró `abierta_por=A` y `cerrada_por=B` en un fixture estructural. El cierre operativo por B corresponde a T05. | Aspecto T04 aprobado; cierre diferido por dependencia |
+| TP11 | Lectura de histórico autorizada para CAJA A, CAJA B y ADMINISTRADOR, paginada y limitada al local; conserva actores de apertura/cierre. | Aprobada |
+| TP12 | MOZO, COCINA, `anon`, perfil/rol/local inactivo y contexto sin usuario fueron denegados en RPC/SELECT; se verificaron grants, RLS, `SECURITY DEFINER`, owner y `search_path`. | Aprobada |
+
+Después de esa validación no cambió la migración ni las RPC de T04. Las comprobaciones añadidas posteriormente al archivo de pruebas, aún no ejecutadas y no requeridas por TP03–TP12, se retiraron. Por tanto, **no quedaron casos faltantes ni invalidados y no se ejecutaron pruebas nuevas para cerrar T04**.
+
+Se conservaron deliberadamente sin repetir: las 132 comprobaciones SQL, las tres carreras, las 22 regresiones SQL, los 305 tests Node, `typecheck` y `build`. La razón es que ya habían aprobado y desde entonces no cambió ningún archivo capaz de invalidar sus resultados; repetirlos contradiría la estrategia incremental. Las operaciones pendientes de TP09/TP10 no son una deuda de T04: dependen de T05/T09 y se ejecutarán en sus tareas.
