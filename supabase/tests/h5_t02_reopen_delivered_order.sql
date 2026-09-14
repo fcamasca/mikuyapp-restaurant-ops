@@ -11,6 +11,7 @@ declare
  v_mozo uuid:='00000000-0000-0000-0000-00000000f801';
  v_cocina uuid:='00000000-0000-0000-0000-00000000f802';
  v_caja uuid:='00000000-0000-0000-0000-00000000f803';
+ v_caja_fisica uuid:='00000000-0000-0000-0000-00000000f809';
  v_local uuid:='00000000-0000-0000-0000-00000000f804';
  v_cat uuid:='00000000-0000-0000-0000-00000000f805';
  v_old uuid:='00000000-0000-0000-0000-00000000f806';
@@ -27,6 +28,9 @@ begin
  select v_mozo,v_local,id,'Mozo' from public.rol where codigo='MOZO' union all
  select v_cocina,v_local,id,'Cocina' from public.rol where codigo='COCINA' union all
  select v_caja,v_local,id,'Caja' from public.rol where codigo='CAJA';
+ insert into public.caja(id,local_id,codigo,nombre) values(v_caja_fisica,v_local,'H5-REOPEN','Caja H5 Reopen');
+ insert into public.sesion_caja(caja_id,local_id,abierta_por,monto_inicial,idempotency_key)
+ values(v_caja_fisica,v_local,v_caja,0,'00000000-0000-0000-0000-00000000f810');
  insert into public.categoria(id,local_id,codigo,nombre) values(v_cat,v_local,'H5-REOPEN','Categoría');
  insert into public.producto(id,local_id,categoria_id,codigo,nombre,precio) values
  (v_old,v_local,v_cat,'OLD','Anterior',10),(v_new,v_local,v_cat,'NEW','Nuevo',7);

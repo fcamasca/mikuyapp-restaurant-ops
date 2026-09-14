@@ -15,7 +15,7 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 - Las carreras usan conexiones independientes sólo cuando este plan las exige explícitamente para la tarea.
 - Los fingerprints completos de datos legacy sólo se repiten cuando la tarea altera datos, esquema o contrato legacy.
 - Las comprobaciones incrementales reutilizan una baseline local validada; el replay limpio completo se reserva para migraciones que lo requieran y checkpoints.
-- T08 refuerza compatibilidad legacy por modificar `pago`; T09 es checkpoint ampliado del núcleo financiero T03–T09.
+- T08 refuerza estructura y compatibilidad legacy por modificar `pago`; los comportamientos de N pagos/parciales permanecen en T09, que es checkpoint ampliado del núcleo financiero T03–T09.
 - T13 mantiene la puerta integral definitiva con TP01–TP61, SQL, seguridad, concurrencia, regresión H1–H6/PM-001, `typecheck` y `build`.
 
 ## 2. Matriz de pruebas técnicas
@@ -46,7 +46,7 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP15 | R04 | Importe cero/negativo, motivo vacío o sesión cerrada. | Rechazo sin fila ni auditoría huérfana. |
 | E1-TP16 | R04–R05 | Entradas/salidas concurrentes y reintentos. | Todos los eventos válidos se suman una vez; idempotencia impide duplicados. |
 | E1-TP17 | R05–R07 | Cierre correcto sin diferencia. | Snapshot por medio/movimiento, esperado=contado, diferencia cero, sesión cerrada. |
-| E1-TP18 | R05–R07 | Diferencia, doble cierre y cierre vs cobro/movimiento. | Aplica DF-02; sólo un cierre; operación perdedora falla/recarga sin parcialidad. |
+| E1-TP18 | R05–R07 | Diferencia, doble cierre y cierre vs cobro/movimiento. | Aplica DF-02; sólo un cierre; operación perdedora falla/recarga sin parcialidad. La carrera cierre-vs-cobro se ejecuta en T05 después de T08, cuando todo pago nuevo ya queda asociado a sesión. |
 
 ### Descuentos y anulaciones
 
@@ -125,6 +125,8 @@ Fixtures mínimos: dos locales; dos cajas; dos usuarios `CAJA`; un `ADMINISTRADO
 
 Las pruebas concurrentes usarán conexiones/sesiones distintas y barreras reproducibles; no se simulará concurrencia sólo con llamadas secuenciales. Después de cada caso se verifican conteos, sumas, estados, locks liberados, auditoría y ausencia de residuos.
 
+Para el orden técnico corregido, T08 valida únicamente los aspectos estructurales/legacy aplicables de TP31–TP35: preservación exacta de pagos históricos, ausencia de sesiones retroactivas, columnas/constraints/índices/grants nuevos, asociación de todo pago nuevo con sesión abierta, propina separada, idempotencia y regresión del cobro total H5 modificado. Eliminar la unicidad por pedido prepara el modelo, pero T08 no habilita ni declara aprobados N pagos, pagos parciales, división operativa o selección por productos; esos comportamientos permanecen en T09/T10.
+
 ## 5. Criterio de aprobación
 
 - DF-01–DF-04 y DF-06–DF-09 aprobadas y reflejadas en el spec; EC-06–EC-08 conservadas como decisiones cerradas.
@@ -167,3 +169,18 @@ La primera validación aprobada de T04 se ejecutó sobre PostgreSQL local aislad
 Después de esa validación no cambió la migración ni las RPC de T04. Las comprobaciones añadidas posteriormente al archivo de pruebas, aún no ejecutadas y no requeridas por TP03–TP12, se retiraron. Por tanto, **no quedaron casos faltantes ni invalidados y no se ejecutaron pruebas nuevas para cerrar T04**.
 
 Se conservaron deliberadamente sin repetir: las 132 comprobaciones SQL, las tres carreras, las 22 regresiones SQL, los 305 tests Node, `typecheck` y `build`. La razón es que ya habían aprobado y desde entonces no cambió ningún archivo capaz de invalidar sus resultados; repetirlos contradiría la estrategia incremental. Las operaciones pendientes de TP09/TP10 no son una deuda de T04: dependen de T05/T09 y se ejecutarán en sus tareas.
+
+## 8. Evidencia incremental de E1-T05
+
+T05 se validó en PostgreSQL local aislado sobre T03, T04 y T08. La migración preservó exactamente el evento `APERTURA` previo de T04. Se aprobaron 15 grupos de comprobación SQL, la regresión T04 directamente afectada y tres carreras reales con conexiones independientes.
+
+| TP | Evidencia disponible | Estado para T05 |
+|---|---|---|
+| TP13 | Entrada positiva con motivo persistió sesión, actor Cajero B, hora servidor y una auditoría atómica. | Aprobada |
+| TP14 | Salida positiva explícita persistió actor Cajero A y redujo el efectivo esperado. | Aprobada |
+| TP15 | Cero, negativo, motivo vacío, sesión cerrada, caja inactiva y otro local fueron rechazados sin residuos; dominio, snapshot y solicitud no admiten edición/borrado. | Aprobada |
+| TP16 | Reintento con la misma clave devolvió el mismo movimiento y conservó una fila/auditoría; cierre-vs-movimiento usó locks reales y dejó al perdedor en `40001`. | Aprobada |
+| TP17 | Snapshot: inicial 100 + pago EFECTIVO 50 + propina EFECTIVO 5 + entrada 20 − salida 5 = esperado 170. Yape 30 y propina Yape 3 quedaron separados y no afectaron efectivo. Cierre contado 170 produjo diferencia cero. | Aprobada |
+| TP18 | Diferencia −10 exigió motivo; cierre supervisor exigió ADMINISTRADOR y motivo. Doble cierre, cierre-vs-movimiento y cierre-vs-cobro bloquearon realmente; un ganador atómico, perdedor `40001`, sin pagos asociados después del cierre. | Aprobada |
+
+Aspectos pendientes de TP09/TP10 aplicables a T05: movimientos por Cajero A/B conservaron su actor sin alterar `abierta_por`; Cajero B cerró la sesión abierta por A y quedaron `abierta_por=A`/`cerrada_por=B`. Los aspectos de pagos múltiples permanecen diferidos a T09.
