@@ -239,3 +239,13 @@ Replay limpio de 35 migraciones aprobado. El constraint conserva todos los event
 Las cuatro carreras (saldo final, parciales incompatibles, cierre-vs-cobro y anulación-vs-cobro) usaron conexiones independientes y bloqueo comprobado con `pg_blocking_pids`. Todas terminaron sin sobrepago, huérfanos, efectos parciales del perdedor ni conexiones residuales.
 
 Checkpoint: T04 132 comprobaciones; T05 15; T06 y T07 8 grupos cada una; T08 27. Se reutilizó T03 porque T09 no cambió caja/sesión. Node, `typecheck`, `build` y regresión integral H1–H6/PM-001 permanecen para T13.
+
+## 12. Prerrequisito técnico de lecturas para E1-T10
+
+Antes de iniciar React, 8 grupos SQL aprobaron: compatibilidad del shape H5 de pendientes; subtotal/descuento/neto; acumulado/saldo con cero, uno y N pagos; pagos con medio, propina, actor y hora; acceso CAJA/ADMINISTRADOR del mismo local; rechazo de otros roles y otro local; visibilidad operacional de `PAGADO`/`ANULADO`. La regresión `h5_t03_cashier_pending_orders_read.sql` también aprobó tras homologar su inspección de metadata al shape aditivo. Estas lecturas no alteraron TP y, por sí solas, no completaban T10; dejaron su implementación frontend desbloqueada.
+
+## 13. Evidencia técnica de E1-T10
+
+La adaptación frontend aprobó 35/35 pruebas Node/React directamente afectadas, `typecheck` y `build`. TP35 confirmó que la selección de productos sólo propone un importe; TP45–TP47 cubrieron captura/visualización separada de propina; TP48 distinguió recibo parcial y ticket consolidado interno no fiscal; TP59–TP60 cubrieron estados operativos, reintento, exclusión de doble envío y resincronización autoritativa.
+
+TP62–TP64 permanecen pendientes de ejecución humana y no se consideran aprobadas. No se repitieron SQL T03–T09, replay, suite Node integral ni regresión H1–H6/PM-001 porque esta intervención no modificó contratos PostgreSQL y esos checkpoints corresponden a T13.

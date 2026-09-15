@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   createCatalogService,
   type AdministrativeCatalog,
@@ -9,68 +9,69 @@ import {
   type CategoryMutation,
   type ProductMutation,
   type TableMutation,
-} from '../services/catalogService'
-import type { ValidatedProfileContext } from '../services/profileContext'
-import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
-import { getSupabaseClient } from '../services/supabaseClient'
+} from "../services/catalogService";
+import type { ValidatedProfileContext } from "../services/profileContext";
+import AuthenticatedUserMenu from "../components/AuthenticatedUserMenu";
+import { getSupabaseClient } from "../services/supabaseClient";
+import CashAdministrationPanel from "../components/CashAdministrationPanel";
 
 interface CategoryAdministrationPageProps {
-  readonly context: ValidatedProfileContext
-  readonly isSigningOut: boolean
-  readonly onNavigateToSales: () => void
-  readonly onSignOut: () => void
-  readonly onNavigateToTechnical: () => void
+  readonly context: ValidatedProfileContext;
+  readonly isSigningOut: boolean;
+  readonly onNavigateToSales: () => void;
+  readonly onSignOut: () => void;
+  readonly onNavigateToTechnical: () => void;
 }
 
 interface CategoryFormState {
-  readonly codigo: string
-  readonly nombre: string
-  readonly orden: string
-  readonly activo: boolean
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly orden: string;
+  readonly activo: boolean;
 }
 
 interface ProductFormState {
-  readonly categoria_id: string
-  readonly codigo: string
-  readonly nombre: string
-  readonly precio: string
-  readonly activo: boolean
+  readonly categoria_id: string;
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly precio: string;
+  readonly activo: boolean;
 }
 
 interface TableFormState {
-  readonly codigo: string
-  readonly nombre: string
-  readonly activo: boolean
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly activo: boolean;
 }
 
 const emptyCategoryForm: CategoryFormState = {
-  codigo: '',
-  nombre: '',
-  orden: '0',
+  codigo: "",
+  nombre: "",
+  orden: "0",
   activo: true,
-}
+};
 
 const emptyProductForm: ProductFormState = {
-  categoria_id: '',
-  codigo: '',
-  nombre: '',
-  precio: '0',
+  categoria_id: "",
+  codigo: "",
+  nombre: "",
+  precio: "0",
   activo: true,
-}
+};
 
 const emptyTableForm: TableFormState = {
-  codigo: '',
-  nombre: '',
+  codigo: "",
+  nombre: "",
   activo: true,
-}
+};
 
-const priceFormatter = new Intl.NumberFormat('es-PE', {
-  style: 'currency',
-  currency: 'PEN',
-})
+const priceFormatter = new Intl.NumberFormat("es-PE", {
+  style: "currency",
+  currency: "PEN",
+});
 
 const inputClassName =
-  'mt-2 min-h-12 w-full min-w-0 rounded-xl border border-stone-300 bg-white px-4 py-3 text-base text-stone-900 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-stone-100'
+  "mt-2 min-h-12 w-full min-w-0 rounded-xl border border-stone-300 bg-white px-4 py-3 text-base text-stone-900 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-stone-100";
 
 export default function CategoryAdministrationPage({
   context,
@@ -79,148 +80,153 @@ export default function CategoryAdministrationPage({
   onSignOut,
   onNavigateToTechnical,
 }: CategoryAdministrationPageProps) {
-  const clientResult = useMemo(() => getSupabaseClient(), [])
+  const clientResult = useMemo(() => getSupabaseClient(), []);
   const service = useMemo(
-    () => clientResult.ok ? createCatalogService(clientResult.client) : null,
+    () => (clientResult.ok ? createCatalogService(clientResult.client) : null),
     [clientResult],
-  )
-  const [catalog, setCatalog] = useState<AdministrativeCatalog | null>(null)
-  const [form, setForm] = useState<CategoryFormState>(emptyCategoryForm)
-  const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm)
-  const [tableForm, setTableForm] = useState<TableFormState>(emptyTableForm)
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
-  const [editingProductId, setEditingProductId] = useState<string | null>(null)
-  const [editingTableId, setEditingTableId] = useState<string | null>(null)
-  const [tables, setTables] = useState<readonly CatalogTable[] | null>(null)
-  const [catalogLoading, setCatalogLoading] = useState(true)
-  const [tablesLoading, setTablesLoading] = useState(true)
-  const [categorySaving, setCategorySaving] = useState(false)
-  const [productSaving, setProductSaving] = useState(false)
-  const [tableSaving, setTableSaving] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [productMessage, setProductMessage] = useState<string | null>(null)
-  const [productError, setProductError] = useState<string | null>(null)
-  const [tableMessage, setTableMessage] = useState<string | null>(null)
-  const [tableError, setTableError] = useState<string | null>(null)
-  const [catalogAttempt, setCatalogAttempt] = useState(0)
-  const [tablesAttempt, setTablesAttempt] = useState(0)
-  const categoryMutationPending = useRef(false)
-  const productMutationPending = useRef(false)
-  const tableMutationPending = useRef(false)
+  );
+  const [catalog, setCatalog] = useState<AdministrativeCatalog | null>(null);
+  const [form, setForm] = useState<CategoryFormState>(emptyCategoryForm);
+  const [productForm, setProductForm] =
+    useState<ProductFormState>(emptyProductForm);
+  const [tableForm, setTableForm] = useState<TableFormState>(emptyTableForm);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
+    null,
+  );
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editingTableId, setEditingTableId] = useState<string | null>(null);
+  const [tables, setTables] = useState<readonly CatalogTable[] | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [tablesLoading, setTablesLoading] = useState(true);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [productSaving, setProductSaving] = useState(false);
+  const [tableSaving, setTableSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [productMessage, setProductMessage] = useState<string | null>(null);
+  const [productError, setProductError] = useState<string | null>(null);
+  const [tableMessage, setTableMessage] = useState<string | null>(null);
+  const [tableError, setTableError] = useState<string | null>(null);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  const [tablesAttempt, setTablesAttempt] = useState(0);
+  const categoryMutationPending = useRef(false);
+  const productMutationPending = useRef(false);
+  const tableMutationPending = useRef(false);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function loadCatalog(): Promise<void> {
       if (!service) {
-        setCatalogLoading(false)
-        setError('No pudimos establecer la conexión con el catálogo.')
-        setProductError('No pudimos establecer la conexión con el catálogo.')
-        return
+        setCatalogLoading(false);
+        setError("No pudimos establecer la conexión con el catálogo.");
+        setProductError("No pudimos establecer la conexión con el catálogo.");
+        return;
       }
 
-      setCatalogLoading(true)
-      const result = await service.getAdministrativeCatalog(context)
+      setCatalogLoading(true);
+      const result = await service.getAdministrativeCatalog(context);
       if (cancelled) {
-        return
+        return;
       }
 
-      setCatalogLoading(false)
+      setCatalogLoading(false);
       if (!result.ok) {
-        setError(result.error.message)
-        setProductError(result.error.message)
-        return
+        setError(result.error.message);
+        setProductError(result.error.message);
+        return;
       }
 
-      setCatalog(result.data)
-      setError(null)
-      setProductError(null)
+      setCatalog(result.data);
+      setError(null);
+      setProductError(null);
     }
 
-    void loadCatalog()
+    void loadCatalog();
     return () => {
-      cancelled = true
-    }
-  }, [catalogAttempt, context, service])
+      cancelled = true;
+    };
+  }, [catalogAttempt, context, service]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function loadTables(): Promise<void> {
       if (!service) {
-        setTablesLoading(false)
-        setTableError('No pudimos establecer la conexión con las mesas.')
-        return
+        setTablesLoading(false);
+        setTableError("No pudimos establecer la conexión con las mesas.");
+        return;
       }
 
-      setTablesLoading(true)
-      const result = await service.getAdministrativeTables(context)
-      if (cancelled) return
+      setTablesLoading(true);
+      const result = await service.getAdministrativeTables(context);
+      if (cancelled) return;
 
-      setTablesLoading(false)
+      setTablesLoading(false);
       if (!result.ok) {
-        setTableError(result.error.message)
-        return
+        setTableError(result.error.message);
+        return;
       }
 
-      setTables(result.data)
-      setTableError(null)
+      setTables(result.data);
+      setTableError(null);
     }
 
-    void loadTables()
-    return () => { cancelled = true }
-  }, [context, service, tablesAttempt])
+    void loadTables();
+    return () => {
+      cancelled = true;
+    };
+  }, [context, service, tablesAttempt]);
 
   function resetForm(): void {
-    setForm(emptyCategoryForm)
-    setEditingCategoryId(null)
+    setForm(emptyCategoryForm);
+    setEditingCategoryId(null);
   }
 
   function editCategory(category: CatalogCategory): void {
-    setEditingCategoryId(category.id)
+    setEditingCategoryId(category.id);
     setForm({
       codigo: category.codigo,
       nombre: category.nombre,
       orden: String(category.orden),
       activo: category.activo,
-    })
-    setError(null)
-    setMessage(null)
+    });
+    setError(null);
+    setMessage(null);
   }
 
   function resetProductForm(): void {
-    setProductForm(emptyProductForm)
-    setEditingProductId(null)
+    setProductForm(emptyProductForm);
+    setEditingProductId(null);
   }
 
   function editProduct(product: CatalogProduct): void {
-    setEditingProductId(product.id)
+    setEditingProductId(product.id);
     setProductForm({
       categoria_id: product.categoria_id,
       codigo: product.codigo,
       nombre: product.nombre,
       precio: String(product.precio),
       activo: product.activo,
-    })
-    setProductError(null)
-    setProductMessage(null)
+    });
+    setProductError(null);
+    setProductMessage(null);
   }
 
   function resetTableForm(): void {
-    setTableForm(emptyTableForm)
-    setEditingTableId(null)
+    setTableForm(emptyTableForm);
+    setEditingTableId(null);
   }
 
   function editTable(table: CatalogTable): void {
-    setEditingTableId(table.id)
+    setEditingTableId(table.id);
     setTableForm({
       codigo: table.codigo,
       nombre: table.nombre,
       activo: table.activo,
-    })
-    setTableError(null)
-    setTableMessage(null)
+    });
+    setTableError(null);
+    setTableMessage(null);
   }
 
   async function runCategoryMutation(
@@ -228,52 +234,52 @@ export default function CategoryAdministrationPage({
     resetAfterSuccess: boolean,
   ): Promise<void> {
     if (categoryMutationPending.current) {
-      return
+      return;
     }
 
-    categoryMutationPending.current = true
-    setCategorySaving(true)
-    setError(null)
-    setMessage(null)
+    categoryMutationPending.current = true;
+    setCategorySaving(true);
+    setError(null);
+    setMessage(null);
 
     try {
-      const result = await operation()
+      const result = await operation();
       if (!result.ok) {
-        setError(result.error.message)
-        return
+        setError(result.error.message);
+        return;
       }
 
-      if (result.data.status === 'cancelled') {
-        setMessage(result.data.message)
-        return
+      if (result.data.status === "cancelled") {
+        setMessage(result.data.message);
+        return;
       }
 
       if (result.data.catalog) {
-        setCatalog(result.data.catalog)
+        setCatalog(result.data.catalog);
       }
-      setMessage(result.data.message)
+      setMessage(result.data.message);
 
       if (resetAfterSuccess) {
-        resetForm()
+        resetForm();
       }
     } catch {
-      setError('No pudimos completar la operación. Intenta nuevamente.')
+      setError("No pudimos completar la operación. Intenta nuevamente.");
     } finally {
-      categoryMutationPending.current = false
-      setCategorySaving(false)
+      categoryMutationPending.current = false;
+      setCategorySaving(false);
     }
   }
 
   function submitCategory(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
+    event.preventDefault();
     if (!service || categorySaving || categoryMutationPending.current) {
-      return
+      return;
     }
 
     if (!form.orden.trim()) {
-      setError('Ingresa el orden de la categoría.')
-      setMessage(null)
-      return
+      setError("Ingresa el orden de la categoría.");
+      setMessage(null);
+      return;
     }
 
     const input = {
@@ -281,40 +287,41 @@ export default function CategoryAdministrationPage({
       nombre: form.nombre,
       orden: Number(form.orden),
       activo: form.activo,
-    }
+    };
 
     void runCategoryMutation(
-      () => editingCategoryId
-        ? service.updateCategory(context, editingCategoryId, input)
-        : service.createCategory(context, input),
+      () =>
+        editingCategoryId
+          ? service.updateCategory(context, editingCategoryId, input)
+          : service.createCategory(context, input),
       true,
-    )
+    );
   }
 
   function toggleCategory(category: CatalogCategory): void {
     if (!service || categorySaving || categoryMutationPending.current) {
-      return
+      return;
     }
 
     void runCategoryMutation(
       () => service.setCategoryActive(context, category.id, !category.activo),
       false,
-    )
+    );
   }
 
   function deleteCategory(category: CatalogCategory): void {
     if (!service || categorySaving || categoryMutationPending.current) {
-      return
+      return;
     }
 
     const confirmed = window.confirm(
       `¿Eliminar definitivamente la categoría «${category.nombre}» (${category.codigo})? Esta acción no se puede deshacer.`,
-    )
+    );
 
     void runCategoryMutation(
       () => service.deleteCategory(context, category.id, confirmed),
       confirmed && editingCategoryId === category.id,
-    )
+    );
   }
 
   async function runProductMutation(
@@ -322,52 +329,54 @@ export default function CategoryAdministrationPage({
     resetAfterSuccess: boolean,
   ): Promise<void> {
     if (productMutationPending.current) {
-      return
+      return;
     }
 
-    productMutationPending.current = true
-    setProductSaving(true)
-    setProductError(null)
-    setProductMessage(null)
+    productMutationPending.current = true;
+    setProductSaving(true);
+    setProductError(null);
+    setProductMessage(null);
 
     try {
-      const result = await operation()
+      const result = await operation();
       if (!result.ok) {
-        setProductError(result.error.message)
-        return
+        setProductError(result.error.message);
+        return;
       }
 
-      if (result.data.status === 'cancelled') {
-        setProductMessage(result.data.message)
-        return
+      if (result.data.status === "cancelled") {
+        setProductMessage(result.data.message);
+        return;
       }
 
       if (result.data.catalog) {
-        setCatalog(result.data.catalog)
+        setCatalog(result.data.catalog);
       }
-      setProductMessage(result.data.message)
+      setProductMessage(result.data.message);
 
       if (resetAfterSuccess) {
-        resetProductForm()
+        resetProductForm();
       }
     } catch {
-      setProductError('No pudimos completar la operación del producto. Intenta nuevamente.')
+      setProductError(
+        "No pudimos completar la operación del producto. Intenta nuevamente.",
+      );
     } finally {
-      productMutationPending.current = false
-      setProductSaving(false)
+      productMutationPending.current = false;
+      setProductSaving(false);
     }
   }
 
   function submitProduct(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
+    event.preventDefault();
     if (!service || productSaving || productMutationPending.current) {
-      return
+      return;
     }
 
     if (!productForm.precio.trim()) {
-      setProductError('Ingresa el precio del producto.')
-      setProductMessage(null)
-      return
+      setProductError("Ingresa el precio del producto.");
+      setProductMessage(null);
+      return;
     }
 
     const input = {
@@ -376,41 +385,42 @@ export default function CategoryAdministrationPage({
       nombre: productForm.nombre,
       precio: Number(productForm.precio),
       activo: productForm.activo,
-    }
-    const categories = catalog?.categories ?? []
+    };
+    const categories = catalog?.categories ?? [];
 
     void runProductMutation(
-      () => editingProductId
-        ? service.updateProduct(context, editingProductId, input, categories)
-        : service.createProduct(context, input, categories),
+      () =>
+        editingProductId
+          ? service.updateProduct(context, editingProductId, input, categories)
+          : service.createProduct(context, input, categories),
       true,
-    )
+    );
   }
 
   function toggleProduct(product: CatalogProduct): void {
     if (!service || productSaving || productMutationPending.current) {
-      return
+      return;
     }
 
     void runProductMutation(
       () => service.setProductActive(context, product.id, !product.activo),
       false,
-    )
+    );
   }
 
   function deleteProduct(product: CatalogProduct): void {
     if (!service || productSaving || productMutationPending.current) {
-      return
+      return;
     }
 
     const confirmed = window.confirm(
       `¿Eliminar definitivamente el producto «${product.nombre}» (${product.codigo})? Esta acción no se puede deshacer.`,
-    )
+    );
 
     void runProductMutation(
       () => service.deleteProduct(context, product.id, confirmed),
       confirmed && editingProductId === product.id,
-    )
+    );
   }
 
   async function runTableMutation(
@@ -418,92 +428,97 @@ export default function CategoryAdministrationPage({
     resetAfterSuccess: boolean,
   ): Promise<void> {
     if (tableMutationPending.current) {
-      return
+      return;
     }
 
-    tableMutationPending.current = true
-    setTableSaving(true)
-    setTableError(null)
-    setTableMessage(null)
+    tableMutationPending.current = true;
+    setTableSaving(true);
+    setTableError(null);
+    setTableMessage(null);
 
     try {
-      const result = await operation()
+      const result = await operation();
       if (!result.ok) {
-        setTableError(result.error.message)
-        return
+        setTableError(result.error.message);
+        return;
       }
 
-      if (result.data.status === 'cancelled') {
-        setTableMessage(result.data.message)
-        return
+      if (result.data.status === "cancelled") {
+        setTableMessage(result.data.message);
+        return;
       }
 
       if (result.data.tables) {
-        setTables(result.data.tables)
+        setTables(result.data.tables);
       }
-      setTableMessage(result.data.message)
+      setTableMessage(result.data.message);
 
       if (resetAfterSuccess) {
-        resetTableForm()
+        resetTableForm();
       }
     } catch {
-      setTableError('No pudimos completar la operación de mesa. Intenta nuevamente.')
+      setTableError(
+        "No pudimos completar la operación de mesa. Intenta nuevamente.",
+      );
     } finally {
-      tableMutationPending.current = false
-      setTableSaving(false)
+      tableMutationPending.current = false;
+      setTableSaving(false);
     }
   }
 
   function submitTable(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
+    event.preventDefault();
     if (!service || tableSaving || tableMutationPending.current) {
-      return
+      return;
     }
 
     const input = {
       codigo: tableForm.codigo,
       nombre: tableForm.nombre,
       activo: tableForm.activo,
-    }
-    const editingTable = tables?.find((table) => table.id === editingTableId)
+    };
+    const editingTable = tables?.find((table) => table.id === editingTableId);
 
     if (editingTableId && !editingTable) {
-      setTableError('No encontramos la mesa que deseas editar. Intenta nuevamente.')
-      return
+      setTableError(
+        "No encontramos la mesa que deseas editar. Intenta nuevamente.",
+      );
+      return;
     }
 
     void runTableMutation(
-      () => editingTable
-        ? service.updateTable(context, editingTable, input)
-        : service.createTable(context, input),
+      () =>
+        editingTable
+          ? service.updateTable(context, editingTable, input)
+          : service.createTable(context, input),
       true,
-    )
+    );
   }
 
   function toggleTable(table: CatalogTable): void {
     if (!service || tableSaving || tableMutationPending.current) {
-      return
+      return;
     }
 
     void runTableMutation(
       () => service.setTableActive(context, table, !table.activo),
       false,
-    )
+    );
   }
 
   function deleteTable(table: CatalogTable): void {
     if (!service || tableSaving || tableMutationPending.current) {
-      return
+      return;
     }
 
     const confirmed = window.confirm(
       `¿Eliminar definitivamente la mesa «${table.nombre}» (${table.codigo})? Esta acción no se puede deshacer.`,
-    )
+    );
 
     void runTableMutation(
       () => service.deleteTable(context, table, confirmed),
       confirmed && editingTableId === table.id,
-    )
+    );
   }
 
   return (
@@ -514,7 +529,9 @@ export default function CategoryAdministrationPage({
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
               MikuyApp · Administración
             </p>
-            <h1 className="mt-2 break-words text-2xl font-bold tracking-tight sm:text-3xl">Catálogo administrativo</h1>
+            <h1 className="mt-2 break-words text-2xl font-bold tracking-tight sm:text-3xl">
+              Catálogo administrativo
+            </h1>
             <p className="mt-2 text-sm text-stone-600">
               Gestiona las categorías, los productos y las mesas de tu local.
             </p>
@@ -535,67 +552,88 @@ export default function CategoryAdministrationPage({
             >
               Resumen diario
             </button>
-            <AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onSignOut={onSignOut} />
+            <AuthenticatedUserMenu
+              context={context}
+              isSigningOut={isSigningOut}
+              onSignOut={onSignOut}
+            />
           </div>
         </header>
+
+        <CashAdministrationPanel context={context} />
 
         <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
-              {editingCategoryId ? 'Editar categoría' : 'Nueva categoría'}
+              {editingCategoryId ? "Editar categoría" : "Nueva categoría"}
             </h2>
             <p className="mt-2 text-sm text-stone-600">
               {editingCategoryId
-                ? 'Actualiza los datos y guarda los cambios.'
-                : 'Completa los datos para agregar una categoría.'}
+                ? "Actualiza los datos y guarda los cambios."
+                : "Completa los datos para agregar una categoría."}
             </p>
 
             <form className="mt-6 space-y-5" onSubmit={submitCategory}>
-              <label className="block text-sm font-medium text-stone-800" htmlFor="category-code">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="category-code"
+              >
                 Código
                 <input
                   autoComplete="off"
                   className={inputClassName}
                   disabled={categorySaving}
                   id="category-code"
-                  onChange={(event) => setForm((current) => ({
-                    ...current,
-                    codigo: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      codigo: event.target.value,
+                    }))
+                  }
                   required
                   type="text"
                   value={form.codigo}
                 />
               </label>
 
-              <label className="block text-sm font-medium text-stone-800" htmlFor="category-name">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="category-name"
+              >
                 Nombre
                 <input
                   autoComplete="off"
                   className={inputClassName}
                   disabled={categorySaving}
                   id="category-name"
-                  onChange={(event) => setForm((current) => ({
-                    ...current,
-                    nombre: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      nombre: event.target.value,
+                    }))
+                  }
                   required
                   type="text"
                   value={form.nombre}
                 />
               </label>
 
-              <label className="block text-sm font-medium text-stone-800" htmlFor="category-order">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="category-order"
+              >
                 Orden
                 <input
                   className={inputClassName}
                   disabled={categorySaving}
                   id="category-order"
                   min="0"
-                  onChange={(event) => setForm((current) => ({
-                    ...current,
-                    orden: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      orden: event.target.value,
+                    }))
+                  }
                   required
                   step="1"
                   type="number"
@@ -608,10 +646,12 @@ export default function CategoryAdministrationPage({
                   checked={form.activo}
                   className="size-4 rounded border-stone-300 accent-emerald-700"
                   disabled={categorySaving}
-                  onChange={(event) => setForm((current) => ({
-                    ...current,
-                    activo: event.target.checked,
-                  }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      activo: event.target.checked,
+                    }))
+                  }
                   type="checkbox"
                 />
                 Categoría activa
@@ -625,10 +665,10 @@ export default function CategoryAdministrationPage({
                   type="submit"
                 >
                   {categorySaving
-                    ? 'Guardando…'
+                    ? "Guardando…"
                     : editingCategoryId
-                      ? 'Guardar cambios'
-                      : 'Crear categoría'}
+                      ? "Guardar cambios"
+                      : "Crear categoría"}
                 </button>
 
                 {editingCategoryId && (
@@ -675,7 +715,10 @@ export default function CategoryAdministrationPage({
             )}
 
             {message && (
-              <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+              <p
+                className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+                role="status"
+              >
                 {message}
               </p>
             )}
@@ -698,13 +741,17 @@ export default function CategoryAdministrationPage({
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-stone-900">{category.nombre}</h3>
+                          <h3 className="font-semibold text-stone-900">
+                            {category.nombre}
+                          </h3>
                           <span
-                            className={category.activo
-                              ? 'rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'
-                              : 'rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700'}
+                            className={
+                              category.activo
+                                ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+                                : "rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700"
+                            }
                           >
-                            {category.activo ? 'Activa' : 'Inactiva'}
+                            {category.activo ? "Activa" : "Inactiva"}
                           </span>
                         </div>
                         <p className="mt-2 text-sm text-stone-600">
@@ -728,7 +775,7 @@ export default function CategoryAdministrationPage({
                         onClick={() => toggleCategory(category)}
                         type="button"
                       >
-                        {category.activo ? 'Desactivar' : 'Activar'}
+                        {category.activo ? "Desactivar" : "Activar"}
                       </button>
                       <button
                         className="min-h-11 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60 sm:w-auto"
@@ -749,82 +796,103 @@ export default function CategoryAdministrationPage({
         <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
-              {editingProductId ? 'Editar producto' : 'Nuevo producto'}
+              {editingProductId ? "Editar producto" : "Nuevo producto"}
             </h2>
             <p className="mt-2 text-sm text-stone-600">
               {editingProductId
-                ? 'Actualiza los datos y guarda los cambios.'
-                : 'Completa los datos para agregar un producto.'}
+                ? "Actualiza los datos y guarda los cambios."
+                : "Completa los datos para agregar un producto."}
             </p>
 
             <form className="mt-6 space-y-5" onSubmit={submitProduct}>
-              <label className="block text-sm font-medium text-stone-800" htmlFor="product-category">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="product-category"
+              >
                 Categoría
                 <select
                   className={inputClassName}
                   disabled={productSaving || !catalog?.categories.length}
                   id="product-category"
-                  onChange={(event) => setProductForm((current) => ({
-                    ...current,
-                    categoria_id: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setProductForm((current) => ({
+                      ...current,
+                      categoria_id: event.target.value,
+                    }))
+                  }
                   required
                   value={productForm.categoria_id}
                 >
                   <option value="">Selecciona una categoría</option>
                   {catalog?.categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.nombre} — {category.activo ? 'Activa' : 'Inactiva'}
+                      {category.nombre} —{" "}
+                      {category.activo ? "Activa" : "Inactiva"}
                     </option>
                   ))}
                 </select>
               </label>
 
-              <label className="block text-sm font-medium text-stone-800" htmlFor="product-code">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="product-code"
+              >
                 Código
                 <input
                   autoComplete="off"
                   className={inputClassName}
                   disabled={productSaving}
                   id="product-code"
-                  onChange={(event) => setProductForm((current) => ({
-                    ...current,
-                    codigo: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setProductForm((current) => ({
+                      ...current,
+                      codigo: event.target.value,
+                    }))
+                  }
                   required
                   type="text"
                   value={productForm.codigo}
                 />
               </label>
 
-              <label className="block text-sm font-medium text-stone-800" htmlFor="product-name">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="product-name"
+              >
                 Nombre
                 <input
                   autoComplete="off"
                   className={inputClassName}
                   disabled={productSaving}
                   id="product-name"
-                  onChange={(event) => setProductForm((current) => ({
-                    ...current,
-                    nombre: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setProductForm((current) => ({
+                      ...current,
+                      nombre: event.target.value,
+                    }))
+                  }
                   required
                   type="text"
                   value={productForm.nombre}
                 />
               </label>
 
-              <label className="block text-sm font-medium text-stone-800" htmlFor="product-price">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="product-price"
+              >
                 Precio
                 <input
                   className={inputClassName}
                   disabled={productSaving}
                   id="product-price"
                   min="0"
-                  onChange={(event) => setProductForm((current) => ({
-                    ...current,
-                    precio: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setProductForm((current) => ({
+                      ...current,
+                      precio: event.target.value,
+                    }))
+                  }
                   required
                   step="0.01"
                   type="number"
@@ -837,10 +905,12 @@ export default function CategoryAdministrationPage({
                   checked={productForm.activo}
                   className="size-4 rounded border-stone-300 accent-emerald-700"
                   disabled={productSaving}
-                  onChange={(event) => setProductForm((current) => ({
-                    ...current,
-                    activo: event.target.checked,
-                  }))}
+                  onChange={(event) =>
+                    setProductForm((current) => ({
+                      ...current,
+                      activo: event.target.checked,
+                    }))
+                  }
                   type="checkbox"
                 />
                 Producto activo
@@ -850,14 +920,16 @@ export default function CategoryAdministrationPage({
                 <button
                   aria-busy={productSaving}
                   className="min-h-11 w-full rounded-xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-70 sm:w-auto"
-                  disabled={productSaving || !service || !catalog?.categories.length}
+                  disabled={
+                    productSaving || !service || !catalog?.categories.length
+                  }
                   type="submit"
                 >
                   {productSaving
-                    ? 'Guardando…'
+                    ? "Guardando…"
                     : editingProductId
-                      ? 'Guardar producto'
-                      : 'Crear producto'}
+                      ? "Guardar producto"
+                      : "Crear producto"}
                 </button>
 
                 {editingProductId && (
@@ -904,7 +976,10 @@ export default function CategoryAdministrationPage({
             )}
 
             {productMessage && (
-              <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+              <p
+                className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+                role="status"
+              >
                 {productMessage}
               </p>
             )}
@@ -920,25 +995,35 @@ export default function CategoryAdministrationPage({
             ) : (
               <ul className="mt-6 space-y-4">
                 {catalog.products.map((product) => {
-                  const category = catalog.categories.find((item) => item.id === product.categoria_id)
+                  const category = catalog.categories.find(
+                    (item) => item.id === product.categoria_id,
+                  );
 
                   return (
-                    <li className="min-w-0 break-words rounded-2xl border border-stone-200 p-4" key={product.id}>
+                    <li
+                      className="min-w-0 break-words rounded-2xl border border-stone-200 p-4"
+                      key={product.id}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-semibold text-stone-900">{product.nombre}</h3>
+                            <h3 className="font-semibold text-stone-900">
+                              {product.nombre}
+                            </h3>
                             <span
-                              className={product.activo
-                                ? 'rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'
-                                : 'rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700'}
+                              className={
+                                product.activo
+                                  ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+                                  : "rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700"
+                              }
                             >
-                              {product.activo ? 'Activo' : 'Inactivo'}
+                              {product.activo ? "Activo" : "Inactivo"}
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-stone-600">
-                            Código: {product.codigo} · Categoría: {category?.nombre ?? 'No disponible'}
-                            {category && !category.activo ? ' (Inactiva)' : ''}
+                            Código: {product.codigo} · Categoría:{" "}
+                            {category?.nombre ?? "No disponible"}
+                            {category && !category.activo ? " (Inactiva)" : ""}
                           </p>
                         </div>
                         <span className="rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-800">
@@ -961,7 +1046,7 @@ export default function CategoryAdministrationPage({
                           onClick={() => toggleProduct(product)}
                           type="button"
                         >
-                          {product.activo ? 'Desactivar' : 'Reactivar'}
+                          {product.activo ? "Desactivar" : "Reactivar"}
                         </button>
                         <button
                           className="min-h-11 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60 sm:w-auto"
@@ -973,7 +1058,7 @@ export default function CategoryAdministrationPage({
                         </button>
                       </div>
                     </li>
-                  )
+                  );
                 })}
               </ul>
             )}
@@ -983,43 +1068,53 @@ export default function CategoryAdministrationPage({
         <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
-              {editingTableId ? 'Editar mesa' : 'Nueva mesa'}
+              {editingTableId ? "Editar mesa" : "Nueva mesa"}
             </h2>
             <p className="mt-2 text-sm text-stone-600">
               {editingTableId
-                ? 'Actualiza el código, el nombre y la disponibilidad.'
-                : 'Las mesas nuevas se registran automáticamente en estado libre.'}
+                ? "Actualiza el código, el nombre y la disponibilidad."
+                : "Las mesas nuevas se registran automáticamente en estado libre."}
             </p>
 
             <form className="mt-6 space-y-5" onSubmit={submitTable}>
-              <label className="block text-sm font-medium text-stone-800" htmlFor="table-code">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="table-code"
+              >
                 Código
                 <input
                   autoComplete="off"
                   className={inputClassName}
                   disabled={tableSaving}
                   id="table-code"
-                  onChange={(event) => setTableForm((current) => ({
-                    ...current,
-                    codigo: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setTableForm((current) => ({
+                      ...current,
+                      codigo: event.target.value,
+                    }))
+                  }
                   required
                   type="text"
                   value={tableForm.codigo}
                 />
               </label>
 
-              <label className="block text-sm font-medium text-stone-800" htmlFor="table-name">
+              <label
+                className="block text-sm font-medium text-stone-800"
+                htmlFor="table-name"
+              >
                 Nombre
                 <input
                   autoComplete="off"
                   className={inputClassName}
                   disabled={tableSaving}
                   id="table-name"
-                  onChange={(event) => setTableForm((current) => ({
-                    ...current,
-                    nombre: event.target.value,
-                  }))}
+                  onChange={(event) =>
+                    setTableForm((current) => ({
+                      ...current,
+                      nombre: event.target.value,
+                    }))
+                  }
                   required
                   type="text"
                   value={tableForm.nombre}
@@ -1030,14 +1125,20 @@ export default function CategoryAdministrationPage({
                 <input
                   checked={tableForm.activo}
                   className="size-4 rounded border-stone-300 accent-emerald-700"
-                  disabled={tableSaving || Boolean(
-                    editingTableId
-                    && tables?.find((table) => table.id === editingTableId)?.estado !== 'LIBRE',
-                  )}
-                  onChange={(event) => setTableForm((current) => ({
-                    ...current,
-                    activo: event.target.checked,
-                  }))}
+                  disabled={
+                    tableSaving ||
+                    Boolean(
+                      editingTableId &&
+                      tables?.find((table) => table.id === editingTableId)
+                        ?.estado !== "LIBRE",
+                    )
+                  }
+                  onChange={(event) =>
+                    setTableForm((current) => ({
+                      ...current,
+                      activo: event.target.checked,
+                    }))
+                  }
                   type="checkbox"
                 />
                 Mesa activa
@@ -1051,10 +1152,10 @@ export default function CategoryAdministrationPage({
                   type="submit"
                 >
                   {tableSaving
-                    ? 'Guardando…'
+                    ? "Guardando…"
                     : editingTableId
-                      ? 'Guardar mesa'
-                      : 'Crear mesa'}
+                      ? "Guardar mesa"
+                      : "Crear mesa"}
                 </button>
 
                 {editingTableId && (
@@ -1101,7 +1202,10 @@ export default function CategoryAdministrationPage({
             )}
 
             {tableMessage && (
-              <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+              <p
+                className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+                role="status"
+              >
                 {tableMessage}
               </p>
             )}
@@ -1117,23 +1221,32 @@ export default function CategoryAdministrationPage({
             ) : (
               <ul className="mt-6 space-y-4">
                 {tables.map((table) => (
-                  <li className="min-w-0 break-words rounded-2xl border border-stone-200 p-4" key={table.id}>
+                  <li
+                    className="min-w-0 break-words rounded-2xl border border-stone-200 p-4"
+                    key={table.id}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-stone-900">{table.nombre}</h3>
+                          <h3 className="font-semibold text-stone-900">
+                            {table.nombre}
+                          </h3>
                           <span
-                            className={table.activo
-                              ? 'rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'
-                              : 'rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700'}
+                            className={
+                              table.activo
+                                ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+                                : "rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700"
+                            }
                           >
-                            {table.activo ? 'Activa' : 'Inactiva'}
+                            {table.activo ? "Activa" : "Inactiva"}
                           </span>
                         </div>
-                        <p className="mt-2 text-sm text-stone-600">Código: {table.codigo}</p>
+                        <p className="mt-2 text-sm text-stone-600">
+                          Código: {table.codigo}
+                        </p>
                       </div>
                       <span className="rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-800">
-                        {table.estado.replaceAll('_', ' ')}
+                        {table.estado.replaceAll("_", " ")}
                       </span>
                     </div>
 
@@ -1148,14 +1261,19 @@ export default function CategoryAdministrationPage({
                       </button>
                       <button
                         className="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
-                        disabled={tableSaving || (table.activo && table.estado !== 'LIBRE')}
+                        disabled={
+                          tableSaving ||
+                          (table.activo && table.estado !== "LIBRE")
+                        }
                         onClick={() => toggleTable(table)}
-                        title={table.activo && table.estado !== 'LIBRE'
-                          ? 'Solo puedes desactivar mesas libres.'
-                          : undefined}
+                        title={
+                          table.activo && table.estado !== "LIBRE"
+                            ? "Solo puedes desactivar mesas libres."
+                            : undefined
+                        }
                         type="button"
                       >
-                        {table.activo ? 'Desactivar' : 'Reactivar'}
+                        {table.activo ? "Desactivar" : "Reactivar"}
                       </button>
                       <button
                         className="min-h-11 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 disabled:opacity-60 sm:w-auto"
@@ -1174,5 +1292,5 @@ export default function CategoryAdministrationPage({
         </section>
       </div>
     </main>
-  )
+  );
 }

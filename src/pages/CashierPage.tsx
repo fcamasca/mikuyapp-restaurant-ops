@@ -1,116 +1,644 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
-import { createCashierService, type CashierPendingOrder, type PersistedPayment } from '../services/cashierService'
-import type { ValidatedProfileContext } from '../services/profileContext'
-import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
-import { getSupabaseClient } from '../services/supabaseClient'
-import type { PaymentMethodCode } from '../types/operations'
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AuthenticatedUserMenu from "../components/AuthenticatedUserMenu";
+import {
+  createCashierService,
+  type AdminDiscount,
+  type Cashbox,
+  type CashSession,
+  type SessionSummary,
+  type CashierPendingOrder,
+  type PaymentHistory,
+  type PersistedPayment,
+} from "../services/cashierService";
+import type { ValidatedProfileContext } from "../services/profileContext";
+import { getSupabaseClient } from "../services/supabaseClient";
+import type { PaymentMethodCode } from "../types/operations";
 interface Props {
-  readonly context: ValidatedProfileContext
-  readonly isSigningOut: boolean
-  readonly onNavigateToSales: () => void
-  readonly onSignOut: () => void
+  context: ValidatedProfileContext;
+  isSigningOut: boolean;
+  onNavigateToSales: () => void;
+  onSignOut: () => void;
 }
-
-const methods: readonly PaymentMethodCode[] = ['EFECTIVO', 'YAPE', 'PLIN', 'TARJETA']
-const money = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
-const dateTime = new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Lima' })
-
-function Consumption({ order }: { readonly order: CashierPendingOrder }) {
-  return <ul aria-label="Detalle del consumo" className="consumption-list mt-4 divide-y divide-stone-200 border-y border-stone-200 text-sm">{order.lines.map((line) => <li className="consumption-item py-3" key={line.detailId}><p className="product-name break-words font-semibold">{line.productName}</p><div className="line-metadata mt-1 flex items-baseline justify-between gap-3 text-stone-700"><p className="quantity-unit min-w-0">{line.quantity} × {money.format(line.unitPrice)} <span className="text-xs text-stone-500">c/u</span></p><p className="line-amount shrink-0 font-bold">{money.format(line.lineAmount)}</p></div></li>)}</ul>
+const money = new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+  }),
+  methods: PaymentMethodCode[] = ["EFECTIVO", "YAPE", "PLIN", "TARJETA"];
+const n = (v: string) => Number(v),
+  key = () => crypto.randomUUID();
+function Lines({
+  order,
+  select,
+  onSelect,
+}: {
+  order: CashierPendingOrder;
+  select: Set<number>;
+  onSelect: (id: number) => void;
+}) {
+  return (
+    <ul className="mt-3 divide-y">
+      {order.lines.map((x) => (
+        <li className="flex gap-3 py-2" key={x.detailId}>
+          <input
+            aria-label={`Seleccionar ${x.productName}`}
+            checked={select.has(x.detailId)}
+            onChange={() => onSelect(x.detailId)}
+            type="checkbox"
+          />
+          <span className="grow">
+            {x.quantity} × {x.productName}
+          </span>
+          <b>{money.format(x.lineAmount)}</b>
+        </li>
+      ))}
+    </ul>
+  );
 }
-
-function DocumentView({ kind, localName, order, payment, onClose }: { readonly kind: 'PRECUENTA' | 'TICKET'; readonly localName: string; readonly order: CashierPendingOrder; readonly payment: PersistedPayment | null; readonly onClose: () => void }) {
-  const documentDate = payment?.paidAt ?? order.createdAt
-  return <div aria-label={kind === 'PRECUENTA' ? 'Precuenta' : 'Ticket interno'} className="print-overlay fixed inset-0 z-40 overflow-y-auto bg-stone-950/50 p-3 sm:p-8"><section className="print-document mx-auto max-w-xl rounded-3xl bg-white p-5 text-stone-950 shadow-xl sm:p-7"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-widest text-emerald-800">{localName}</p><h2 className="mt-2 text-2xl font-bold">{kind === 'PRECUENTA' ? 'Precuenta' : 'Ticket interno'}</h2><p className="mt-1 text-sm text-stone-600">Pedido #{order.orderId} · Mesa {order.tableCode} · {order.tableName}</p><p className="mt-1 text-sm text-stone-600">Fecha/hora: {dateTime.format(new Date(documentDate))} · America/Lima</p></div><div className="no-print flex shrink-0 flex-col gap-2 sm:flex-row"><button className="min-h-11 rounded-xl bg-stone-950 px-4 py-2 font-semibold text-white" onClick={() => window.print()} type="button">Imprimir</button><button className="min-h-11 rounded-xl border border-stone-300 px-4 py-2 font-semibold" onClick={onClose} type="button">Cerrar</button></div></div><Consumption order={order} /><p className="mt-5 flex justify-between border-t-2 border-stone-900 pt-4 text-xl font-bold"><span>Total</span><span>{money.format(payment?.amount ?? order.total)}</span></p>{kind === 'PRECUENTA' ? <p className="mt-3 text-sm text-stone-500">Documento informativo · Pedido pendiente de pago</p> : payment && <div className="payment-summary mt-4 rounded-xl bg-stone-100 p-3 text-sm"><p>Pago #{payment.paymentId}</p><p className="mt-1">Medio de pago: <strong>{payment.method}</strong></p></div>}</section></div>
+function InternalDocument({
+  payment,
+  order,
+  payments,
+  onClose,
+}: {
+  payment: PersistedPayment;
+  order: CashierPendingOrder;
+  payments: readonly PaymentHistory[];
+  onClose: () => void;
+}) {
+  const complete = payment.balance === 0;
+  return (
+    <div className="print-overlay fixed inset-0 z-50 overflow-auto bg-black/50 p-5">
+      <article className="print-document mx-auto max-w-xl rounded-2xl bg-white p-6">
+        <h2 className="text-2xl font-bold">
+          {complete
+            ? "Ticket consolidado interno"
+            : "Recibo interno de pago parcial"}
+        </h2>
+        <p>Documento interno · No es comprobante fiscal</p>
+        <hr className="my-4" />
+        <p>
+          Pedido #{order.orderId} · Mesa {order.tableCode}
+        </p>
+        <p>Subtotal: {money.format(payment.subtotal)}</p>
+        <p>Descuento: {money.format(payment.discount)}</p>
+        <p>Total neto: {money.format(payment.netTotal)}</p>
+        <ul className="my-3">
+          {[
+            ...payments,
+            {
+              paymentId: payment.paymentId,
+              amount: payment.amount,
+              method: payment.method,
+              tip: payment.tip,
+              actorName: "Usuario actual",
+              paidAt: payment.paidAt,
+              subtotal: payment.subtotal,
+              discount: payment.discount,
+              netTotal: payment.netTotal,
+              paid: payment.paid,
+              balance: payment.balance,
+            },
+          ]
+            .filter(
+              (x, i, a) =>
+                a.findIndex((y) => y.paymentId === x.paymentId) === i,
+            )
+            .map((x) => (
+              <li key={x.paymentId}>
+                Pago #{x.paymentId}: {money.format(x.amount)} · {x.method} ·
+                propina {money.format(x.tip)}
+              </li>
+            ))}
+        </ul>
+        <b>Saldo: {money.format(payment.balance)}</b>
+        <div className="no-print mt-5 flex gap-2">
+          <button onClick={() => window.print()} type="button">
+            Imprimir
+          </button>
+          <button onClick={onClose} type="button">
+            Cerrar
+          </button>
+        </div>
+      </article>
+    </div>
+  );
 }
-
-export default function CashierPage({ context, isSigningOut, onNavigateToSales, onSignOut }: Props) {
-  const clientResult = useMemo(() => getSupabaseClient(), [])
-  const service = useMemo(() => clientResult.ok ? createCashierService(clientResult.client) : null, [clientResult])
-  const [orders, setOrders] = useState<readonly CashierPendingOrder[]>([])
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [attempt, setAttempt] = useState(0)
-  const [method, setMethod] = useState<PaymentMethodCode>('EFECTIVO')
-  const [confirming, setConfirming] = useState(false)
-  const [paying, setPaying] = useState(false)
-  const payingRef = useRef(false)
-  const [payment, setPayment] = useState<PersistedPayment | null>(null)
-  const [paidOrder, setPaidOrder] = useState<CashierPendingOrder | null>(null)
-  const [document, setDocument] = useState<'PRECUENTA' | 'TICKET' | null>(null)
-
-  const load = useCallback(async (showLoading = false, isCurrent: () => boolean = () => true): Promise<readonly CashierPendingOrder[] | null> => {
-    if (showLoading) setLoading(true)
-    if (!service) { setLoading(false); setError('No pudimos conectar con caja.'); return null }
-    const result = await service.getPendingOrders(context)
-    if (!isCurrent()) return null
-    setLoading(false)
-    if (!result.ok) { setError(result.error.message); return null }
-    setOrders(result.data)
-    setSelectedId((current) => result.data.some((order) => order.orderId === current) ? current : result.data[0]?.orderId ?? null)
-    setError(null)
-    return result.data
-  }, [context, service])
-
-  useEffect(() => { void load(true) }, [attempt, load])
-
+export default function CashierPage({
+  context,
+  isSigningOut,
+  onNavigateToSales,
+  onSignOut,
+}: Props) {
+  const cr = useMemo(() => getSupabaseClient(), []),
+    service = useMemo(
+      () => (cr.ok ? createCashierService(cr.client) : null),
+      [cr],
+    );
+  const [cashboxes, setCashboxes] = useState<readonly Cashbox[]>([]),
+    [cashboxId, setCashboxId] = useState(""),
+    [session, setSession] = useState<CashSession | null>(null),
+    [summary, setSummary] = useState<SessionSummary | null>(null),
+    [history, setHistory] = useState<readonly Record<string, unknown>[]>([]),
+    [orders, setOrders] = useState<readonly CashierPendingOrder[]>([]),
+    [selectedId, setSelectedId] = useState<number | null>(null),
+    [payments, setPayments] = useState<readonly PaymentHistory[]>([]),
+    [discount, setDiscount] = useState<AdminDiscount | null>(null),
+    [loading, setLoading] = useState(true),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null),
+    [attempt, setAttempt] = useState(0);
+  const [initial, setInitial] = useState("0"),
+    [movement, setMovement] = useState<"ENTRADA" | "SALIDA">("ENTRADA"),
+    [movementAmount, setMovementAmount] = useState(""),
+    [reason, setReason] = useState(""),
+    [counted, setCounted] = useState(""),
+    [paymentAmount, setPaymentAmount] = useState(""),
+    [tip, setTip] = useState("0"),
+    [method, setMethod] = useState<PaymentMethodCode>("EFECTIVO"),
+    [discountType, setDiscountType] = useState<"IMPORTE" | "PORCENTAJE">(
+      "IMPORTE",
+    ),
+    [discountValue, setDiscountValue] = useState(""),
+    [selectedLines, setSelectedLines] = useState(new Set<number>()),
+    [document, setDocument] = useState<PersistedPayment | null>(null),
+    [documentOrder, setDocumentOrder] = useState<CashierPendingOrder | null>(
+      null,
+    );
+  const pending = useRef(false);
+  const selected = orders.find((x) => x.orderId === selectedId) ?? null;
+  const refresh = useCallback(async () => {
+    if (!service) return;
+    setLoading(true);
+    const boxes = await service.getCashboxes(context);
+    if (!boxes.ok) {
+      setError(boxes.error.message);
+      setLoading(false);
+      return;
+    }
+    setCashboxes(boxes.data);
+    const chosen = cashboxId || boxes.data[0]?.id || "";
+    if (!cashboxId) setCashboxId(chosen);
+    const [s, o] = chosen
+      ? await Promise.all([
+          service.getActiveSession(context, chosen),
+          service.getPendingOrders(context),
+        ])
+      : [null, await service.getPendingOrders(context)];
+    if (s && !s.ok) setError(s.error.message);
+    else if (s) {
+      setSession(s.data);
+      if (s.data) {
+        const sr = await service.getSummary(context, s.data.id);
+        setSummary(sr.ok ? sr.data : null);
+      } else setSummary(null);
+    }
+    if (o.ok) {
+      setOrders(o.data);
+      setSelectedId((x) =>
+        o.data.some((y) => y.orderId === x) ? x : (o.data[0]?.orderId ?? null),
+      );
+    } else setError(o.error.message);
+    setLoading(false);
+  }, [cashboxId, context, service]);
   useEffect(() => {
-    if (!clientResult.ok) return
-    let disposed = false
-    let handle: Awaited<ReturnType<typeof subscribeToOperationsChanges>> | null = null
-    void subscribeToOperationsChanges(
-      clientResult.client,
-      () => load(false, () => !disposed).then(() => undefined),
-      () => {
-        if (!disposed) setError('La conexión en tiempo real se interrumpió. Estamos recuperando la caja.')
-      },
-      { channelName: 'cashier-orders-signals', initialRefresh: false },
-    ).then((started) => {
-      if (disposed) void started.stop()
-      else handle = started
-    })
-    return () => {
-      disposed = true
-      if (handle) void handle.stop()
+    void refresh();
+  }, [attempt, refresh]);
+  useEffect(() => {
+    if (!service || !cashboxId) {
+      setHistory([]);
+      return;
     }
-  }, [clientResult, load])
-  const selected = orders.find((order) => order.orderId === selectedId) ?? null
-
-  async function pay(): Promise<void> {
-    if (!service || !selected || payingRef.current) return
-    payingRef.current = true
-    setPaying(true)
-    setError(null)
+    void service.getSessionHistory(context, cashboxId).then((result) => {
+      if (result.ok) setHistory(result.data);
+    });
+  }, [cashboxId, context, service]);
+  useEffect(() => {
+    if (!service || !selected) {
+      setPayments([]);
+      setDiscount(null);
+      return;
+    }
+    void Promise.all([
+      service.getPayments(context, selected.orderId),
+      service.getOrderDiscount(context, selected.orderId),
+    ]).then(([p, d]) => {
+      if (p.ok) setPayments(p.data);
+      if (d.ok) setDiscount(d.data);
+    });
+  }, [context, selected, service]);
+  const run = async (
+    action: () => Promise<{ ok: boolean; error?: { message: string } }>,
+  ) => {
+    if (pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    setError(null);
     try {
-      const result = await service.registerPayment(context, selected.orderId, method)
-      if (!result.ok) {
-        setConfirming(false)
-        const refreshed = await load(false)
-        setError(refreshed && !refreshed.some((order) => order.orderId === selected.orderId)
-          ? 'Este pedido ya fue procesado. La lista de caja está actualizada.'
-          : result.error.message)
-        return
-      }
-      setPaidOrder(selected)
-      setPayment(result.data)
-      setConfirming(false)
-      await load(false)
+      const r = await action();
+      if (!r.ok) setError(r.error?.message ?? "Error servidor");
+      await refresh();
     } finally {
-      payingRef.current = false
-      setPaying(false)
+      pending.current = false;
+      setBusy(false);
     }
-  }
-
-  const shownDocumentOrder = document === 'TICKET' ? paidOrder : selected
-
-  return <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 sm:py-8 lg:px-8"><div className="mx-auto max-w-7xl"><header className="flex flex-col items-start justify-between gap-4 sm:flex-row"><div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">MikuyApp · Caja</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">Cobros pendientes</h1><p className="mt-2 text-sm text-stone-600">{context.local.nombre} · Horario America/Lima</p></div><div className="flex w-full items-center gap-3 sm:w-auto"><button className="min-h-11 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-50" onClick={onNavigateToSales} type="button">Resumen diario</button><AuthenticatedUserMenu context={context} isSigningOut={isSigningOut} onSignOut={onSignOut} /></div></header>
-    {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4"><p role="alert" className="text-sm text-rose-800">{error}</p><button className="mt-3 min-h-11 rounded-lg border border-rose-300 px-4 font-semibold" onClick={() => setAttempt((value) => value + 1)} type="button">Reintentar</button></div>}
-    {payment && paidOrder && <section aria-live="polite" className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4"><h2 className="font-bold text-emerald-950">Pago registrado</h2><p className="mt-1 text-sm text-emerald-900">Pedido #{payment.orderId} · {payment.method} · {money.format(payment.amount)} · mesa liberada</p><button className="mt-3 min-h-11 rounded-xl bg-emerald-900 px-4 py-2 font-bold text-white" onClick={() => setDocument('TICKET')} type="button">Abrir ticket interno</button></section>}
-    <div className="mt-6 grid min-w-0 gap-5 lg:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)]"><section className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm"><h2 className="text-lg font-bold">Mesas pendientes de pago</h2>{loading ? <p aria-busy="true" className="mt-5 text-sm text-stone-600">Cargando pedidos pendientes…</p> : orders.length === 0 ? <p className="mt-5 rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-600">No hay pedidos pendientes de pago.</p> : <ul className="mt-4 space-y-3">{orders.map((order) => <li key={order.orderId}><button aria-pressed={selectedId === order.orderId} className={`min-h-16 w-full rounded-xl border p-3 text-left ${selectedId === order.orderId ? 'border-emerald-700 bg-emerald-50' : 'border-stone-200 bg-white'}`} onClick={() => { setSelectedId(order.orderId); setConfirming(false) }} type="button"><span className="block font-bold">Mesa {order.tableCode} · Pedido #{order.orderId}</span><span className="mt-1 block text-sm text-stone-600">{order.tableName} · {money.format(order.total)}</span></button></li>)}</ul>}</section>
-      <section className="min-w-0 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">{selected ? <><div className="flex flex-col justify-between gap-3 sm:flex-row"><div><p className="text-sm font-semibold text-emerald-800">ENTREGADO · PENDIENTE_PAGO</p><h2 className="mt-1 text-2xl font-bold">Pedido #{selected.orderId}</h2><p className="mt-1 text-stone-600">Mesa {selected.tableCode} · {selected.tableName}</p></div><button className="min-h-11 rounded-xl border border-stone-300 px-4 py-2 font-semibold" onClick={() => setDocument('PRECUENTA')} type="button">Abrir precuenta</button></div><Consumption order={selected} /><p className="mt-5 flex justify-between border-t-2 border-stone-900 pt-4 text-xl font-bold"><span>Total autoritativo</span><span>{money.format(selected.total)}</span></p><fieldset className="mt-6"><legend className="font-bold">Medio de pago</legend><div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{methods.map((value) => <label className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 ${method === value ? 'border-emerald-700 bg-emerald-50' : 'border-stone-300'}`} key={value}><input checked={method === value} disabled={paying} name="payment-method" onChange={() => setMethod(value)} type="radio" />{value}</label>)}</div></fieldset>{confirming ? <div className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-4"><p className="font-bold">¿Confirmar cobro de {money.format(selected.total)} mediante {method}?</p><p className="mt-1 text-sm text-stone-600">Esta operación registrará el pago y liberará la mesa.</p><div className="mt-4 flex flex-col gap-2 sm:flex-row"><button aria-busy={paying} className="min-h-12 rounded-xl bg-emerald-900 px-5 font-bold text-white disabled:opacity-60" disabled={paying} onClick={() => { void pay() }} type="button">{paying ? 'Registrando pago…' : 'Confirmar y cobrar'}</button><button className="min-h-12 rounded-xl border border-stone-300 px-5 font-semibold" disabled={paying} onClick={() => setConfirming(false)} type="button">Cancelar</button></div></div> : <button className="mt-6 min-h-12 w-full rounded-xl bg-stone-950 px-5 font-bold text-white disabled:opacity-60" disabled={paying} onClick={() => setConfirming(true)} type="button">Cobrar pedido</button>}</> : <div className="grid min-h-64 place-items-center text-center text-stone-600"><div><h2 className="font-bold text-stone-900">Selecciona un pedido</h2><p className="mt-2 text-sm">El detalle del consumo aparecerá aquí.</p></div></div>}</section></div></div>
-    {document && shownDocumentOrder && <DocumentView kind={document} localName={context.local.nombre} onClose={() => setDocument(null)} order={shownDocumentOrder} payment={document === 'TICKET' ? payment : null} />}
-  </main>
+  };
+  const suggested = [...selectedLines].reduce(
+    (sum, id) =>
+      sum + (selected?.lines.find((x) => x.detailId === id)?.lineAmount ?? 0),
+    0,
+  );
+  return (
+    <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
+      <div className="mx-auto max-w-7xl">
+        <header className="flex flex-wrap justify-between gap-3">
+          <div>
+            <p className="font-semibold text-emerald-700">MikuyApp · Caja</p>
+            <h1 className="text-3xl font-bold">Sesión y cobros</h1>
+            <p>{context.local.nombre}</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onNavigateToSales}>Resumen diario</button>
+            <AuthenticatedUserMenu
+              context={context}
+              isSigningOut={isSigningOut}
+              onSignOut={onSignOut}
+            />
+          </div>
+        </header>
+        {error && (
+          <div className="mt-4 rounded-xl bg-rose-50 p-4">
+            <p role="alert">{error}</p>
+            <button disabled={loading} onClick={() => setAttempt((x) => x + 1)}>
+              Reintentar
+            </button>
+          </div>
+        )}
+        <section className="mt-5 rounded-2xl bg-white p-4">
+          <h2 className="font-bold">Estado de caja</h2>
+          {loading ? (
+            <p aria-busy="true">Cargando caja…</p>
+          ) : cashboxes.length === 0 ? (
+            <p>No hay caja física disponible.</p>
+          ) : (
+            <>
+              <label>
+                Caja física
+                <select
+                  disabled={busy}
+                  value={cashboxId}
+                  onChange={(e) => {
+                    setCashboxId(e.target.value);
+                    setSession(null);
+                  }}
+                >
+                  {cashboxes.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.codigo} · {x.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {session ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                  <p>
+                    Sesión: <b>{session.estado}</b>
+                  </p>
+                  <p>
+                    Abierta por: <b>{session.abierta_por}</b>
+                  </p>
+                  <p>
+                    Monto inicial: <b>{money.format(session.monto_inicial)}</b>
+                  </p>
+                  <p>
+                    Efectivo esperado:{" "}
+                    <b>{money.format(summary?.efectivo_esperado ?? 0)}</b>
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-3">
+                  <label>
+                    Monto inicial
+                    <input
+                      min="0"
+                      step="0.01"
+                      value={initial}
+                      onChange={(e) => setInitial(e.target.value)}
+                      type="number"
+                    />
+                  </label>
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      service &&
+                      void run(() =>
+                        service.openSession(
+                          context,
+                          cashboxId,
+                          n(initial),
+                          key(),
+                        ),
+                      )
+                    }
+                  >
+                    Abrir o recuperar sesión
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+        {session && (
+          <details className="mt-4 rounded-2xl bg-white p-4">
+            <summary className="font-bold">
+              Movimientos, historial y cierre
+            </summary>
+            <p className="mt-2 text-sm">
+              Historial reciente: {history.length} sesiones.
+            </p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (service)
+                    void run(() =>
+                      service.registerMovement(
+                        context,
+                        session.id,
+                        movement,
+                        n(movementAmount),
+                        reason,
+                        key(),
+                      ),
+                    );
+                }}
+              >
+                <h3>Movimiento</h3>
+                <select
+                  value={movement}
+                  onChange={(e) =>
+                    setMovement(e.target.value as typeof movement)
+                  }
+                >
+                  <option>ENTRADA</option>
+                  <option>SALIDA</option>
+                </select>
+                <input
+                  aria-label="Importe movimiento"
+                  value={movementAmount}
+                  onChange={(e) => setMovementAmount(e.target.value)}
+                  type="number"
+                />
+                <input
+                  aria-label="Motivo movimiento"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+                <button disabled={busy}>Confirmar movimiento</button>
+              </form>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (service)
+                    void run(() =>
+                      service.closeSession(
+                        context,
+                        session.id,
+                        n(counted),
+                        reason || null,
+                        key(),
+                      ),
+                    );
+                }}
+              >
+                <h3>Cierre de caja</h3>
+                <p>
+                  Efectivo esperado{" "}
+                  {money.format(summary?.efectivo_esperado ?? 0)}
+                </p>
+                <input
+                  aria-label="Efectivo contado"
+                  value={counted}
+                  onChange={(e) => setCounted(e.target.value)}
+                  type="number"
+                />
+                <p>PostgreSQL calculará y confirmará la diferencia.</p>
+                <input
+                  aria-label="Motivo de diferencia"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+                <button disabled={busy}>Confirmar cierre</button>
+              </form>
+            </div>
+          </details>
+        )}
+        <div className="mt-5 grid gap-5 lg:grid-cols-[22rem_1fr]">
+          <section className="rounded-2xl bg-white p-4">
+            <h2 className="font-bold">Pedidos pendientes</h2>
+            {loading ? (
+              <p>Cargando pedidos pendientes…</p>
+            ) : orders.length === 0 ? (
+              <p>No hay pedidos pendientes de pago.</p>
+            ) : (
+              orders.map((x) => (
+                <button
+                  className="mt-2 block w-full rounded-xl border p-3 text-left"
+                  key={x.orderId}
+                  onClick={() => {
+                    setSelectedId(x.orderId);
+                    setSelectedLines(new Set());
+                    setPaymentAmount(String(x.balance));
+                  }}
+                >
+                  Mesa {x.tableCode} · Pedido #{x.orderId}
+                  <br />
+                  Saldo {money.format(x.balance)}
+                </button>
+              ))
+            )}
+          </section>
+          <section className="rounded-2xl bg-white p-4">
+            {selected ? (
+              <>
+                <h2 className="text-2xl font-bold">
+                  Pedido #{selected.orderId}
+                </h2>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  <p>
+                    Subtotal
+                    <br />
+                    <b>{money.format(selected.subtotal)}</b>
+                  </p>
+                  <p>
+                    Descuento
+                    <br />
+                    <b>{money.format(selected.discount)}</b>
+                  </p>
+                  <p>
+                    Total neto
+                    <br />
+                    <b>{money.format(selected.netTotal)}</b>
+                  </p>
+                  <p>
+                    Pagado
+                    <br />
+                    <b>{money.format(selected.paid)}</b>
+                  </p>
+                  <p>
+                    Saldo
+                    <br />
+                    <b>{money.format(selected.balance)}</b>
+                  </p>
+                </div>
+                <Lines
+                  order={selected}
+                  select={selectedLines}
+                  onSelect={(id) =>
+                    setSelectedLines((old) => {
+                      const x = new Set(old);
+                      x.has(id) ? x.delete(id) : x.add(id);
+                      return x;
+                    })
+                  }
+                />
+                <p>Importe sugerido por selección: {money.format(suggested)}</p>
+                <button
+                  type="button"
+                  onClick={() => setPaymentAmount(String(suggested))}
+                >
+                  Usar importe sugerido
+                </button>
+                <form
+                  className="mt-4 grid gap-2 sm:grid-cols-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (service && session)
+                      void run(async () => {
+                        const r = await service.registerPayment(
+                          context,
+                          selected.orderId,
+                          session.id,
+                          n(paymentAmount),
+                          method,
+                          n(tip),
+                          key(),
+                        );
+                        if (r.ok) {
+                          setDocumentOrder(selected);
+                          setDocument(r.data);
+                        }
+                        return r;
+                      });
+                  }}
+                >
+                  <label>
+                    Importe a aplicar
+                    <input
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      type="number"
+                    />
+                  </label>
+                  <label>
+                    Propina separada
+                    <input
+                      value={tip}
+                      onChange={(e) => setTip(e.target.value)}
+                      type="number"
+                    />
+                  </label>
+                  <select
+                    value={method}
+                    onChange={(e) =>
+                      setMethod(e.target.value as PaymentMethodCode)
+                    }
+                  >
+                    {methods.map((x) => (
+                      <option key={x}>{x}</option>
+                    ))}
+                  </select>
+                  <button aria-busy={busy} disabled={busy || !session}>
+                    Registrar pago
+                  </button>
+                </form>
+                {discount && (
+                  <p className="mt-3 text-sm">
+                    Descuento: <b>{discount.estado}</b> · {discount.tipo}{' '}
+                    {discount.valor_solicitado}
+                  </p>
+                )}
+                <form
+                  className="mt-4 flex flex-wrap gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (service)
+                      void run(() =>
+                        service.requestDiscount(
+                          context,
+                          selected.orderId,
+                          discountType,
+                          n(discountValue),
+                          reason,
+                          key(),
+                        ),
+                      );
+                  }}
+                >
+                  <select
+                    value={discountType}
+                    onChange={(e) =>
+                      setDiscountType(e.target.value as typeof discountType)
+                    }
+                  >
+                    <option>IMPORTE</option>
+                    <option>PORCENTAJE</option>
+                  </select>
+                  <input
+                    aria-label="Valor descuento"
+                    value={discountValue}
+                    onChange={(e) => setDiscountValue(e.target.value)}
+                  />
+                  <input
+                    aria-label="Motivo descuento"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  />
+                  <button disabled={busy || selected.paid > 0}>
+                    Solicitar descuento
+                  </button>
+                </form>
+                <h3 className="mt-5 font-bold">Pagos confirmados</h3>
+                {payments.length === 0 ? (
+                  <p>Sin pagos confirmados.</p>
+                ) : (
+                  <ul>
+                    {payments.map((x) => (
+                      <li key={x.paymentId}>
+                        #{x.paymentId} · {money.format(x.amount)} · {x.method} ·
+                        propina {money.format(x.tip)} · {x.actorName} · saldo{" "}
+                        {money.format(x.balance)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <p>Selecciona un pedido.</p>
+            )}
+          </section>
+        </div>
+      </div>
+      {document && documentOrder && (
+        <InternalDocument
+          order={documentOrder}
+          payment={document}
+          payments={payments}
+          onClose={() => {
+            setDocument(null);
+            setDocumentOrder(null);
+          }}
+        />
+      )}
+    </main>
+  );
 }

@@ -106,6 +106,8 @@ Los IDs, actores e importes principales se almacenan en columnas normalizadas; J
 
 Crear snapshots RPC de sesión activa, cierre/histórico y reporte. Derivan local desde contexto servidor. El reporte separa venta, propina, medios y efectivo; pagos parciales cuentan como pedido pagado sólo cuando el pedido llega a `PAGADO`, evitando inflar conteos.
 
+Como soporte técnico aditivo de T10, `obtener_pedidos_pendientes_pago_caja()` conserva sus campos H5 y añade `subtotal`, `descuento`, `total_neto`, `pagado_acumulado` y `saldo`, resueltos en PostgreSQL. Una lectura CAJA por pedido expone sus pagos confirmados, actor, medio, propina y saldo posterior. Una lectura operacional separada para `ADMINISTRADOR` presenta pedidos del mismo local en los estados relevantes para descuento/anulación, existencia de pagos y totales autoritativos; no concede capacidad de cobro.
+
 No publicar payload financiero como verdad. La opción mínima es conservar `pago` fuera de Realtime y hacer resync explícito después de comandos; para cambios de sesión/movimientos entre terminales, se pueden publicar tablas con RLS si la verificación confirma filtrado suficiente o usar una tabla de señales sin montos. La decisión técnica debe privilegiar no exponer importes por eventos. `pedido`/`mesa` siguen anunciando pago final.
 
 ## D12. UX de Caja

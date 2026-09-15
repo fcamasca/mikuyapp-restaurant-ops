@@ -36,16 +36,21 @@ begin
   if v_function !~* 'auth\.uid'
     or v_function !~* 'obtener_contexto_autenticado'
     or v_function !~* '''CAJA'''
-    or v_function !~* 'order_row\.local_id = v_local_id'
-    or v_function !~* 'order_row\.estado = ''ENTREGADO'''
-    or v_function !~* 'table_row\.estado = ''PENDIENTE_PAGO'''
-    or v_function !~* 'detail_row\.cantidad \* detail_row\.precio_unitario'
-    or v_function ~* 'product_row\.precio'
-    or v_function ~* 'product_row\.activo'
+    or v_function !~* 'p\.local_id\s*=\s*v_local'
+    or v_function !~* 'p\.estado\s*=\s*''ENTREGADO'''
+    or v_function !~* 'm\.estado\s*=\s*''PENDIENTE_PAGO'''
+    or v_function !~* 'd\.cantidad\s*\*\s*d\.precio_unitario'
+    or v_function ~* 'pr\.precio'
+    or v_function ~* 'pr\.activo'
     or v_result !~ 'producto_nombre text'
     or v_result !~ 'precio_unitario numeric'
     or v_result !~ 'importe_linea numeric'
-    or v_result !~ 'total_pedido numeric' then
+    or v_result !~ 'total_pedido numeric'
+    or v_result !~ 'subtotal numeric'
+    or v_result !~ 'descuento numeric'
+    or v_result !~ 'total_neto numeric'
+    or v_result !~ 'pagado_acumulado numeric'
+    or v_result !~ 'saldo numeric' then
     raise exception 'H5-T03 contrato o seguridad de lectura inesperados';
   end if;
 
