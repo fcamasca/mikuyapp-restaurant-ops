@@ -71,7 +71,7 @@ La solicitud de `CAJA` y la decisión de `ADMINISTRADOR` deben quedar trazadas. 
 
 RPC `anular_pedido_supervisado(p_pedido_id, p_motivo, p_idempotency_key)` exige `ADMINISTRADOR`, mismo local y motivo. El administrador ejecuta directamente: no existe solicitante ni autorizador separado. Bloquea pedido y mesa. Sin pagos, cambia a `ANULADO`, registra en `historial_estado` y auditoría el actor administrador, fecha/hora y estado anterior/nuevo, y libera o deriva la mesa de forma consistente con el modelo vigente.
 
-No modifica detalles ni elimina filas. Si existe cualquier pago confirmado, incluso parcial, rechaza la anulación. Para estados avanzados (`ENVIADO` a `ENTREGADO`) la UI advierte el impacto operativo; la función mantiene una política explícita de estados anulables aprobada. La cancelación granular por mozo sigue fuera de alcance.
+No modifica detalles ni elimina filas. Si existe cualquier pago confirmado, incluso parcial, rechaza la anulación. Sin pagos confirmados, la matriz definitiva permite `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` y `ENTREGADO`; bloquea `PAGADO` y `ANULADO`. Para `EN_PREPARACION`, `LISTO` y `ENTREGADO`, la futura UI advertirá el impacto operativo antes de confirmar, sin cambiar la autorización PostgreSQL. La anulación completa por `ADMINISTRADOR` es distinta de la cancelación individual de productos por `MOZO` de Evolución 7. No se implementan reversos ni devoluciones.
 
 ## D08. División y cobro transaccional
 

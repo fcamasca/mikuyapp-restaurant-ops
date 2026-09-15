@@ -60,7 +60,7 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP24 | R09–R10 | Descuento y cobro concurrentes. | Locks serializan; cobro usa descuento confirmado o una operación falla limpiamente. |
 | E1-TP25 | R09–R10 | Reintento de autorización. | Un snapshot/evento; sin doble descuento. |
 | E1-TP26 | R11 | `ADMINISTRADOR` anula directamente un pedido sin pagos y con motivo. | Pedido `ANULADO`, mesa consistente, actor administrador, fecha/hora y estado anterior/nuevo; sin solicitante/autorizador separados. |
-| E1-TP27 | R11 | Anulación en estados avanzados permitidos/no permitidos. | Se aplica la matriz aprobada; nunca transición silenciosa. |
+| E1-TP27 | R11 | Anulación sin pagos en cada estado del pedido. | `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` y `ENTREGADO` se anulan; `PAGADO` y `ANULADO` se bloquean. La advertencia futura para `EN_PREPARACION`, `LISTO` y `ENTREGADO` no altera la autorización PostgreSQL; nunca hay transición silenciosa. |
 | E1-TP28 | R12 | Anulación con cualquier pago parcial o pedido `PAGADO`. | Bloqueada por regla definitiva; pagos intactos y sin evento de anulación. |
 | E1-TP29 | R11–R12 | Anulación vs cobro simultáneo. | Sólo un resultado coherente; no pedido anulado con pago inesperado. |
 | E1-TP30 | R11–R12 | Pedido `ANULADO`/`PAGADO` recibe mutaciones H3–H5. | Terminalidad existente conservada. |
@@ -184,3 +184,58 @@ T05 se validó en PostgreSQL local aislado sobre T03, T04 y T08. La migración p
 | TP18 | Diferencia −10 exigió motivo; cierre supervisor exigió ADMINISTRADOR y motivo. Doble cierre, cierre-vs-movimiento y cierre-vs-cobro bloquearon realmente; un ganador atómico, perdedor `40001`, sin pagos asociados después del cierre. | Aprobada |
 
 Aspectos pendientes de TP09/TP10 aplicables a T05: movimientos por Cajero A/B conservaron su actor sin alterar `abierta_por`; Cajero B cerró la sesión abierta por A y quedaron `abierta_por=A`/`cerrada_por=B`. Los aspectos de pagos múltiples permanecen diferidos a T09.
+
+## 9. Evidencia incremental de E1-T06
+
+T06 se validó en PostgreSQL local aislado sobre T03, T04, T08 y T05. `pedido` conservó exactamente sus columnas previas: no se agregaron snapshots de subtotal, descuento ni total neto. Se aprobaron 8 grupos SQL de T06, cuatro regresiones directamente afectadas y TP24 con conexiones independientes.
+
+| TP | Evidencia disponible | Estado para T06 |
+|---|---|---|
+| TP19 | Solicitud `IMPORTE=20` por CAJA y autorización por ADMINISTRADOR sobre subtotal 100 produjeron snapshot 100/20/80; solicitante, autorizador y auditorías quedaron trazados. `fn_resolver_total_pedido` devolvió los mismos valores. | Aprobada |
+| TP20 | `PORCENTAJE=12.5` sobre 99.99 redondeó el descuento a 12.50 y total neto a 87.49 en PostgreSQL. No existe tope porcentual comercial arbitrario; sólo el límite matemático que impide total negativo. | Aprobada |
+| TP21 | CAJA no pudo autoautorizar y MOZO no pudo solicitar; grants, rol y contexto servidor bloquearon elevación de privilegios. | Aprobada |
+| TP22 | Sin tipo, ambos tipos, cero, importe mayor al subtotal, porcentaje mayor a 100 y motivo vacío fueron rechazados sin snapshot. | Aprobada |
+| TP23 | Una fila de pago confirmada bloqueó la solicitud; el snapshot autorizado tampoco admitió UPDATE/DELETE posterior. | Aprobada |
+| TP24 | Carrera real: autorización mantuvo lock del pedido, cobro esperó, leyó el snapshot confirmado y persistió un único pago de 80. Pedido `PAGADO`, snapshot 100/20/80 y cero inconsistencia. | Aprobada |
+| TP25 | Reintentos de solicitud/autorización devolvieron la misma fila; un evento de solicitud y uno de autorización. | Aprobada |
+
+El cobro total provisional T08 fue adaptado sólo para consumir `fn_resolver_total_pedido`. Conserva temporalmente su orden `caja → sesion_caja → pedido → mesa`. **Pendiente obligatorio de T09:** adoptar el orden definitivo aprobado `sesion_caja → pedido → mesa` al implementar N pagos/parciales; no se corrigió dentro de T06.
+
+## 10. Evidencia incremental de E1-T07
+
+T07 se validó en PostgreSQL local aislado sobre T03, T04, T08, T05 y T06. Se aprobaron 8 grupos SQL, tres regresiones de auditoría directamente afectadas y TP29 con conexiones independientes y bloqueo reproducible.
+
+| TP | Evidencia disponible | Estado para T07 |
+|---|---|---|
+| TP26 | ADMINISTRADOR anuló directamente un pedido con motivo obligatorio; pedido `ANULADO`, mesa `LIBRE`, historial y auditoría registraron estado anterior/nuevo, actor y hora servidor. Los detalles conservaron exactamente su fingerprint. | Aprobada |
+| TP27 | Se probó individualmente `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` y `ENTREGADO`: todos se anularon sin pagos. `PAGADO` y `ANULADO` fueron rechazados. En cada anulación exitosa la mesa quedó `LIBRE`. | Aprobada |
+| TP28 | Un pago confirmado bloqueó la anulación sin alterar pago, pedido, mesa ni auditoría. | Aprobada |
+| TP29 | Carrera real: la anulación retuvo locks de pedido/mesa; el cobro esperó y, tras el commit, falló limpiamente con `40001`. Resultado: pedido `ANULADO`, mesa `LIBRE`, cero pagos, un historial y una auditoría de anulación. | Aprobada |
+| TP30 | `PAGADO` y `ANULADO` permanecieron terminales ante las mutaciones H3–H5 afectadas: agregar detalle, entregar y cobrar fueron rechazados sin residuos. | Aprobada |
+
+La idempotencia devolvió la misma anulación sin duplicar historial ni auditoría. CAJA, MOZO, otro local y motivo vacío fueron rechazados; RLS/grants permiten lectura local sólo a ADMINISTRADOR y no conceden escritura directa. Las regresiones aprobadas fueron `e1_t04_apertura_sesion`, `e1_t05_movimientos_cierre` y `e1_t06_descuento_pedido`, porque T07 amplió el constraint compartido de `auditoria_caja`.
+
+No se ejecutaron las 305 pruebas Node, `typecheck` ni `build`: T07 modificó exclusivamente SQL, pruebas SQL y documentación. Tampoco se repitieron suites sin relación directa ni pruebas ya aprobadas cuyos contratos no cambiaron.
+
+## 11. Evidencia incremental de E1-T09
+
+Replay limpio de 35 migraciones aprobado. El constraint conserva todos los eventos anteriores y añade `PAGO`; la RPC bloquea `sesion_caja → pedido → mesa`.
+
+| TP | Evidencia | Estado |
+|---|---|---|
+| TP31 | Regresión T08: 27 comprobaciones legacy, sin sesiones fabricadas. | Aprobada en aspectos afectados |
+| TP32 | Pago total: `PAGADO`, mesa `LIBRE`, historial y saldo cero. | Aprobada |
+| TP33–TP34 | Dos medios distintos y `TARJETA + TARJETA`; parcial pendiente y final exacto. | Aprobadas |
+| TP35 | Sin persistencia por líneas; corresponde a UI. | Diferida a T10 |
+| TP36 | Cuatro pagos mixtos/repetidos sumaron exactamente 100. | Aprobada |
+| TP37 | Cero, negativo y sobrepago rechazados sin residuos. | Aprobada |
+| TP38–TP39 | Carreras de saldo final y parciales incompatibles: un ganador, sin sobrepago. | Aprobadas |
+| TP40 | Reintento devolvió la misma fila y una auditoría. | Aprobada |
+| TP41–TP42 | Reapertura previa conservada; mutación posterior al parcial rechazada. | Aprobadas |
+| TP43 | Sesión cerrada/otro local rechazados; Cajero B cobró sesión abierta por A. | Aprobada |
+| TP44 | Cierre ganó; cobro no dejó pago asociado a sesión cerrada. | Aprobada |
+| TP45–TP47 | Propina separada; negativa rechazada; sólo efectivo incrementa esperado. | Aprobadas backend |
+
+Las cuatro carreras (saldo final, parciales incompatibles, cierre-vs-cobro y anulación-vs-cobro) usaron conexiones independientes y bloqueo comprobado con `pg_blocking_pids`. Todas terminaron sin sobrepago, huérfanos, efectos parciales del perdedor ni conexiones residuales.
+
+Checkpoint: T04 132 comprobaciones; T05 15; T06 y T07 8 grupos cada una; T08 27. Se reutilizó T03 porque T09 no cambió caja/sesión. Node, `typecheck`, `build` y regresión integral H1–H6/PM-001 permanecen para T13.

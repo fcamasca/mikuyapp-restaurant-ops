@@ -27,9 +27,10 @@ begin
   if v_definition !~* 'rpc_registrar_pago_total_pedido'
     or v_e1_definition !~* 'auth\.uid' or v_e1_definition !~* 'obtener_contexto_autenticado'
     or v_e1_definition !~* '''CAJA''' or v_e1_definition !~* 'for update'
-    or v_e1_definition !~* 'sum\(detalle\.cantidad \* detalle\.precio_unitario\)'
+    or v_e1_definition !~* '(sum\(detalle\.cantidad \* detalle\.precio_unitario\)|fn_resolver_total_pedido)'
     or v_e1_definition !~* 'insert into public\.pago'
-    or v_e1_definition !~* '''ENTREGADO'', ''PAGADO'''
+    or v_e1_definition !~* '''ENTREGADO'''
+    or v_e1_definition !~* '''PAGADO'''
     or pg_catalog.has_function_privilege('anon', 'public.registrar_pago_pedido(bigint,text)', 'EXECUTE')
     or not pg_catalog.has_function_privilege('authenticated', 'public.registrar_pago_pedido(bigint,text)', 'EXECUTE')
     or pg_catalog.has_function_privilege('anon', 'public.rpc_registrar_pago_total_pedido(bigint,uuid,text,numeric,uuid)', 'EXECUTE')
