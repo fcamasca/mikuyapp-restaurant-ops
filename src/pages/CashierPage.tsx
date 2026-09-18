@@ -44,21 +44,18 @@ function Lines({
   order,
   select,
   onSelect,
+  selectable = false,
 }: {
   order: CashierPendingOrder;
   select: Set<number>;
   onSelect: (id: number) => void;
+  selectable?: boolean;
 }) {
   return (
     <ul className="mt-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white">
       {order.lines.map((x) => (
         <li className="flex items-center gap-3 px-3 py-3" key={x.detailId}>
-          <input
-            aria-label={`Seleccionar ${x.productName}`}
-            checked={select.has(x.detailId)}
-            onChange={() => onSelect(x.detailId)}
-            type="checkbox"
-          />
+          {selectable && <input aria-label={`Seleccionar ${x.productName}`} checked={select.has(x.detailId)} onChange={() => onSelect(x.detailId)} type="checkbox" />}
           <span className="grow text-sm text-stone-700">
             {x.quantity} × {x.productName}
           </span>
@@ -164,7 +161,9 @@ export default function CashierPage({
   const [initial, setInitial] = useState("0"),
     [movement, setMovement] = useState<"ENTRADA" | "SALIDA">("ENTRADA"),
     [movementAmount, setMovementAmount] = useState(""),
-    [reason, setReason] = useState(""),
+    [movementReason, setMovementReason] = useState(""),
+    [closeReason, setCloseReason] = useState(""),
+    [discountReason, setDiscountReason] = useState(""),
     [counted, setCounted] = useState(""),
     [paymentAmount, setPaymentAmount] = useState(""),
     [tip, setTip] = useState("0"),
@@ -174,6 +173,14 @@ export default function CashierPage({
     ),
     [discountValue, setDiscountValue] = useState(""),
     [selectedLines, setSelectedLines] = useState(new Set<number>()),
+    [partialMode, setPartialMode] = useState(false),
+    [tipMode, setTipMode] = useState(false),
+    [divideMode, setDivideMode] = useState(false),
+    [discountMode, setDiscountMode] = useState(false),
+    [moreOptions, setMoreOptions] = useState(false),
+    [paymentsOpen, setPaymentsOpen] = useState(false),
+    [cashPanel, setCashPanel] = useState<"MOVEMENT" | "CLOSE" | null>(null),
+    [paymentFeedback, setPaymentFeedback] = useState<PersistedPayment | null>(null),
     [document, setDocument] = useState<PersistedPayment | null>(null),
     [documentOrder, setDocumentOrder] = useState<CashierPendingOrder | null>(
       null,
@@ -183,6 +190,17 @@ export default function CashierPage({
   const openedByName = session?.abierta_por === context.profile.id
     ? context.profile.nombre
     : "Otro cajero autorizado";
+  const clearPaymentOptions = useCallback(() => {
+    setPartialMode(false);
+    setPaymentAmount("");
+    setTipMode(false);
+    setTip("0");
+    setDivideMode(false);
+    setSelectedLines(new Set());
+    setDiscountMode(false);
+    setMoreOptions(false);
+    setPaymentsOpen(false);
+  }, []);
   const refresh = useCallback(async (
     showLoading = true,
     isCurrent: () => boolean = () => true,
@@ -221,8 +239,9 @@ export default function CashierPage({
         o.data.some((y) => y.orderId === x) ? x : (o.data[0]?.orderId ?? null),
       );
     } else setError(o.error.message);
+    clearPaymentOptions();
     setLoading(false);
-  }, [cashboxId, context, service]);
+  }, [cashboxId, clearPaymentOptions, context, service]);
   useEffect(() => {
     void refresh();
   }, [attempt, refresh]);
@@ -291,6 +310,11 @@ export default function CashierPage({
       sum + (selected?.lines.find((x) => x.detailId === id)?.lineAmount ?? 0),
     0,
   );
+  const partialAmount = n(paymentAmount);
+  const invalidPartial = !Number.isFinite(partialAmount) || partialAmount <= 0 || partialAmount > (selected?.balance ?? 0);
+  const invalidTip = !Number.isFinite(n(tip)) || n(tip) < 0;
+  const paymentToApply = partialMode ? partialAmount : (selected?.balance ?? 0);
+  const accumulatedPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
   return (
     <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
       <div className="mx-auto max-w-7xl">
@@ -317,7 +341,7 @@ export default function CashierPage({
             </button>
           </div>
         )}
-        <section className="mt-5 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+        <section className="mt-4 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 pb-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 1</p>
@@ -350,20 +374,15 @@ export default function CashierPage({
                 </select>
               </label>
               {session ? (
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
-                    Estado<br /><b className="text-base text-stone-950">{session.estado}</b>
-                  </p>
-                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
-                    Abierta por<br /><b className="text-base text-stone-950">{openedByName}</b>
-                  </p>
-                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
-                    Monto inicial<br /><b className="text-base text-stone-950">{money.format(session.monto_inicial)}</b>
-                  </p>
-                  <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
-                    Efectivo esperado<br />
-                    <b className="text-lg text-emerald-950">{money.format(summary?.efectivo_esperado ?? 0)}</b>
-                  </p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-stone-100 pt-3 text-sm">
+                  <p><span className="text-stone-500">Estado</span> <b>{session.estado}</b></p>
+                  <p><span className="text-stone-500">Cajero</span> <b>{openedByName}</b></p>
+                  <p><span className="text-stone-500">Inicial</span> <b>{money.format(session.monto_inicial)}</b></p>
+                  <p><span className="text-stone-500">Esperado</span> <b className="text-emerald-800">{money.format(summary?.efectivo_esperado ?? 0)}</b></p>
+                  <div className="flex flex-wrap gap-2 sm:ml-auto">
+                    <button className={auxiliaryButtonClass} onClick={() => setCashPanel(cashPanel === "MOVEMENT" ? null : "MOVEMENT")} type="button">Movimientos</button>
+                    <button className={secondaryButtonClass} onClick={() => setCashPanel(cashPanel === "CLOSE" ? null : "CLOSE")} type="button">Cerrar caja</button>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-4 flex flex-col gap-3 sm:max-w-md">
@@ -400,15 +419,13 @@ export default function CashierPage({
             </>
           )}
         </section>
-        {session && (
-          <details className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-            <summary className="cursor-pointer text-base font-bold text-stone-900">
-              Movimientos, historial y cierre
-            </summary>
+        {session && cashPanel && (
+          <section className="mt-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
             <p className="mt-2 text-sm">
               Historial reciente: {history.length} sesiones.
             </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="mt-4">
+              {cashPanel === "MOVEMENT" &&
               <form
                 className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4"
                 onSubmit={(e) => {
@@ -420,7 +437,7 @@ export default function CashierPage({
                         session.id,
                         movement,
                         n(movementAmount),
-                        reason,
+                        movementReason,
                         key(),
                       ),
                     );
@@ -450,12 +467,14 @@ export default function CashierPage({
                 <label className="block text-sm font-semibold text-stone-700">Motivo
                 <input
                   className={fieldClass}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  value={movementReason}
+                      onChange={(e) => setMovementReason(e.target.value)}
                 />
                 </label>
                 <button className={secondaryButtonClass} disabled={busy}>Confirmar movimiento</button>
               </form>
+              }
+              {cashPanel === "CLOSE" &&
               <form
                 className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4"
                 onSubmit={(e) => {
@@ -466,7 +485,7 @@ export default function CashierPage({
                         context,
                         session.id,
                         n(counted),
-                        reason || null,
+                            closeReason || null,
                         key(),
                       ),
                     );
@@ -489,15 +508,20 @@ export default function CashierPage({
                 <label className="block text-sm font-semibold text-stone-700">Motivo de diferencia
                 <input
                   className={fieldClass}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  value={closeReason}
+                      onChange={(e) => setCloseReason(e.target.value)}
                 />
                 </label>
                 <button className={primaryButtonClass} disabled={busy}>Confirmar cierre</button>
               </form>
+              }
             </div>
-          </details>
+          </section>
         )}
+        {paymentFeedback && <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950" role="status">
+          <b>Pago registrado: {money.format(paymentFeedback.amount)} · {paymentFeedback.method}</b>
+          <p>Saldo restante: {money.format(paymentFeedback.balance)} · Pedido {paymentFeedback.orderStatus === "PAGADO" ? "PAGADO" : "pendiente de completar"}.</p>
+        </div>}
         <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
           <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 2</p>
@@ -510,12 +534,12 @@ export default function CashierPage({
               orders.map((x) => (
                 <button
                   className={`mt-3 block w-full rounded-xl border p-3 text-left transition focus:outline-none focus:ring-4 focus:ring-emerald-100 ${selectedId === x.orderId ? "border-emerald-600 bg-emerald-50 shadow-sm" : "border-stone-200 hover:border-emerald-300 hover:bg-stone-50"}`}
-                  key={x.orderId}
-                  onClick={() => {
-                    setSelectedId(x.orderId);
-                    setSelectedLines(new Set());
-                    setPaymentAmount(String(x.balance));
-                  }}
+                      key={x.orderId}
+                      onClick={() => {
+                        clearPaymentOptions();
+                        setPaymentFeedback(null);
+                        setSelectedId(x.orderId);
+                      }}
                 >
                   <span className="block font-bold text-stone-950">Mesa {x.tableCode}</span>
                   <span className="text-sm text-stone-600">Pedido #{x.orderId}</span>
@@ -555,6 +579,7 @@ export default function CashierPage({
                   <Lines
                     order={selected}
                     select={selectedLines}
+                    selectable={divideMode}
                     onSelect={(id) =>
                       setSelectedLines((old) => {
                         const x = new Set(old);
@@ -563,10 +588,14 @@ export default function CashierPage({
                       })
                     }
                   />
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-stone-600">Importe sugerido por selección<br /><b className="text-lg text-stone-950">{money.format(suggested)}</b></p>
-                    <button className={auxiliaryButtonClass} type="button" onClick={() => setPaymentAmount(String(suggested))}>Usar importe sugerido</button>
-                  </div>
+                  {divideMode && <div className="mt-3 rounded-xl border border-stone-200 bg-white p-3">
+                    <p className="text-sm">Total seleccionado <b>{money.format(suggested)}</b> · Saldo <b>{money.format(selected.balance)}</b></p>
+                    {suggested > selected.balance && <p className="mt-1 text-sm font-semibold text-rose-700">La selección excede el saldo por {money.format(suggested - selected.balance)}.</p>}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button className={secondaryButtonClass} disabled={suggested <= 0 || suggested > selected.balance} type="button" onClick={() => { setPartialMode(true); setPaymentAmount(String(suggested)); setDivideMode(false); setSelectedLines(new Set()); }}>Usar importe seleccionado</button>
+                      <button className={auxiliaryButtonClass} type="button" onClick={() => { setDivideMode(false); setSelectedLines(new Set()); }}>Cerrar</button>
+                    </div>
+                  </div>}
                 </section>
                 <form
                   className="mt-5 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-4"
@@ -578,7 +607,7 @@ export default function CashierPage({
                           context,
                           selected.orderId,
                           session.id,
-                          n(paymentAmount),
+                          paymentToApply,
                           method,
                           n(tip),
                           key(),
@@ -586,6 +615,7 @@ export default function CashierPage({
                         if (r.ok) {
                           setDocumentOrder(selected);
                           setDocument(r.data);
+                          setPaymentFeedback(r.data);
                         }
                         return r;
                       });
@@ -595,60 +625,50 @@ export default function CashierPage({
                     <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 4</p>
                     <h3 className="text-xl font-bold">Cobro</h3>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                  <label className="block text-sm font-semibold text-stone-700">
-                    <span className="block">Importe a aplicar</span>
-                    <input
-                      className={fieldClass}
-                      min="0.01"
-                      step="0.01"
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      type="number"
-                    />
-                  </label>
+                  <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-sm font-semibold text-stone-700">
                     <span className="block">Medio de pago</span>
                     <select className={selectClass} value={method} onChange={(e) => setMethod(e.target.value as PaymentMethodCode)}>
                       {methods.map((x) => <option key={x}>{x}</option>)}
                     </select>
                   </label>
-                  <label className="block text-sm font-semibold text-stone-700">
-                    <span className="block">Propina separada</span>
-                    <input
-                      className={fieldClass}
-                      min="0"
-                      step="0.01"
-                      value={tip}
-                      onChange={(e) => setTip(e.target.value)}
-                      type="number"
-                    />
-                  </label>
+                  <div className="rounded-xl bg-white p-3 text-sm text-stone-600">Importe a cobrar<br /><b className="text-2xl text-emerald-800">{money.format(paymentToApply)}</b></div>
                   </div>
-                  <button className={`${primaryButtonClass} mt-4 w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session}>
-                    Registrar pago
+                  {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe de esta parte <span className="font-normal">(máximo {money.format(selected.balance)})</span>
+                    <input className={fieldClass} min="0.01" max={selected.balance} step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" />
+                    {invalidPartial && paymentAmount && <span className="mt-1 block text-sm text-rose-700">Ingresa un importe mayor que cero y no superior al saldo.</span>}
+                  </label>}
+                  {tipMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Propina
+                    <input className={fieldClass} min="0" step="0.01" value={tip} onChange={(e) => setTip(e.target.value)} type="number" />
+                  </label>}
+                  {tipMode && !invalidTip && <p className="mt-2 text-sm">Propina: <b>{money.format(n(tip))}</b></p>}
+                  <button className={`${primaryButtonClass} mt-4 w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidTip || (partialMode && invalidPartial)}>
+                    {partialMode ? `Cobrar esta parte · ${money.format(paymentToApply)}` : `Cobrar ${money.format(selected.balance)}`}
                   </button>
                 </form>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className={auxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>Cobrar una parte</button>
+                  <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setTip("0"); }}>Agregar propina</button>
+                  <button className={auxiliaryButtonClass} type="button" onClick={() => setMoreOptions((value) => !value)}>Más opciones</button>
+                </div>
+                {moreOptions && <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
+                  <button className={secondaryButtonClass} type="button" onClick={() => { setDivideMode(true); setDiscountMode(false); setMoreOptions(false); }}>Dividir por productos</button>
+                  <button className={secondaryButtonClass} disabled={selected.paid > 0} type="button" onClick={() => { setDiscountMode(true); setDivideMode(false); setMoreOptions(false); }}>Solicitar descuento</button>
+                </div>}
                 {discount && (
                   <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                     Descuento: <b>{discount.estado}</b> · {discount.tipo} · {formatDiscountValue(discount)}
                   </p>
                 )}
-                <form
+                {discountMode && <form
                   className="mt-4 rounded-xl border border-stone-200 bg-white p-4"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (service)
-                      void run(() =>
-                        service.requestDiscount(
-                          context,
-                          selected.orderId,
-                          discountType,
-                          n(discountValue),
-                          reason,
-                          key(),
-                        ),
-                      );
+                    if (service) void run(async () => {
+                      const result = await service.requestDiscount(context, selected.orderId, discountType, n(discountValue), discountReason, key());
+                      if (result.ok) setDiscountMode(false);
+                      return result;
+                    });
                   }}
                 >
                   <h3 className="font-bold">Solicitar descuento</h3>
@@ -664,19 +684,21 @@ export default function CashierPage({
                       <input className={fieldClass} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} />
                     </label>
                     <label className="block text-sm font-semibold text-stone-700">Motivo
-                      <input className={fieldClass} value={reason} onChange={(e) => setReason(e.target.value)} />
+                      <input className={fieldClass} value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} />
                     </label>
                   </div>
                   <button className={`${secondaryButtonClass} mt-4 w-full sm:w-auto`} disabled={busy || selected.paid > 0}>
                     Solicitar descuento
                   </button>
-                </form>
+                </form>}
                 <section className="mt-5 border-t border-stone-200 pt-5">
-                  <h3 className="text-lg font-bold">Pagos confirmados</h3>
-                  <p className="text-sm text-stone-600">Historial autoritativo del pedido seleccionado.</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-lg font-bold">{payments.length} {payments.length === 1 ? "pago realizado" : "pagos realizados"} · {money.format(accumulatedPayments)} acumulado</h3>
+                    {payments.length > 0 && <button className={auxiliaryButtonClass} type="button" onClick={() => setPaymentsOpen((value) => !value)}>{paymentsOpen ? "Ocultar pagos" : "Ver pagos"}</button>}
+                  </div>
                   {payments.length === 0 ? (
                     <p className="mt-3 rounded-xl bg-stone-50 p-4 text-stone-600">Sin pagos confirmados.</p>
-                  ) : (
+                  ) : paymentsOpen && (
                     <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                       {payments.map((x) => (
                         <li className="rounded-xl border border-stone-200 bg-stone-50 p-3" key={x.paymentId}>
@@ -686,7 +708,7 @@ export default function CashierPage({
                             <div><dt className="text-stone-500">Propina</dt><dd className="font-bold">{money.format(x.tip)}</dd></div>
                             <div><dt className="text-stone-500">Saldo</dt><dd className="font-bold">{money.format(x.balance)}</dd></div>
                           </dl>
-                          <p className="mt-2 text-xs text-stone-500">Registrado por {x.actorName}</p>
+                          <p className="mt-2 text-xs text-stone-500">Registrado por {x.actorName} · {new Date(x.paidAt).toLocaleString("es-PE")}</p>
                         </li>
                       ))}
                     </ul>

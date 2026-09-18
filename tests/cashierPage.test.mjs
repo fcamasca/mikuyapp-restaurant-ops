@@ -147,8 +147,8 @@ test("TP35, TP45-47 y TP59-60 están representados", () => {
     "Total neto",
     "Pagado",
     "Saldo",
-    "Importe sugerido por selección",
-    "Propina separada",
+    "Dividir por productos",
+    "Agregar propina",
     "EFECTIVO",
     "YAPE",
     "TARJETA",
@@ -188,7 +188,7 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
     "Detalle del pedido",
     "Productos del pedido",
     "Cobro",
-    "Pagos confirmados",
+    "pago realizado",
     "Medio de pago",
   ]) assert.match(page, new RegExp(text));
 
@@ -200,6 +200,39 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
   assert.match(page, /className=\{selectClass\}/);
   assert.match(page, /lg:grid-cols-\[22rem_minmax\(0,1fr\)\]/);
   assert.doesNotMatch(page, /overflow-x-(?:auto|scroll)/);
+});
+
+test("TP62 UX prioriza saldo completo y revela excepciones bajo demanda", () => {
+  assert.match(page, /paymentToApply = partialMode \? partialAmount : \(selected\?\.balance \?\? 0\)/);
+  assert.match(page, /`Cobrar \$\{money\.format\(selected\.balance\)\}`/);
+  assert.match(page, /partialMode && <label[^>]*>Importe de esta parte/);
+  assert.match(page, /Cobrar una parte/);
+  assert.match(page, /tipMode && <label[^>]*>Propina/);
+  assert.match(page, /moreOptions && <div/);
+  assert.match(page, /selectable=\{divideMode\}/);
+  assert.match(page, /suggested > selected\.balance/);
+  assert.match(page, /disabled=\{suggested <= 0 \|\| suggested > selected\.balance\}/);
+  assert.match(page, /discountMode && <form/);
+  assert.match(page, /paymentsOpen && \(/);
+});
+
+test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
+  assert.match(page, /partialAmount <= 0 \|\| partialAmount > \(selected\?\.balance \?\? 0\)/);
+  assert.match(page, /partialMode && invalidPartial/);
+  for (const reset of [
+    "setPartialMode(false)",
+    'setPaymentAmount("")',
+    "setTipMode(false)",
+    'setTip("0")',
+    "setDivideMode(false)",
+    "setSelectedLines(new Set())",
+    "setDiscountMode(false)",
+  ]) assert.match(page, new RegExp(reset.replace(/[()[\]]/g, "\\$&")));
+  assert.match(page, /clearPaymentOptions\(\);[\s\S]*setSelectedId/);
+  assert.match(page, /clearPaymentOptions\(\);[\s\S]*setLoading\(false\)/);
+  assert.match(page, /\[movementReason, setMovementReason\]/);
+  assert.match(page, /\[closeReason, setCloseReason\]/);
+  assert.match(page, /\[discountReason, setDiscountReason\]/);
 });
 
 test("TP62 UX muestra nombre local y nunca expone el UUID del cajero", () => {
