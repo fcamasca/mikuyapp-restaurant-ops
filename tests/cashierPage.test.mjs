@@ -241,3 +241,35 @@ test("TP62 UX muestra nombre local y nunca expone el UUID del cajero", () => {
   assert.match(page, /Otro cajero autorizado/);
   assert.doesNotMatch(page, /<b[^>]*>\{session\.abierta_por\}<\/b>/);
 });
+
+test("TP62 cobro prepara una confirmación y no invoca la RPC desde el formulario", () => {
+  const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
+  assert.match(paymentForm, /setPaymentConfirmation\(confirmation\)/);
+  assert.match(paymentForm, /paymentConfirmationRef\.current = confirmation/);
+  assert.doesNotMatch(paymentForm, /service\.registerPayment/);
+  assert.match(page, /Confirmación requerida/);
+  assert.match(page, /Confirmar cobro/);
+});
+
+test("TP62 modal resume el cobro total y parcial antes de registrar", () => {
+  for (const text of ["Mesa", "Pedido", "Importe", "Medio", "Propina", "Saldo actual", "Volver"])
+    assert.match(page, new RegExp(`>${text}<`));
+  assert.match(page, /Este cobro completará el pedido y liberará la mesa\./);
+  assert.match(page, /Después del pago quedará un saldo de/);
+  assert.match(page, /`Confirmar cobro \$\{money\.format\(paymentConfirmation\.amount\)\}`/);
+});
+
+test("TP62 confirmar registra una sola vez y Volver no registra", () => {
+  assert.match(page, /if \(pending\.current\) return;/);
+  assert.match(page, /disabled=\{busy\}[\s\S]*onClick=\{closePaymentConfirmation\}[\s\S]*>Volver<\/button>/);
+  assert.match(page, /disabled=\{busy\}[\s\S]*service\.registerPayment\(context, confirmation\.orderId/);
+  assert.match(page, /busy \? "Registrando cobro…"/);
+});
+
+test("TP62 resync invalida una confirmación obsoleta", () => {
+  assert.match(page, /if \(paymentConfirmationRef\.current\)/);
+  assert.match(page, /El saldo o el pedido cambió\. Revisa los datos antes de confirmar nuevamente\./);
+  assert.match(page, /selected\.balance !== confirmation\.currentBalance/);
+  assert.match(page, /El saldo cambió\. Actualiza y revisa el cobro antes de confirmar nuevamente\./);
+  assert.match(page, /void refresh\(false\)/);
+});

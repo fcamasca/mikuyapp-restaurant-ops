@@ -20,6 +20,15 @@ interface Props {
   onNavigateToSales: () => void;
   onSignOut: () => void;
 }
+interface PaymentConfirmation {
+  orderId: number;
+  tableCode: string;
+  amount: number;
+  method: PaymentMethodCode;
+  tip: number;
+  currentBalance: number;
+  partial: boolean;
+}
 const money = new Intl.NumberFormat("es-PE", {
     style: "currency",
     currency: "PEN",
@@ -180,17 +189,25 @@ export default function CashierPage({
     [moreOptions, setMoreOptions] = useState(false),
     [paymentsOpen, setPaymentsOpen] = useState(false),
     [cashPanel, setCashPanel] = useState<"MOVEMENT" | "CLOSE" | null>(null),
+    [paymentConfirmation, setPaymentConfirmation] = useState<PaymentConfirmation | null>(null),
+    [confirmationNotice, setConfirmationNotice] = useState<string | null>(null),
     [paymentFeedback, setPaymentFeedback] = useState<PersistedPayment | null>(null),
     [document, setDocument] = useState<PersistedPayment | null>(null),
     [documentOrder, setDocumentOrder] = useState<CashierPendingOrder | null>(
       null,
     );
-  const pending = useRef(false);
+  const pending = useRef(false),
+    paymentConfirmationRef = useRef<PaymentConfirmation | null>(null);
   const selected = orders.find((x) => x.orderId === selectedId) ?? null;
   const openedByName = session?.abierta_por === context.profile.id
     ? context.profile.nombre
     : "Otro cajero autorizado";
   const clearPaymentOptions = useCallback(() => {
+    if (paymentConfirmationRef.current) {
+      paymentConfirmationRef.current = null;
+      setPaymentConfirmation(null);
+      setConfirmationNotice("El saldo o el pedido cambió. Revisa los datos antes de confirmar nuevamente.");
+    }
     setPartialMode(false);
     setPaymentAmount("");
     setTipMode(false);
@@ -201,6 +218,10 @@ export default function CashierPage({
     setMoreOptions(false);
     setPaymentsOpen(false);
   }, []);
+  const closePaymentConfirmation = () => {
+    paymentConfirmationRef.current = null;
+    setPaymentConfirmation(null);
+  };
   const refresh = useCallback(async (
     showLoading = true,
     isCurrent: () => boolean = () => true,
@@ -601,24 +622,19 @@ export default function CashierPage({
                   className="mt-5 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-4"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (service && session)
-                      void run(async () => {
-                        const r = await service.registerPayment(
-                          context,
-                          selected.orderId,
-                          session.id,
-                          paymentToApply,
-                          method,
-                          n(tip),
-                          key(),
-                        );
-                        if (r.ok) {
-                          setDocumentOrder(selected);
-                          setDocument(r.data);
-                          setPaymentFeedback(r.data);
-                        }
-                        return r;
-                      });
+                    if (!session || busy || invalidTip || (partialMode && invalidPartial)) return;
+                    const confirmation: PaymentConfirmation = {
+                      orderId: selected.orderId,
+                      tableCode: selected.tableCode,
+                      amount: paymentToApply,
+                      method,
+                      tip: n(tip),
+                      currentBalance: selected.balance,
+                      partial: partialMode,
+                    };
+                    setConfirmationNotice(null);
+                    paymentConfirmationRef.current = confirmation;
+                    setPaymentConfirmation(confirmation);
                   }}
                 >
                   <div className="mb-4">
@@ -646,6 +662,7 @@ export default function CashierPage({
                     {partialMode ? `Cobrar esta parte · ${money.format(paymentToApply)}` : `Cobrar ${money.format(selected.balance)}`}
                   </button>
                 </form>
+                {confirmationNotice && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="status">{confirmationNotice}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button className={auxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>Cobrar una parte</button>
                   <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setTip("0"); }}>Agregar propina</button>
@@ -720,8 +737,59 @@ export default function CashierPage({
             )}
           </section>
         </div>
-      </div>
-      {document && documentOrder && (
+        </div>
+        {paymentConfirmation && selected && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4" role="presentation">
+            <section aria-labelledby="payment-confirmation-title" aria-modal="true" className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" role="dialog">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Confirmación requerida</p>
+              <h2 className="mt-1 text-2xl font-bold" id="payment-confirmation-title">Confirmar cobro</h2>
+              <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-stone-50 p-4 text-sm">
+                <div><dt className="text-stone-600">Mesa</dt><dd className="font-bold">{paymentConfirmation.tableCode}</dd></div>
+                <div><dt className="text-stone-600">Pedido</dt><dd className="font-bold">#{paymentConfirmation.orderId}</dd></div>
+                <div><dt className="text-stone-600">Importe</dt><dd className="font-bold text-emerald-800">{money.format(paymentConfirmation.amount)}</dd></div>
+                <div><dt className="text-stone-600">Medio</dt><dd className="font-bold">{paymentConfirmation.method}</dd></div>
+                <div><dt className="text-stone-600">Propina</dt><dd className="font-bold">{money.format(paymentConfirmation.tip)}</dd></div>
+                <div><dt className="text-stone-600">Saldo actual</dt><dd className="font-bold">{money.format(paymentConfirmation.currentBalance)}</dd></div>
+              </dl>
+              {paymentConfirmation.partial ? (
+                <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 font-semibold text-amber-950">Después del pago quedará un saldo de {money.format(paymentConfirmation.currentBalance - paymentConfirmation.amount)}.</p>
+              ) : (
+                <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-950">Este cobro completará el pedido y liberará la mesa.</p>
+              )}
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button className={auxiliaryButtonClass} disabled={busy} onClick={closePaymentConfirmation} type="button">Volver</button>
+                <button
+                  aria-busy={busy}
+                  className={primaryButtonClass}
+                  disabled={busy}
+                  onClick={() => {
+                    const confirmation = paymentConfirmationRef.current;
+                    if (!service || !session || !confirmation || selected.orderId !== confirmation.orderId || selected.balance !== confirmation.currentBalance) {
+                      closePaymentConfirmation();
+                      setConfirmationNotice("El saldo cambió. Actualiza y revisa el cobro antes de confirmar nuevamente.");
+                      void refresh(false);
+                      return;
+                    }
+                    void run(async () => {
+                      const r = await service.registerPayment(context, confirmation.orderId, session.id, confirmation.amount, confirmation.method, confirmation.tip, key());
+                      if (r.ok) {
+                        setDocumentOrder(selected);
+                        setDocument(r.data);
+                        setPaymentFeedback(r.data);
+                        closePaymentConfirmation();
+                      }
+                      return r;
+                    });
+                  }}
+                  type="button"
+                >
+                  {busy ? "Registrando cobro…" : `Confirmar cobro ${money.format(paymentConfirmation.amount)}`}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        {document && documentOrder && (
         <InternalDocument
           order={documentOrder}
           payment={document}
