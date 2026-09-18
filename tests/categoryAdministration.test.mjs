@@ -451,7 +451,7 @@ test('rechaza orden vacío antes de convertirlo accidentalmente en cero', () => 
   const submit = source.slice(start, end)
 
   assert.match(submit, /if \(!form\.orden\.trim\(\)\)/)
-  assert.match(submit, /setError\('Ingresa el orden de la categoría\.'\)/)
+  assert.match(submit, /setError\(["']Ingresa el orden de la categoría\.["']\)/)
   assert.ok(submit.indexOf('!form.orden.trim()') < submit.indexOf('Number(form.orden)'))
 })
 
@@ -464,9 +464,9 @@ test('conserva el formulario de categorías ante error y bloquea envíos duplica
   const end = source.indexOf('function submitCategory(', start)
   const mutation = source.slice(start, end)
 
-  assert.match(mutation, /if \(categoryMutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /if \(categoryMutationPending\.current\) \{\s*return;?\s*\}/)
   assert.match(mutation, /categoryMutationPending\.current = true/)
-  assert.match(mutation, /if \(!result\.ok\) \{\s*setError\(result\.error\.message\)\s*return\s*\}/)
+  assert.match(mutation, /if \(!result\.ok\) \{\s*setError\(result\.error\.message\);?\s*return;?\s*\}/)
   assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetForm()'))
   assert.match(mutation, /finally \{\s*categoryMutationPending\.current = false/)
 })

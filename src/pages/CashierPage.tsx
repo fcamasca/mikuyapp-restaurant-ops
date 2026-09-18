@@ -12,6 +12,7 @@ import {
 } from "../services/cashierService";
 import type { ValidatedProfileContext } from "../services/profileContext";
 import { getSupabaseClient } from "../services/supabaseClient";
+import { subscribeToOperationsChanges } from "../services/operationsRealtimeService.ts";
 import type { PaymentMethodCode } from "../types/operations";
 interface Props {
   context: ValidatedProfileContext;
@@ -166,10 +167,14 @@ export default function CashierPage({
     );
   const pending = useRef(false);
   const selected = orders.find((x) => x.orderId === selectedId) ?? null;
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (
+    showLoading = true,
+    isCurrent: () => boolean = () => true,
+  ) => {
     if (!service) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     const boxes = await service.getCashboxes(context);
+    if (!isCurrent()) return;
     if (!boxes.ok) {
       setError(boxes.error.message);
       setLoading(false);
@@ -184,11 +189,13 @@ export default function CashierPage({
           service.getPendingOrders(context),
         ])
       : [null, await service.getPendingOrders(context)];
+    if (!isCurrent()) return;
     if (s && !s.ok) setError(s.error.message);
     else if (s) {
       setSession(s.data);
       if (s.data) {
         const sr = await service.getSummary(context, s.data.id);
+        if (!isCurrent()) return;
         setSummary(sr.ok ? sr.data : null);
       } else setSummary(null);
     }
@@ -203,6 +210,27 @@ export default function CashierPage({
   useEffect(() => {
     void refresh();
   }, [attempt, refresh]);
+  useEffect(() => {
+    if (!cr.ok || !service) return;
+    let disposed = false;
+    let handle: Awaited<ReturnType<typeof subscribeToOperationsChanges>> | null = null;
+    void subscribeToOperationsChanges(
+      cr.client,
+      () => refresh(false, () => !disposed),
+      () => {
+        if (disposed) return;
+        setError("La conexión en tiempo real se interrumpió. Estamos recuperando Caja.");
+      },
+      { channelName: "cashier-orders-signals", initialRefresh: false },
+    ).then((started) => {
+      if (disposed) void started.stop();
+      else handle = started;
+    });
+    return () => {
+      disposed = true;
+      if (handle) void handle.stop();
+    };
+  }, [cr, refresh, service]);
   useEffect(() => {
     if (!service || !cashboxId) {
       setHistory([]);

@@ -249,3 +249,37 @@ Antes de iniciar React, 8 grupos SQL aprobaron: compatibilidad del shape H5 de p
 La adaptación frontend aprobó 35/35 pruebas Node/React directamente afectadas, `typecheck` y `build`. TP35 confirmó que la selección de productos sólo propone un importe; TP45–TP47 cubrieron captura/visualización separada de propina; TP48 distinguió recibo parcial y ticket consolidado interno no fiscal; TP59–TP60 cubrieron estados operativos, reintento, exclusión de doble envío y resincronización autoritativa.
 
 TP62–TP64 permanecen pendientes de ejecución humana y no se consideran aprobadas. No se repitieron SQL T03–T09, replay, suite Node integral ni regresión H1–H6/PM-001 porque esta intervención no modificó contratos PostgreSQL y esos checkpoints corresponden a T13.
+
+## 14. Evidencia incremental de E1-T11
+
+T11 se validó sobre una copia local aislada de la baseline T10 existente. Se aplicó únicamente `20260917000100_e1_t11_auditoria_financiera.sql`; no fue necesario repetir el replay completo. El catálogo quedó cerrado a `APERTURA`, `ENTRADA`, `SALIDA`, `SOLICITUD_DESCUENTO`, `AUTORIZACION_DESCUENTO`, `RECHAZO_DESCUENTO`, `PAGO`, `ANULACION`, `CIERRE` y `CIERRE_SUPERVISOR`; no existe evento de revocación.
+
+| TP | Evidencia | Estado |
+|---|---|---|
+| TP49 | Reconstrucción ordenada por sesión/pedido con apertura por Cajero A, movimiento y pago por Cajero B, solicitante y administrador reales. | Aprobada |
+| TP50 | Total neto autorizado, saldo anterior/nuevo del pago y estados financieros coincidieron con las tablas de dominio. | Aprobada |
+| TP51 | `authenticated` no pudo insertar, actualizar ni eliminar `auditoria_caja`; sólo las RPC insertan eventos. | Aprobada |
+| TP52 | Una sesión de otro local produjo conjunto vacío y MOZO fue rechazado sin exposición de datos. | Aprobada |
+| TP53 | Eliminación de actor, caja y pedido referenciados fue bloqueada por FK; la trazabilidad quedó preservada. | Aprobada |
+| TP54 | Un trigger de fallo inducido durante una RPC revirtió movimiento y auditoría; quedaron cero efectos parciales y cero huérfanos. | Aprobada |
+| TP55 | RPC `SECURITY DEFINER`, owner `postgres`, `search_path=pg_catalog`, RLS activa, `PUBLIC`/`anon` revocados y `authenticated` sólo con ejecución de lectura. | Aprobada |
+
+Regresiones directamente afectadas aprobadas: T04 (132 comprobaciones), T05 (15), T06, T07 y T09. No se ejecutaron suite Node integral, `typecheck`, `build`, TP62–TP64 ni la regresión integral T13 porque T11 sólo modificó SQL/documentación y no cambió contratos funcionales T03–T10.
+
+## 15. Evidencia incremental de E1-T12
+
+T12 se validó sobre la baseline local aislada aprobada hasta T11, aplicando una sola vez `20260917000200_e1_t12_reportes_caja.sql`. No se hizo replay integral. Las lecturas derivan local del contexto autenticado, usan corte `America/Lima`, separan venta/propina y contabilizan importes parciales sin inflar el conteo de pedidos completados.
+
+| TP | Evidencia | Estado |
+|---|---|---|
+| TP56 | Sesión cerrada con apertura por Cajero A, cierre por Cajero B, dos pagos parciales EFECTIVO/YAPE, propinas, entrada, salida, descuento, anulación, esperado, contado y diferencia concilió exactamente. | Aprobada |
+| TP57 | Resumen diario sumó 90 de venta y 7 de propina en dos pagos, pero contó un único pedido completado; descuento y anulación quedaron separados. | Aprobada |
+| TP58 | Fecha operativa Lima correcta; otro local obtuvo sólo su información; MOZO, COCINA y contexto anónimo fueron rechazados. Los CSV usan exactamente el snapshot cargado sin recalcular totales. | Aprobada |
+
+Regresión `h6_t02_sales_exports.sql`: aprobada. Pruebas Node/React directamente afectadas: 35/35 aprobadas; la prueba focalizada final de reportes aprobó 9/9. `typecheck` y `build` aprobaron; el build sólo emitió la advertencia no bloqueante de tamaño de chunk. No se ejecutaron replay integral, suite SQL T03–T11, regresión integral T13 ni TP62–TP64.
+
+## 16. Puerta técnica integral E1-T13
+
+T13 aprobó la matriz técnica completa **TP01–TP61**. Evidencia detallada, comandos, carreras y defectos corregidos: `implementation-t13.md`. El replay limpio final aplicó las 40 migraciones en orden y el seed sobre PostgreSQL 17 local, aislado y sin bind mounts. La regresión SQL H1–H6/PM-001/E1, la revisión de seguridad, las carreras obligatorias, las 303 pruebas Node/React, `typecheck`, `build` y `git diff --check` aprobaron. No existe script/dependencia de lint, por lo que no se ejecutó ni se incorporó una herramienta nueva.
+
+TP62–TP64 y T14 permanecen pendientes de ejecución humana; E1 no está aceptada.

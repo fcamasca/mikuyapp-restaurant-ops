@@ -526,7 +526,7 @@ test('el formulario administrativo no incorpora controles para cambiar estado', 
   assert.match(form, /id="table-name"/)
   assert.match(form, /type="checkbox"/)
   assert.doesNotMatch(form, /id="table-(?:state|status|estado)"|name="estado"|<select/)
-  assert.match(source, /disabled=\{tableSaving \|\| \(table\.activo && table\.estado !== 'LIBRE'\)\}/)
+  assert.match(source, /disabled=\{\s*tableSaving\s*\|\|\s*\(table\.activo\s*&&\s*table\.estado\s*!==\s*["']LIBRE["']\)\s*\}/)
 })
 
 test('conserva el formulario de mesas ante error y bloquea envíos duplicados', () => {
@@ -538,9 +538,9 @@ test('conserva el formulario de mesas ante error y bloquea envíos duplicados', 
   const end = source.indexOf('function submitTable(', start)
   const mutation = source.slice(start, end)
 
-  assert.match(mutation, /if \(tableMutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /if \(tableMutationPending\.current\) \{\s*return;?\s*\}/)
   assert.match(mutation, /tableMutationPending\.current = true/)
-  assert.match(mutation, /if \(!result\.ok\) \{\s*setTableError\(result\.error\.message\)\s*return\s*\}/)
+  assert.match(mutation, /if \(!result\.ok\) \{\s*setTableError\(result\.error\.message\);?\s*return;?\s*\}/)
   assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetTableForm()'))
   assert.match(mutation, /finally \{\s*tableMutationPending\.current = false/)
 })

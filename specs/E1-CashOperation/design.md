@@ -63,7 +63,7 @@ El descuento se aplicará a nivel pedido porque minimiza cambios y evita reasign
 1. `CAJA` solicita sobre pedido `ENTREGADO`, sin pagos, indicando tipo/valor/motivo.
 2. `ADMINISTRADOR` autoriza o rechaza desde una bandeja del mismo local.
 3. La autorización bloquea pedido, recalcula subtotal desde snapshots de detalles, valida valor y persiste subtotal/importe/total neto.
-4. Cobro consume ese snapshot. El descuento no cambia por modificaciones posteriores; esas modificaciones quedan prohibidas después de autorización salvo revocación auditada previa al primer pago.
+4. Cobro consume ese snapshot. Una solicitud que alcanza `AUTORIZADO` o `RECHAZADO` queda inmutable; E1 no incluye revocación, modificación ni reversión de descuentos decididos.
 
 La solicitud de `CAJA` y la decisión de `ADMINISTRADOR` deben quedar trazadas. Sólo se admite sobre `ENTREGADO` y antes del primer pago. No se fija un porcentaje máximo arbitrario: todo descuento requiere autorización administrativa.
 
@@ -98,7 +98,7 @@ Cada pago parcial devuelve un recibo interno con aplicado, propina, medio y sald
 
 ## D10. Auditoría
 
-`historial_estado` se conserva para transiciones de pedido. `auditoria_caja` registra eventos de negocio financieros con un catálogo cerrado: apertura, entrada, salida, solicitud/autorización/rechazo/revocación de descuento, pago, anulación directa por administrador, cierre y cierre supervisor. Apertura, cada movimiento, cada pago, anulación y cierre conservan su actor propio; `abierta_por` y `cerrada_por` pueden ser distintos.
+`historial_estado` se conserva para transiciones de pedido. `auditoria_caja` registra eventos de negocio financieros con un catálogo cerrado: apertura, entrada, salida, solicitud/autorización/rechazo de descuento, pago, anulación directa por administrador, cierre y cierre supervisor. No existe evento ni flujo de revocación de descuento en E1. Apertura, cada movimiento, cada pago, anulación y cierre conservan su actor propio; `abierta_por` y `cerrada_por` pueden ser distintos.
 
 Los IDs, actores e importes principales se almacenan en columnas normalizadas; JSONB se usa únicamente para snapshots complementarios acotados por tipo de evento. La inserción ocurre dentro de cada RPC; los clientes no reciben privilegio de escritura. RLS permite lectura local según rol y jamás acceso cruzado.
 

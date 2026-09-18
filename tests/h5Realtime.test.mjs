@@ -29,12 +29,12 @@ function fixture() {
 
 test('H5-T06 caja reutiliza infraestructura H4 y descarta respuestas tardías', () => {
   assert.match(cashierPage, /subscribeToOperationsChanges/)
-  assert.match(cashierPage, /channelName: 'cashier-orders-signals'/)
-  assert.match(cashierPage, /initialRefresh: false/)
-  assert.match(cashierPage, /load\(false, \(\) => !disposed\)/)
-  assert.match(cashierPage, /if \(!isCurrent\(\)\) return null/)
-  assert.match(cashierPage, /if \(disposed\) void started\.stop\(\)/)
-  assert.match(cashierPage, /if \(handle\) void handle\.stop\(\)/)
+  assert.match(cashierPage, /channelName:\s*["']cashier-orders-signals["']/)
+  assert.match(cashierPage, /initialRefresh:\s*false/)
+  assert.match(cashierPage, /refresh\(false, \(\) => !disposed\)/)
+  assert.match(cashierPage, /if \(!isCurrent\(\)\) return(?: null)?;?/)
+  assert.match(cashierPage, /if \(disposed\) void started\.stop\(\);?/)
+  assert.match(cashierPage, /if \(handle\) void handle\.stop\(\);?/)
   assert.doesNotMatch(cashierPage, /setInterval|poll/i)
 })
 

@@ -8,7 +8,7 @@ begin
 end $$;
 
 do $metadata$
-declare v_definition text; v_e1_definition text;
+declare v_definition text; v_e1_definition text; v_v2_definition text;
 begin
   select pg_catalog.pg_get_functiondef(p.oid) into strict v_definition
   from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid = p.pronamespace
@@ -24,13 +24,26 @@ begin
     and p.prosecdef and p.proowner = (select oid from pg_catalog.pg_roles where rolname = 'postgres')
     and p.proconfig = array['search_path=pg_catalog'];
 
+  select pg_catalog.pg_get_functiondef(p.oid) into v_v2_definition
+  from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.proname = 'rpc_registrar_pago_pedido_v2'
+    and p.prosecdef and p.proowner = (select oid from pg_catalog.pg_roles where rolname = 'postgres')
+    and p.proconfig = array['search_path=pg_catalog'];
+
   if v_definition !~* 'rpc_registrar_pago_total_pedido'
-    or v_e1_definition !~* 'auth\.uid' or v_e1_definition !~* 'obtener_contexto_autenticado'
-    or v_e1_definition !~* '''CAJA''' or v_e1_definition !~* 'for update'
-    or v_e1_definition !~* '(sum\(detalle\.cantidad \* detalle\.precio_unitario\)|fn_resolver_total_pedido)'
-    or v_e1_definition !~* 'insert into public\.pago'
-    or v_e1_definition !~* '''ENTREGADO'''
-    or v_e1_definition !~* '''PAGADO'''
+    or (v_v2_definition is null and (
+      v_e1_definition !~* 'auth\.uid' or v_e1_definition !~* 'obtener_contexto_autenticado'
+      or v_e1_definition !~* '''CAJA''' or v_e1_definition !~* 'for update'
+      or v_e1_definition !~* '(sum\(detalle\.cantidad \* detalle\.precio_unitario\)|fn_resolver_total_pedido)'
+      or v_e1_definition !~* 'insert into public\.pago'
+      or v_e1_definition !~* '''ENTREGADO''' or v_e1_definition !~* '''PAGADO'''))
+    or (v_v2_definition is not null and (
+      v_e1_definition !~* 'rpc_registrar_pago_pedido_v2'
+      or v_v2_definition !~* 'auth\.uid' or v_v2_definition !~* 'obtener_contexto_autenticado'
+      or v_v2_definition !~* '''CAJA''' or v_v2_definition !~* 'for update'
+      or v_v2_definition !~* 'fn_resolver_total_pedido'
+      or v_v2_definition !~* 'insert into public\.pago'
+      or v_v2_definition !~* '''ENTREGADO''' or v_v2_definition !~* '''PAGADO'''))
     or pg_catalog.has_function_privilege('anon', 'public.registrar_pago_pedido(bigint,text)', 'EXECUTE')
     or not pg_catalog.has_function_privilege('authenticated', 'public.registrar_pago_pedido(bigint,text)', 'EXECUTE')
     or pg_catalog.has_function_privilege('anon', 'public.rpc_registrar_pago_total_pedido(bigint,uuid,text,numeric,uuid)', 'EXECUTE')

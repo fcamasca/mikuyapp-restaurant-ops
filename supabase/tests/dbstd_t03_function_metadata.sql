@@ -85,8 +85,9 @@ begin
     end if;
   end loop;
 
-  -- El fingerprint protege las diez tablas del baseline DBSTD, no las tablas
-  -- aditivas de E1, cuyos grants se verifican en su propia suite. No cambia el hash.
+  -- El fingerprint protege las diez tablas del baseline DBSTD e incorpora la
+  -- evolución aprobada de columnas/grants de pago E1; las tablas nuevas se
+  -- verifican en su propia suite.
   select pg_catalog.md5(pg_catalog.string_agg(grant_row.line, E'\n' order by grant_row.line))
   into v_privilege_fingerprint
   from (
@@ -109,7 +110,10 @@ begin
         'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago')
   ) as grant_row;
 
-  if v_privilege_fingerprint is distinct from 'd64f59917898b2943d5119205d55e110' then
+  if v_privilege_fingerprint not in (
+    'd64f59917898b2943d5119205d55e110', -- baseline DBSTD/T03
+    '528f39f284ac3a065afca5154425dd8c'  -- pago evolucionado por E1
+  ) then
     raise exception 'DBSTD-TP14 grants de tablas o columnas cambiaron: %',
       v_privilege_fingerprint;
   end if;

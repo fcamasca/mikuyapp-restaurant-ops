@@ -410,7 +410,7 @@ test('rechaza precio vacío antes de convertirlo accidentalmente en cero', () =>
   const submit = source.slice(start, end)
 
   assert.match(submit, /if \(!productForm\.precio\.trim\(\)\)/)
-  assert.match(submit, /setProductError\('Ingresa el precio del producto\.'\)/)
+  assert.match(submit, /setProductError\(["']Ingresa el precio del producto\.["']\)/)
   assert.ok(submit.indexOf('!productForm.precio.trim()') < submit.indexOf('Number(productForm.precio)'))
 })
 
@@ -423,9 +423,9 @@ test('conserva el formulario de productos ante error y bloquea envíos duplicado
   const end = source.indexOf('function submitProduct(', start)
   const mutation = source.slice(start, end)
 
-  assert.match(mutation, /if \(productMutationPending\.current\) \{\s*return\s*\}/)
+  assert.match(mutation, /if \(productMutationPending\.current\) \{\s*return;?\s*\}/)
   assert.match(mutation, /productMutationPending\.current = true/)
-  assert.match(mutation, /if \(!result\.ok\) \{\s*setProductError\(result\.error\.message\)\s*return\s*\}/)
+  assert.match(mutation, /if \(!result\.ok\) \{\s*setProductError\(result\.error\.message\);?\s*return;?\s*\}/)
   assert.ok(mutation.indexOf('if (!result.ok)') < mutation.indexOf('resetProductForm()'))
   assert.match(mutation, /finally \{\s*productMutationPending\.current = false/)
 })

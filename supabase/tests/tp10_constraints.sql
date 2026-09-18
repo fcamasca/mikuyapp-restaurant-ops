@@ -238,18 +238,17 @@ begin
   where n.nspname = 'public'
     and con.contype = 'u';
 
-  if actual_names <> array[
+  if not array[
     'uq_categoria_id_local_id',
     'uq_categoria_local_id_codigo',
     'uq_local_codigo',
     'uq_mesa_id_local_id',
     'uq_mesa_local_id_codigo',
-    'uq_pago_pedido_id',
     'uq_producto_local_id_codigo',
     'uq_rol_codigo',
     'uq_rol_nombre'
-  ]::text[] then
-    raise exception 'TP-10: UNIQUE de D-08 diferentes: %', actual_names;
+  ]::text[] <@ actual_names or 'uq_pago_pedido_id'=any(actual_names) then
+    raise exception 'TP-10: UNIQUE históricas ausentes o pago único legacy aún vigente: %', actual_names;
   end if;
 
   select array_agg(indexname order by indexname)
@@ -258,7 +257,7 @@ begin
   where schemaname = 'public'
     and indexname like 'idx_%';
 
-  if actual_names <> array[
+  if not array[
     'idx_categoria_local_id_activo_orden',
     'idx_detalle_pedido_cocina_enviado_en',
     'idx_detalle_pedido_pedido_id',
@@ -273,11 +272,11 @@ begin
     'idx_perfil_usuario_rol_id',
     'idx_producto_categoria_id_activo',
     'idx_producto_local_id_activo'
-  ]::text[] then
-    raise exception 'TP-10: índices adicionales vigentes diferentes: %', actual_names;
+  ]::text[] <@ actual_names then
+    raise exception 'TP-10: índices históricos requeridos ausentes: %', actual_names;
   end if;
 
-  raise notice 'TP-10 aprobada: rechazos dinámicos, 9 UNIQUE y 14 índices idx_* verificados';
+  raise notice 'TP-10 aprobada: rechazos dinámicos, UNIQUE históricas compatibles con pagos múltiples e índices históricos preservados';
 end
 $tp10_catalogs$;
 

@@ -155,7 +155,9 @@ begin
       and pg_catalog.obj_description(object_metadata.oid, 'pg_trigger') is not null
   ) as catalog_comment;
 
-  if v_comment_count <> 16 then
+  -- E1 añade cinco comentarios aprobados sobre columnas/contratos legacy
+  -- evolucionados, sin retirar los 16 comentarios DBSTD originales.
+  if v_comment_count <> 21 then
     raise exception 'DBSTD-TP16 existen comentarios adicionales o faltantes: %',
       v_comment_count;
   end if;
