@@ -2,7 +2,7 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-El Spec Mode de **Evolución 1 — Operación de caja** está aprobado y la construcción se encuentra en curso. E1-T03, E1-T04, E1-T08, E1-T05 y E1-T06 están completadas técnicamente y validadas en PostgreSQL local aislado; E1-T07 y E1-T09 permanecen pendientes. La evolución todavía no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
+El Spec Mode de **Evolución 1 — Operación de caja** está aprobado y la construcción se encuentra en validación humana. T03–T13 completaron su validación técnica previa, pero TP62 detectó una diferencia funcional entre un **acto de cobro**, sus **N medios de pago** y un **cobro parcial**. Este ajuste queda aprobado documentalmente y requiere construcción/revalidación posterior antes de reanudar TP62. T14 permanece en validación humana y E1 todavía no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
 
 `main`/`origin/main` en `f76c190`, verificado entonces sin cambios locales, se conserva como baseline histórica del inicio del Spec Mode y no describe el estado actual del árbol de trabajo. El MVP v1.0.0 y PM-001 están aceptados. PM-002 permanece `TRANSITIONING`; esta evolución no lo modifica y la construcción debe respetar su matriz de ambientes.
 
@@ -27,7 +27,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 |---|---|---|
 | E1-R01 | La solución distinguirá una **caja física** de una **sesión de caja**. La sesión pertenece operativamente a la caja física, no al usuario que la abre. Para el alcance de un solo local se habilitará al menos una caja identificable y cada apertura originará una sesión inmutable vinculada a local y caja, con `abierta_por` como trazabilidad del actor de apertura. | Must |
 | E1-R02 | Un usuario `CAJA` podrá abrir una sesión registrando monto inicial no negativo. Fecha/hora, `abierta_por` y local procederán del servidor. Existirá como máximo una sesión `ABIERTA` por caja física. Si ya existe, no se creará otra: cualquier usuario `CAJA` activo del mismo local podrá recuperar y continuar operando esa sesión sin cierre ni arqueo. | Must |
-| E1-R03 | Una sesión tendrá estado `ABIERTA` o `CERRADA`. El cambio de cajero no exigirá cierre ni arqueo. No se editarán apertura, `abierta_por` ni monto inicial; cada pago, entrada, salida y cierre registrará su propio actor, y el cierre conservará `cerrada_por` además de `abierta_por`. | Must |
+| E1-R03 | Una sesión tendrá estado `ABIERTA` o `CERRADA`. El cambio de cajero no exigirá cierre ni arqueo. No se editarán apertura, `abierta_por` ni monto inicial; cada cobro y sus medios, entrada, salida y cierre registrarán su actor real, y el cierre conservará `cerrada_por` además de `abierta_por`. | Must |
 | E1-R04 | Cualquier usuario `CAJA` activo del mismo local podrá registrar **entradas manuales** y, explícitamente, **salidas de caja** sobre la sesión abierta de la caja, con tipo, importe positivo, motivo no vacío, actor y hora servidor. Se rechazarán importes cero/negativos, sesión cerrada, otra caja/local y edición o borrado posterior. | Must |
 | E1-R05 | El efectivo esperado será calculado en PostgreSQL como monto inicial + cobros en efectivo + propinas en efectivo + entradas − salidas, considerando exclusivamente operaciones confirmadas de la sesión. El frontend no enviará ni decidirá el saldo. | Must |
 | E1-R06 | Cualquier usuario `CAJA` activo del mismo local podrá cerrar la sesión abierta de la caja ingresando el efectivo contado, aunque otro cajero la haya abierto. PostgreSQL devolverá/resguardará resumen por medio, entradas, salidas, esperado, contado y diferencia. El cierre será atómico y conservará `abierta_por`, `cerrada_por` y sus fechas servidor. | Must |
@@ -37,16 +37,16 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | E1-R10 | `descuento_pedido` será el snapshot autoritativo del descuento. `pedido` no duplicará `subtotal_snapshot`, `descuento_snapshot` ni `total_neto_snapshot`. Una función autoritativa PostgreSQL resolverá el subtotal, descuento y total neto aplicable al cobro. El descuento no podrá volver negativo el total ni cambiar después del primer pago confirmado; los reintentos no crearán descuentos/autorizaciones duplicados. | Must |
 | E1-R11 | `ADMINISTRADOR` ejecutará directamente la anulación con motivo obligatorio; no existirá solicitante ni autorizador separados para esta operación. Sin pagos confirmados, serán anulables `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` y `ENTREGADO`; `PAGADO` y `ANULADO` no serán anulables. La función bloqueará pedido/mesa y registrará actor administrador, fecha/hora servidor y estado anterior/nuevo. Para `EN_PREPARACION`, `LISTO` y `ENTREGADO`, la futura UI mostrará una advertencia operativa previa que no modifica la autorización PostgreSQL. | Must |
 | E1-R12 | Si existe cualquier pago confirmado, incluso parcial, la anulación se bloqueará. La anulación completa del pedido por `ADMINISTRADOR` es distinta de la cancelación individual de productos por `MOZO` prevista para Evolución 7. No se implementarán reversos ni devoluciones como parte de esta regla. | Must |
-| E1-R13 | La división de cuenta permitirá **N pagos monetarios sobre un único `pedido`**, sin crear subpedidos ni cambiar la pertenencia de detalles. Los medios podrán ser distintos o repetidos; son válidos, entre otros, `EFECTIVO + YAPE`, `TARJETA + TARJETA` y `EFECTIVO + YAPE + TARJETA + TARJETA`. La selección de detalles será sólo ayuda de cálculo y la autoridad será el monto aplicado acumulado. | Must |
-| E1-R14 | Cada pago parcial tendrá importe positivo, medio permitido, sesión, actor y hora servidor. La suma aplicada no excederá el total neto. El pedido sólo pasará `ENTREGADO → PAGADO` y la mesa sólo se liberará cuando el saldo llegue exactamente a cero. | Must |
-| E1-R15 | Dos cobros simultáneos bloquearán el mismo pedido; el segundo recalculará saldo dentro de la transacción. Los reintentos usarán una clave idempotente o contrato equivalente y nunca duplicarán el pago. La regla actual `UNIQUE(pago.pedido_id)` deberá reemplazarse por una garantía compatible con múltiples pagos. | Must |
-| E1-R16 | Antes del primer pago se mantiene la reapertura H5 de `ENTREGADO`; después del primer pago parcial no se podrá agregar, editar, retirar, reenviar ni volver a entregar detalles. La UX mostrará que la cuenta está parcialmente pagada. | Must |
-| E1-R17 | La propina será opcional, no negativa, se registrará con el pago que la recauda y tendrá medio de pago. Se mantendrá separada del importe aplicado a la venta y no alterará el total autoritativo del pedido; sí afectará la caja si su medio es efectivo. | Must |
-| E1-R18 | Se emitirá un recibo interno por cada pago parcial y un ticket consolidado al completar exactamente el total neto. Ambos reflejarán pagos y propinas separadas, no constituirán comprobante fiscal ni definirán tratamiento tributario. | Must |
-| E1-R19 | Una auditoría específica permitirá reconstruir apertura, movimientos, descuentos, autorización, anulación, pagos, cierre y valores relevantes anteriores/nuevos, con local, sesión, pedido cuando aplique, actor, autorizador sólo cuando corresponda y hora servidor. Para anulación registrará únicamente al `ADMINISTRADOR` que la ejecutó. No se forzará esta semántica dentro de `historial_estado`. | Must |
+| E1-R13 | La solución distinguirá un **acto de cobro** de los **medios de pago que lo componen**. Un cobro aplicará un importe total a un único `pedido` y contendrá N líneas monetarias con medios distintos o repetidos; son válidos, entre otros, `EFECTIVO + YAPE`, `YAPE + YAPE` y combinaciones de tres o más medios. Un cobro normal cubrirá todo el saldo, se confirmará una sola vez, será atómico y producirá un único documento interno que detalle sus medios. La selección de productos continuará siendo sólo ayuda de cálculo, sin subpedidos, `pago_detalle` ni asignación histórica por líneas. | Must |
+| E1-R14 | `Cobrar una parte` será un acto de cobro explícitamente distinto cuyo total será mayor que cero y menor que el saldo vigente. Cada acto parcial podrá contener uno o varios medios si todos sus importes son positivos y suman exactamente el total del cobro. El pedido conservará `ENTREGADO` y la mesa seguirá pendiente mientras exista saldo; sólo un cobro que deje saldo exactamente cero cambiará el pedido a `PAGADO` y liberará la mesa. Dos cobros parciales separados producirán dos documentos internos separados. | Must |
+| E1-R15 | Cada cobro tendrá sesión abierta, pedido, actor real, hora servidor e idempotencia a nivel de cobro. PostgreSQL bloqueará `sesion_caja → pedido → mesa`, recalculará el saldo y registrará en una sola transacción su cabecera lógica, todas las líneas de medio, auditoría y transición/documento lógico aplicable; ante cualquier error no persistirá ninguna línea. Un reintento devolverá el mismo cobro completo sin duplicar cabecera, pagos, auditoría, historial ni documento. | Must |
+| E1-R16 | Antes del primer cobro confirmado se mantiene la reapertura H5 de `ENTREGADO`; después del primer acto parcial no se podrá agregar, editar, retirar, reenviar ni volver a entregar detalles. La UX mostrará que la cuenta está parcialmente pagada. | Must |
+| E1-R17 | La propina será opcional y no negativa, permanecerá separada del importe aplicado a la venta y se asociará al medio que la recauda dentro del cobro. No alterará el total autoritativo del pedido; sólo las líneas `EFECTIVO` —importe de venta y propina— afectarán el efectivo esperado. | Must |
+| E1-R18 | Cada acto de cobro producirá un único documento interno. Un cobro parcial producirá su propio recibo; el cobro que complete el saldo producirá un ticket consolidado del pedido y detallará todas las líneas de medio del acto final y los cobros previos. Los documentos separarán venta y propina, no serán comprobantes fiscales ni definirán tratamiento tributario. | Must |
+| E1-R19 | Una auditoría específica permitirá reconstruir apertura, movimientos, descuentos, autorización, anulación, cobros y sus medios, cierre y valores relevantes anteriores/nuevos, con local, sesión, pedido/cobro cuando aplique, actor, autorizador sólo cuando corresponda y hora servidor. Un cobro con N medios constituirá un único evento lógico de auditoría con detalle complementario de sus líneas. Para anulación registrará únicamente al `ADMINISTRADOR` que la ejecutó. No se forzará esta semántica dentro de `historial_estado`. | Must |
 | E1-R20 | Los registros financieros y de auditoría no admitirán `UPDATE`/`DELETE` desde cliente. Correcciones futuras deberán ser eventos compensatorios explícitos. Se conservarán FKs `ON DELETE RESTRICT` y trazabilidad histórica. | Must |
-| E1-R21 | Los reportes mínimos mostrarán por sesión: apertura/cierre, totales por medio, efectivo esperado, contado/diferencia, entradas, salidas, descuentos, anulaciones, propinas y pagos divididos, sin convertirse en libro contable ni conciliación bancaria. | Must |
-| E1-R22 | La estación PC de Caja mostrará permanentemente estado de caja, quién abrió, monto inicial y esperado, sin presentar la sesión como exclusiva de esa persona; priorizará cobro rápido. Apertura, cierre, salidas, descuento y anulación requerirán confirmación clara y estados de carga/error/reintento. | Must |
+| E1-R21 | Los reportes mínimos mostrarán por sesión: apertura/cierre, totales por medio, efectivo esperado, contado/diferencia, entradas, salidas, descuentos, anulaciones, propinas, cobros y parciales, sin duplicar la venta por agrupar varios medios y sin convertirse en libro contable ni conciliación bancaria. | Must |
+| E1-R22 | La estación PC de Caja mostrará permanentemente estado de caja, quién abrió, monto inicial y esperado, sin presentar la sesión como exclusiva de esa persona; priorizará cobro rápido. El cobro normal preparará el saldo completo, permitirá agregar N líneas de medio y sólo habilitará una confirmación única cuando su suma coincida exactamente. `Cobrar una parte` será una acción secundaria diferenciada. Todo cobro mostrará antes de ejecutar pedido/mesa, total, medios, propina, saldo posterior y liberación de mesa cuando corresponda; un resync invalidará una confirmación obsoleta. Apertura, cierre, salidas, descuento y anulación mantendrán confirmación clara y estados de carga/error/reintento. | Must |
 
 ## 4. Seguridad, roles e invariantes
 
@@ -72,14 +72,14 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | EC-05 | `historial_estado` sólo sirve para estados de pedido y no cubre auditoría financiera. |
 | EC-06 | La sesión pertenece a la caja física; `abierta_por` no la hace exclusiva. Otro `CAJA` activo del mismo local puede operar y cerrar, con actor propio por operación. |
 | EC-07 | `ADMINISTRADOR` anula directamente con motivo; cualquier pago confirmado bloquea la anulación. |
-| EC-08 | Un pedido admite N pagos y los medios pueden repetirse; sólo llega a `PAGADO` al completar exactamente el total neto. |
+| EC-08 | Un pedido admite N actos de cobro; cada cobro admite N medios distintos o repetidos y sólo llega a `PAGADO` cuando un acto deja el saldo exactamente en cero. |
 
 ### Propuestas técnicas del spec
 
 | ID | Propuesta |
 |---|---|
 | PT-01 | Introducir caja física, sesión, movimientos inmutables y auditoría específica. |
-| PT-02 | Implementar división como múltiples pagos sobre un pedido, sin subpedidos. |
+| PT-02 | Implementar la división como múltiples actos de cobro sobre un pedido; cada acto agrupa sus N medios, sin subpedidos ni asignación por productos. |
 | PT-03 | Modelar propina separada del importe de venta dentro del evento de pago. |
 | PT-04 | Aplicar antes del primer pago el snapshot de descuento asociado al pedido, persistido exclusivamente en `descuento_pedido`. |
 
@@ -88,6 +88,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | ID | Decisión | Comportamiento cerrado |
 |---|---|---|
 | DT-01 | Fuente autoritativa del descuento. | `descuento_pedido` conserva el snapshot; `pedido` no duplica subtotal, descuento ni total neto; una función PostgreSQL obtiene los tres importes aplicables al cobro. |
+| DT-02 | Identidad persistente del acto de cobro. | Crear una cabecera mínima `cobro` y asociar mediante `pago.cobro_id` las N filas de medio. La cabecera concentra pedido, sesión, actor, hora, total aplicado, saldo anterior/posterior e idempotencia; `pago` conserva medio, importe y propina. Pagos legacy permanecen identificables sin fabricar cabeceras. |
 
 ### Decisiones funcionales aprobadas
 
@@ -97,12 +98,12 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | DF-02 | Diferencia de cierre. | Se permite; motivo obligatorio cuando diferencia ≠ 0 y visibilidad para `ADMINISTRADOR`. |
 | DF-03 | Solicitud, autorización y momento del descuento. | `CAJA` solicita; `ADMINISTRADOR` autoriza; sólo en `ENTREGADO` y antes del primer pago. |
 | DF-04 | Límite comercial del descuento. | No se fija porcentaje arbitrario; todo descuento requiere autorización de `ADMINISTRADOR`. |
-| DF-06 | Documentos de pagos parciales. | Recibo interno por cada pago parcial y ticket consolidado al completar. |
+| DF-06 | Documentos por acto de cobro. | Un documento interno por cobro: recibo para cada acto parcial y ticket consolidado cuando el acto completa el saldo; un cobro con N medios se confirma y documenta una sola vez, detallando sus líneas. |
 | DF-07 | Cierre supervisor. | `ADMINISTRADOR` puede ejecutarlo con motivo y auditoría. |
 | DF-08 | Selección de caja física. | Caja configurable/seleccionable; no queda vinculada permanentemente al navegador. |
 | DF-09 | División mediante selección de productos. | La selección sólo ayuda a calcular; se persiste importe, no asignación histórica por líneas. |
 
-No quedan decisiones funcionales ni técnicas pendientes para iniciar construcción. EC-06, EC-07 y EC-08 permanecen cerradas.
+No quedan decisiones funcionales ni técnicas abiertas para construir el ajuste detectado en TP62. EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 define la representación mínima elegida. La construcción y revalidación de este ajuste aún no se han ejecutado.
 
 ## 6. Fuera de alcance
 

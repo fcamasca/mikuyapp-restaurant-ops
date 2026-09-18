@@ -12,10 +12,11 @@ La evolución es aditiva salvo el contrato de pago único, que debe transformars
 |---|---|
 | `caja` | Caja física: `id`, `local_id`, `codigo`, `nombre`, `activo`, timestamps; única por `(local_id,codigo)`. No representa un turno. |
 | `sesion_caja` | Un turno perteneciente a caja/local: `abierta_por`, `abierta_en`, `monto_inicial`, estado, y snapshots de cierre (`cerrada_por/en`, esperado, contado, diferencia, motivo_diferencia`). `abierta_por` es trazabilidad, no titularidad. Índice único parcial para una sesión `ABIERTA` por caja. |
-| `movimiento_caja` | Evento inmutable `ENTRADA`/`SALIDA`, sesión, importe positivo, motivo, actor, hora e idempotencia. No incluye cobros, que permanecen en `pago`. |
+| `movimiento_caja` | Evento inmutable `ENTRADA`/`SALIDA`, sesión, importe positivo, motivo, actor, hora e idempotencia. No incluye cobros, que permanecen en `cobro` + `pago`. |
 | `descuento_pedido` | Snapshot único vigente por pedido para esta evolución: tipo `IMPORTE`/`PORCENTAJE`, valor solicitado, subtotal base, importe aplicado, total neto, motivo, solicitante, autorizador y timestamps. |
-| `auditoria_caja` | Evento append-only específico: tipo, local, sesión/pedido/pago/movimiento opcionales, actor/autorizador, valores anteriores/nuevos acotados y hora. No reemplaza `historial_estado`. |
-| `pago` evolucionado | Eliminar unicidad por pedido; agregar `sesion_caja_id`, `idempotency_key`, `propina`, y mantener `importe` como monto aplicado a venta. Restricciones positivas/no negativas y unicidad idempotente por sesión/actor. |
+| `cobro` | Cabecera mínima e inmutable de un acto de cobro: `id`, pedido, sesión, actor, total aplicado, propina total derivable, saldo anterior/posterior, hora servidor e idempotencia única en su contexto. Agrupa uno o varios medios y origina un único documento/evento lógico. |
+| `auditoria_caja` | Evento append-only específico: tipo, local, sesión/pedido/cobro/pago/movimiento opcionales, actor/autorizador, valores anteriores/nuevos acotados y hora. No reemplaza `historial_estado`. |
+| `pago` evolucionado | Cada fila representa un medio dentro de un acto: agregar `cobro_id`, conservar sesión/actor/hora por compatibilidad y trazabilidad, `medio`, `importe` aplicado a venta y `propina` separada. Para filas nuevas `cobro_id` es obligatorio; las legacy pueden permanecer sin cabecera identificadas explícitamente. |
 
 No se propone una tabla genérica de “autorizaciones”: los únicos casos actuales son descuento y anulación, con semánticas diferentes. La autorización de descuento vive en `descuento_pedido`; la anulación se registra como evento de auditoría y transición de pedido. Tampoco se crea `cuenta`, `subcuenta`, `pago_detalle` ni contabilidad de doble partida.
 
@@ -73,40 +74,47 @@ RPC `anular_pedido_supervisado(p_pedido_id, p_motivo, p_idempotency_key)` exige 
 
 No modifica detalles ni elimina filas. Si existe cualquier pago confirmado, incluso parcial, rechaza la anulación. Sin pagos confirmados, la matriz definitiva permite `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO` y `ENTREGADO`; bloquea `PAGADO` y `ANULADO`. Para `EN_PREPARACION`, `LISTO` y `ENTREGADO`, la futura UI advertirá el impacto operativo antes de confirmar, sin cambiar la autorización PostgreSQL. La anulación completa por `ADMINISTRADOR` es distinta de la cancelación individual de productos por `MOZO` de Evolución 7. No se implementan reversos ni devoluciones.
 
-## D08. División y cobro transaccional
+## D08. Acto de cobro, medios y parciales
 
-La mínima definición útil de “dividir cuenta” es permitir varios pagos sobre un pedido. RPC conceptual `registrar_pago_pedido_v2(p_pedido_id, p_importe_aplicar, p_medio, p_propina, p_idempotency_key)`:
+La alternativa aprobada a partir de TP62 es una cabecera mínima `cobro` con N filas `pago`. Una cabecera representa una sola decisión/confirmación/documento; sus filas representan exclusivamente los medios utilizados. Es el menor cambio que ofrece agrupación persistente, atomicidad e idempotencia de todo el acto sin introducir `pago_detalle`, subcuentas ni asignación de productos.
 
-1. Valida `CAJA` activo y una sesión abierta de la caja en su mismo local; no exige que el actor sea `abierta_por`.
-2. Bloquea sesión y pedido en orden estable; valida `ENTREGADO` o estado interno equivalente de saldo pendiente, mesa `PENDIENTE_PAGO` y ausencia de anulación.
-3. Calcula subtotal, descuento, total neto, suma ya pagada y saldo.
-4. Exige `0 < importe_aplicar <= saldo`, propina `>= 0` y medio válido; nunca toma total/saldo del cliente.
-5. Inserta el pago con sesión e idempotencia.
-6. Si queda saldo, conserva pedido `ENTREGADO` y mesa pendiente; sólo si la suma de N pagos alcanza exactamente el total neto cambia a `PAGADO`, inserta `historial_estado` y libera mesa.
+RPC conceptual sustituta de `registrar_pago_pedido_v2`:
 
-Los medios de los N pagos son independientes y pueden repetirse. El modelo y la RPC deben aceptar tanto combinaciones mixtas (`EFECTIVO + YAPE`) como repetidas (`TARJETA + TARJETA`) y combinaciones de tres o más pagos (`EFECTIVO + YAPE + TARJETA + TARJETA`), manteniendo un actor propio por fila.
+`registrar_cobro_pedido(p_pedido_id, p_sesion_caja_id, p_tipo_cobro, p_medios jsonb, p_idempotency_key)`
+
+`p_tipo_cobro` admite `TOTAL` o `PARCIAL`. `p_medios` es una lista acotada de objetos `{medio, importe, propina}`; el cliente no envía actor, local, saldo, total neto, timestamps ni estados. El contrato devuelve cabecera de cobro, líneas persistidas, subtotal/descuento/neto, saldo anterior/posterior, estado de pedido/mesa e información necesaria para el único documento interno.
+
+1. Obtiene `auth.uid()`; exige `CAJA` activo, sesión abierta y pertenencia al mismo local.
+2. Bloquea exactamente `sesion_caja → pedido → mesa`; valida pedido `ENTREGADO`, mesa `PENDIENTE_PAGO` y ausencia de anulación.
+3. Resuelve subtotal/descuento/total neto, cobros anteriores y saldo vigente dentro de la transacción.
+4. Valida lista no vacía, medio permitido, cada `importe > 0`, cada `propina >= 0` y suma monetaria exacta con precisión de moneda. Medios repetidos son válidos.
+5. Para `TOTAL`, exige suma de importes igual al saldo. Para `PARCIAL`, exige `0 < suma < saldo`. Un faltante impide confirmar en UI y también es rechazado por servidor para `TOTAL`; exceso siempre se rechaza.
+6. Inserta una cabecera `cobro`, todas sus filas `pago` y un único evento lógico `PAGO` de auditoría. Cualquier fallo en una línea revierte el conjunto.
+7. Si el saldo posterior es positivo conserva pedido `ENTREGADO` y mesa pendiente. Si es cero cambia a `PAGADO`, registra una sola transición en `historial_estado` y libera mesa.
+
+Un cobro normal puede contener `EFECTIVO 20 + YAPE 24 + YAPE 20` y se confirma una sola vez por 64. `Cobrar una parte` crea otra cabecera independiente, aunque use uno o varios medios. Dos actos parciales producen dos documentos; varias líneas dentro de un mismo acto producen uno solo.
 
 La selección de productos o división por persona es sólo una calculadora en frontend que produce un importe sugerido; PostgreSQL acepta, valida y persiste únicamente el importe aplicado. No se persiste asignación histórica por líneas ni se crea `pago_detalle`. Esto cubre división por detalles, importe y múltiples medios sin subcuentas.
 
-La antigua `UNIQUE(pago.pedido_id)` se reemplaza por índices de consulta y unicidad de idempotencia. La garantía de no sobrepago queda en lock + suma transaccional + validación. El pago histórico existente se migra con propina cero y una asociación de sesión sólo si existe evidencia; no se inventará una sesión retroactiva. Puede mantenerse `sesion_caja_id NULL` únicamente para filas legacy y exigir `NOT NULL` a nuevas inserciones vía RPC/constraint aplicable.
+La idempotencia reside en `cobro`, no por línea: una clave repetida en el mismo contexto retorna la cabecera y el conjunto original. La antigua `UNIQUE(pago.pedido_id)` permanece reemplazada por índices de consulta; la garantía de no sobrepago queda en lock + suma transaccional + validación. Los pagos históricos se conservan exactamente, sin fabricar cabeceras ni sesiones; `cobro_id`/`sesion_caja_id NULL` sólo identifican legacy, mientras toda escritura nueva ocurre mediante la RPC y exige ambos vínculos.
 
 ## D09. Propina y documentos
 
-`pago.importe` continúa significando importe aplicado a venta; `propina` es columna separada. El desembolso total del cliente es `importe + propina`. La propina no reduce saldo ni aparece como venta; aparece separada por medio y se suma al efectivo esperado sólo cuando `medio='EFECTIVO'`.
+`pago.importe` continúa significando la parte de venta aportada por ese medio; `propina` es columna separada en la misma línea. El total del acto es la suma de importes y la propina total es la suma separada de sus líneas. La propina no reduce saldo ni aparece como venta; sólo importe y propina de líneas `EFECTIVO` incrementan el efectivo esperado.
 
-Cada pago parcial devuelve un recibo interno con aplicado, propina, medio y saldo. Al completar exactamente el total neto, el ticket consolidado lista subtotal, descuento, total neto, pagos, propinas y saldo cero. No se formula tratamiento fiscal.
+Cada cabecera `cobro` origina un único documento. Un acto parcial devuelve un recibo interno con total, medios, propinas y saldo posterior. El acto que completa el saldo devuelve un ticket consolidado que lista subtotal, descuento, total neto, cobros anteriores, detalle de medios/propinas y saldo cero. No se formula tratamiento fiscal.
 
 ## D10. Auditoría
 
-`historial_estado` se conserva para transiciones de pedido. `auditoria_caja` registra eventos de negocio financieros con un catálogo cerrado: apertura, entrada, salida, solicitud/autorización/rechazo de descuento, pago, anulación directa por administrador, cierre y cierre supervisor. No existe evento ni flujo de revocación de descuento en E1. Apertura, cada movimiento, cada pago, anulación y cierre conservan su actor propio; `abierta_por` y `cerrada_por` pueden ser distintos.
+`historial_estado` se conserva para transiciones de pedido. `auditoria_caja` registra eventos de negocio financieros con un catálogo cerrado: apertura, entrada, salida, solicitud/autorización/rechazo de descuento, pago, anulación directa por administrador, cierre y cierre supervisor. No existe evento ni flujo de revocación de descuento en E1. Cada acto de cobro produce un solo evento `PAGO`, referenciado a `cobro`, con total/saldo anterior/saldo posterior en columnas o snapshot acotado y detalle complementario de medios; no se generan N eventos lógicos por sus N líneas. Apertura, cada movimiento, cada cobro, anulación y cierre conservan su actor propio; `abierta_por` y `cerrada_por` pueden ser distintos.
 
 Los IDs, actores e importes principales se almacenan en columnas normalizadas; JSONB se usa únicamente para snapshots complementarios acotados por tipo de evento. La inserción ocurre dentro de cada RPC; los clientes no reciben privilegio de escritura. RLS permite lectura local según rol y jamás acceso cruzado.
 
 ## D11. Lecturas, reportes y Realtime
 
-Crear snapshots RPC de sesión activa, cierre/histórico y reporte. Derivan local desde contexto servidor. El reporte separa venta, propina, medios y efectivo; pagos parciales cuentan como pedido pagado sólo cuando el pedido llega a `PAGADO`, evitando inflar conteos.
+Crear snapshots RPC de sesión activa, cierre/histórico y reporte. Derivan local desde contexto servidor. El reporte suma las filas por medio, separa venta y propina, calcula efectivo sólo desde líneas `EFECTIVO` y cuenta el pedido una sola vez al llegar a `PAGADO`; `cobro` evita confundir N medios con N actos o duplicar venta.
 
-Como soporte técnico aditivo de T10, `obtener_pedidos_pendientes_pago_caja()` conserva sus campos H5 y añade `subtotal`, `descuento`, `total_neto`, `pagado_acumulado` y `saldo`, resueltos en PostgreSQL. Una lectura CAJA por pedido expone sus pagos confirmados, actor, medio, propina y saldo posterior. Una lectura operacional separada para `ADMINISTRADOR` presenta pedidos del mismo local en los estados relevantes para descuento/anulación, existencia de pagos y totales autoritativos; no concede capacidad de cobro.
+Como soporte técnico aditivo de T10, `obtener_pedidos_pendientes_pago_caja()` conserva sus campos H5 y añade `subtotal`, `descuento`, `total_neto`, `pagado_acumulado` y `saldo`, resueltos en PostgreSQL. Una lectura CAJA por pedido agrupa los cobros confirmados y expone para cada acto actor/hora/total/saldo posterior y sus líneas de medio/importe/propina. Una lectura operacional separada para `ADMINISTRADOR` presenta pedidos del mismo local en los estados relevantes para descuento/anulación, existencia de cobros y totales autoritativos; no concede capacidad de cobro.
 
 No publicar payload financiero como verdad. La opción mínima es conservar `pago` fuera de Realtime y hacer resync explícito después de comandos; para cambios de sesión/movimientos entre terminales, se pueden publicar tablas con RLS si la verificación confirma filtrado suficiente o usar una tabla de señales sin montos. La decisión técnica debe privilegiar no exponer importes por eventos. `pedido`/`mesa` siguen anunciando pago final.
 
@@ -114,13 +122,15 @@ No publicar payload financiero como verdad. La opción mínima es conservar `pag
 
 La cabecera fija indica caja, sesión, quién abrió, apertura, inicial y esperado; no presenta al abridor como propietario exclusivo. Sin sesión abierta, cobro y movimientos quedan deshabilitados y el foco es “Abrir caja”. Con sesión abierta, cualquier `CAJA` activo del local puede continuar y se priorizan pedidos pendientes/cobro; movimientos e historial quedan secundarios. Cierre presenta resumen y diferencia antes de confirmar y conserva quién cerró.
 
-Descuento muestra solicitante, autorización y motivo. Anulación muestra el administrador que la ejecutó, fecha/hora y motivo, sin solicitante/autorizador separados. Pago dividido muestra total neto, acumulado, N pagos y saldo, con protección doble clic y medios repetibles. La selección por detalles es una ayuda visual sin reasignar el modelo. Todos los conflictos refrescan el snapshot autoritativo y explican si otro usuario cerró, cobró o modificó la operación.
+Descuento muestra solicitante, autorización y motivo. Anulación muestra el administrador que la ejecutó, fecha/hora y motivo, sin solicitante/autorizador separados. En cobro normal, el objetivo es todo el saldo: se inicia con una línea de medio y `Agregar medio de pago` añade líneas con medio e importe, incluidos medios repetidos. La UI muestra total preparado, saldo objetivo, faltante/exceso y puede sugerir el remanente en la última línea; sólo habilita confirmación cuando la suma coincide exactamente. `Cobrar una parte` abre un modo explícito con total menor al saldo y puede usar la misma composición de medios.
+
+La confirmación única presenta pedido/mesa, total del acto, detalle de medios, propina, saldo posterior y aviso de liberación cuando corresponda. Sólo confirmar invoca la RPC; `Volver` no muta. Doble clic/request en curso queda bloqueado. Todo resync/Realtime invalida el borrador/modal y obliga a revisar el snapshot autoritativo. La selección por productos sigue siendo una calculadora separada y nunca representa medios ni persistencia por líneas.
 
 ## D13. Concurrencia y orden de bloqueos
 
 Orden recomendado: `caja` → `sesion_caja` → `pedido` → `mesa`; operaciones que no necesitan todos omiten los posteriores. Descuento/anulación/cobro bloquean pedido; cierre bloquea sesión antes de agregar totales; cobro bloquea sesión antes de pedido. Restricciones únicas/idempotencia complementan locks.
 
-Casos obligatorios: doble apertura/cierre/cobro, cobro vs cierre, cobro vs anulación, descuento vs cobro, reapertura vs primer pago, dos parciales sobre el mismo saldo y reintento después de timeout. Todo error revierte evento, auditoría y estados juntos.
+Casos obligatorios: doble apertura/cierre/cobro, dos cobros sobre el mismo saldo, cobro vs cierre, cobro vs anulación, descuento vs cobro, reapertura vs primer cobro, dos parciales sobre el mismo saldo, error en una línea y reintento del cobro completo después de timeout. Todo error revierte cabecera, todas las líneas, auditoría, historial y estados juntos.
 
 ## D14. Riesgos y compatibilidad
 
@@ -131,6 +141,8 @@ Casos obligatorios: doble apertura/cierre/cobro, cobro vs cierre, cobro vs anula
 | Auditoría genérica difícil de consultar. | Eventos cerrados y campos principales normalizados. |
 | PM-002 aún en transición. | DEV/Preview primero; ningún cambio remoto o cutover implícito. |
 | Histórico sin sesión. | Permitir legacy identificable; nunca fabricar asociación retroactiva. |
+| Confundir N medios con N cobros/documentos. | Cabecera `cobro` obligatoria para nuevas filas; lecturas y documentos agrupan por ella. |
+| Migración de idempotencia por fila a idempotencia de cobro. | Nueva unicidad en cabecera; RPC anterior deja de ser vía de escritura una vez migrados consumidores. |
 
 ## D15. Trazabilidad
 

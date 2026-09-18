@@ -2,7 +2,7 @@
 
 ## Estado
 
-**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. La construcción autorizada alcanzó **T03–T13**: la puerta técnica integral T13 aprobó TP01–TP61, replay limpio, SQL, seguridad, concurrencia, regresión H1–H6/PM-001, suite Node, `typecheck` y `build`. T14 y TP62–TP64 siguen pendientes de validación humana. Esto no implica aceptación de E1. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
+**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. La construcción previa alcanzó **T03–T13** y su evidencia histórica se conserva. Durante TP62 se aprobó homologar la diferencia entre acto de cobro, N medios dentro del acto y cobro parcial. Por ello T09–T13 requieren un delta de construcción/revalidación antes de reanudar T14; no se consideran inválidas las capacidades no afectadas. T14 y TP62–TP64 permanecen pausadas y E1 no está aceptada. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
 
 | ID | Unidad implementable | Dependencias | Resultado verificable | Requisitos / pruebas | Est. |
 |---|---|---|---|---|---:|
@@ -14,20 +14,20 @@
 | E1-T06 | **Completada técnicamente en local aislado.** Implementar `descuento_pedido` como snapshot autoritativo y la función PostgreSQL de subtotal, descuento y total neto, sin duplicar snapshots en `pedido`. | T02, T03 | Snapshot autorizado, motivo/actores y total neto servidor conforme a DT-01. Evidencia en `implementation-t06.md`. | R09–R10 / TP19–TP25 | 4 h |
 | E1-T07 | **Completada técnicamente en local aislado.** Implementar anulación directa por `ADMINISTRADOR`, con motivo, y bloqueo ante cualquier pago confirmado. | T02, T06 | Actor administrador, fecha/hora, estados anterior/nuevo, terminalidad, mesa e historial consistentes; sin solicitante/autorizador separados. Evidencia en `implementation-t07.md`. | R11–R12 / TP26–TP30 | 3 h |
 | E1-T08 | **Completada técnicamente en local aislado.** Evolucionar estructuralmente `pago` y migrar contrato legacy para múltiples filas, sesión, propina e idempotencia, conservando temporalmente el cobro total H5. | T03, T04 | Filas históricas preservadas sin sesión fabricada; pagos nuevos con sesión abierta, actor, propina e idempotencia; esquema preparado sin habilitar parciales. Evidencia en `implementation-t08.md`. | R13–R17 / aspectos estructurales/legacy de TP31–TP35 | 4 h |
-| E1-T09 | **Completada técnicamente en local aislado.** RPC definitiva de N pagos parciales/finales, medios distintos o repetidos, propinas, idempotencia y orden `sesion_caja → pedido → mesa`. | T05, T06, T08 | Sin sobrepago/doble cobro; cada pago conserva actor y pedido/mesa sólo terminan al completar exactamente el total neto. Evidencia en `implementation-t09.md`. | R13–R17 / TP31–TP47 aplicables | 5 h |
-| E1-T10 | **COMPLETADA técnicamente en frontend; TP62–TP64 permanecen como validación humana posterior.** Adaptar Caja para apertura/cierre, movimientos, descuentos, pagos divididos, propinas y documentos internos. | T04–T09 + lecturas PostgreSQL aditivas validadas | Flujo PC rápido, confirmaciones, conflictos, estados y responsive, sin reconstruir importes en React. Evidencia: `implementation-t10.md`. | R01–R18/R22 / TP35, TP45–TP48, TP59–TP64 | 7 h |
-| E1-T11 | **COMPLETADA técnicamente en PostgreSQL local aislado.** Consolidar auditoría financiera append-only, lectura autorizada y cobertura de todos los comandos. | T03–T09 | Reconstrucción completa por sesión/pedido; catálogo cerrado, sin revocación ni escritura cliente. Evidencia: `implementation-t11.md`. | R19–R20 / TP49–TP55 | 4 h |
-| E1-T12 | **COMPLETADA técnicamente en PostgreSQL local aislado y frontend.** Evolucionar resumen/reportes/exportación con sesiones, movimientos, descuentos, anulaciones, propinas y parciales. | T05–T11 | Totales conciliables y aislados por local, sin contabilidad general. Evidencia: `implementation-t12.md`. | R21 / TP56–TP58 | 4 h |
-| E1-T13 | **COMPLETADA técnicamente en local aislado.** Ejecutar seguridad, SQL, concurrencia, regresión H1–H6/PM-001, suite Node, `typecheck` y `build`; corregir defectos. | T03–T12 | TP01–TP61 aprobadas; replay final de 40 migraciones, carreras obligatorias, 303/303 Node y controles de compilación verdes. Evidencia: `implementation-t13.md`. | Todos / TP01–TP61 | 5 h |
-| E1-T14 | Ejecutar pruebas humanas en PC Caja, autorización Admin y responsive; documentar evidencia y solicitar aceptación. | T13, deployment Preview DEV | TP62–TP64 aprobadas; no crear aceptación sin aprobación explícita. | Todos / TP62–TP64 | 4 h |
+| E1-T09 | **Implementación previa completada; delta TP62 pendiente.** Evolucionar el contrato a una cabecera `cobro` con N filas `pago`, RPC atómica, idempotencia por acto y orden `sesion_caja → pedido → mesa`; preservar legacy y cobros parciales como actos separados. | T05, T06, T08 | Un cobro confirma todos sus medios o ninguno; no hay sobrepago, duplicación ni pérdida de trazabilidad. Actualizar evidencia T09 sin reescribir la histórica. | R13–R17 / TP31–TP47 aplicables | 5 h |
+| E1-T10 | **Implementación previa completada; delta TP62 pendiente.** Adaptar Caja para componer N medios dentro de un cobro normal/parcial, mostrar faltante/exceso y confirmar el acto una sola vez; mantener las demás capacidades existentes. | Delta T09 + lecturas agrupadas | Cobro normal cubre saldo completo; parcial es acto separado; confirmación/resync/documentos consumen snapshot servidor. | R13–R18/R22 / TP32–TP48, TP59–TP64 aplicables | 7 h |
+| E1-T11 | **Implementación previa completada; regresión delta pendiente.** Ajustar auditoría para un evento lógico por `cobro` y verificar inmutabilidad/aislamiento sin crear eventos nuevos. | Delta T09 | Reconstrucción por sesión/pedido/cobro con detalle de medios, sin N auditorías lógicas por un mismo acto. | R19–R20 / TP49–TP55 aplicables | 4 h |
+| E1-T12 | **Implementación previa completada; regresión delta pendiente.** Ajustar lecturas/reportes/exportación para agrupar por cobro y sumar cada fila por medio sin duplicar venta ni conteo de pedido. | Delta T09–T11 | Totales por medio, efectivo esperado, venta, propina y documentos concilian con cobros multi-medio. | R21 / TP56–TP58 aplicables | 4 h |
+| E1-T13 | **Puerta previa aprobada; nuevo checkpoint delta pendiente.** Repetir únicamente la puerta integral que invaliden el nuevo modelo/contrato de cobro, incluyendo migración, SQL, seguridad, concurrencia, Node, `typecheck` y `build`. | Deltas T09–T12 | Cobertura TP01–TP61 vigente sobre la versión final antes de volver a TP62. | Todos / TP afectados y TP61 | 5 h |
+| E1-T14 | **EN VALIDACIÓN HUMANA, pausada en TP62.** Reanudar pruebas humanas sólo después del nuevo checkpoint T13 y Preview DEV actualizado; documentar evidencia y solicitar aceptación. | Nuevo checkpoint T13, deployment Preview DEV | TP62–TP64 aprobadas; no crear aceptación sin aprobación explícita. | Todos / TP62–TP64 | 4 h |
 
 ## Dependencias y orden
 
 1. T01–T02 están completadas en Spec Mode; la construcción comienza en T03.
 2. T03–T04 establecen caja, sesión y apertura. T08 adelanta exclusivamente la estructura/compatibilidad legacy de `pago` necesaria para asociar cobros y propinas a sesión.
 3. T05 depende de T04 + T08 para calcular efectivo esperado y ejecutar TP18 cierre-vs-cobro sin inferencias por fecha.
-4. T06 define el total neto; T07 comparte locks/auditoría. T09 depende de T05 + T06 + T08 e implementa recién entonces N pagos/parciales y su concurrencia.
-5. T12 consume snapshots estabilizados. T13 precede toda prueba humana.
+4. T06 define el total neto; T07 comparte locks/auditoría. El delta T09 depende de T05 + T06 + T08 y agrega la identidad del acto de cobro, composición atómica de medios y parciales separados.
+5. El orden del ajuste es T09 (modelo/RPC/lecturas mínimas) → T10 (UI/documentos) → T11 (auditoría) → T12 (reportes) → T13 (checkpoint). T14/TP62 sólo se reanudan después.
 6. PM-002 `TRANSITIONING` condiciona el ambiente: construcción/verificación en DEV/Preview no habilita PROD ni modifica el plan de cutover.
 
 ## Estrategia de validación durante construcción
@@ -40,9 +40,21 @@ La cobertura final TP01–TP64 y el criterio de aceptación no cambian. Para evi
 4. La concurrencia con conexiones independientes se ejecuta únicamente cuando el plan de pruebas exige una carrera para la tarea.
 5. Los fingerprints completos de datos legacy sólo se repiten si la tarea modifica datos, esquema o contrato legacy.
 6. Se reutiliza una baseline local previamente validada para comprobaciones incrementales. El replay limpio desde las migraciones históricas se reserva para migraciones que lo requieran y para checkpoints.
-7. T08 tendrá validación reforzada de estructura y compatibilidad legacy porque modifica `pago`; no valida todavía N pagos/parciales, reservados a T09.
+7. La evidencia original de T08 conserva validez para estructura/compatibilidad legacy de `pago`; el delta T09 deberá repetir los invariantes legacy afectados por agregar `cobro_id`, sin fabricar cabeceras retroactivas.
 8. T09 será el checkpoint ampliado del núcleo financiero T03–T09.
 9. T13 conserva la puerta integral definitiva: TP01–TP61, SQL, seguridad, concurrencia, regresión H1–H6/PM-001, `typecheck` y `build`.
+
+## Ajuste detectado durante TP62
+
+El comportamiento construido trataba cada fila `pago` como un acto independiente. La decisión homologada exige que un acto pueda contener N medios y producir una sola confirmación/documento. El delta de T09–T13 deberá:
+
+1. agregar `cobro` y la relación `pago.cobro_id` mediante migración nueva, preservando pagos legacy sin fabricar agrupaciones;
+2. sustituir la escritura cliente por una RPC de cobro completo atómica e idempotente;
+3. mantener `Cobrar una parte` como otro acto, no como sinónimo de agregar un medio;
+4. ajustar lecturas, documentos, auditoría y reportes para agrupar por cobro;
+5. ejecutar sólo las regresiones invalidadas y terminar con el checkpoint integral aplicable antes de volver a T14.
+
+Esta homologación no autoriza implementación, migración ni despliegue. Las horas existentes se conservan como estimación aprobada de las unidades T01–T14; cualquier variación real del delta deberá estimarse al autorizar su construcción, sin alterar la referencia histórica de 30–40 horas.
 
 ## Estimación
 

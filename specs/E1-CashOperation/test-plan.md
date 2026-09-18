@@ -15,7 +15,7 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 - Las carreras usan conexiones independientes sólo cuando este plan las exige explícitamente para la tarea.
 - Los fingerprints completos de datos legacy sólo se repiten cuando la tarea altera datos, esquema o contrato legacy.
 - Las comprobaciones incrementales reutilizan una baseline local validada; el replay limpio completo se reserva para migraciones que lo requieran y checkpoints.
-- T08 refuerza estructura y compatibilidad legacy por modificar `pago`; los comportamientos de N pagos/parciales permanecen en T09, que es checkpoint ampliado del núcleo financiero T03–T09.
+- La evidencia original de T08 conserva estructura/compatibilidad legacy de `pago`; el delta T09 revalida sólo los invariantes afectados por `cobro_id` y la agrupación de medios, y vuelve a ser checkpoint ampliado del núcleo financiero.
 - T13 mantiene la puerta integral definitiva con TP01–TP61, SQL, seguridad, concurrencia, regresión H1–H6/PM-001, `typecheck` y `build`.
 
 ## 2. Matriz de pruebas técnicas
@@ -70,68 +70,68 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | ID | Requisitos | Caso | Resultado esperado |
 |---|---|---|---|
 | E1-TP31 | R13–R16 | Migración de pago legacy. | Filas/importes/medios/usuarios/fechas preservados; legacy identificable sin sesión inventada. |
-| E1-TP32 | R13–R16 | Pago total único (regresión H5). | Un pago, `PAGADO`, historial único, mesa `LIBRE`. |
-| E1-TP33 | R13–R16 | Dos pagos por importe y medios distintos. | Primer pago conserva `ENTREGADO`/pendiente; segundo completa y libera. |
-| E1-TP34 | R13–R16 | Dos pagos `TARJETA + TARJETA` sobre el mismo pedido. | Ambos medios repetidos son válidos; el primero deja saldo y el segundo sólo marca `PAGADO` si completa exactamente el neto. |
+| E1-TP32 | R13–R16 | Cobro total con un solo medio (regresión H5). | Una cabecera, una línea, una auditoría/documento lógico; pedido `PAGADO`, historial único y mesa `LIBRE`. |
+| E1-TP33 | R13–R16 | Un cobro total `EFECTIVO + YAPE`. | Dos líneas pertenecen al mismo `cobro`; una confirmación atómica completa el saldo, genera un documento y libera la mesa. |
+| E1-TP34 | R13–R16 | Un cobro total `YAPE + YAPE`. | El medio repetido es válido; dos líneas comparten cabecera y la suma exacta completa el pedido en un solo acto. |
 | E1-TP35 | R13 | División por selección de productos. | UI calcula importe; servidor valida monto, sin mover/duplicar detalles. |
-| E1-TP36 | R13–R16 | Cuatro pagos `EFECTIVO + YAPE + TARJETA + TARJETA`, incluyendo redondeo. | Los medios distintos/repetidos son válidos; N filas conservan actor y el saldo llega exactamente a cero sin sobrepago. |
-| E1-TP37 | R14 | Importe cero/negativo/mayor al saldo. | Rechazo servidor sin pago/auditoría. |
-| E1-TP38 | R14–R16 | Doble cobro concurrente del saldo final. | Uno confirma; otro observa saldo cero/terminal; no duplica. |
-| E1-TP39 | R14–R16 | Dos pagos parciales concurrentes cuya suma excedería saldo. | Serialización; sólo montos compatibles confirman. |
-| E1-TP40 | R15 | Doble clic/reintento con idempotency key. | Mismo pago devuelto; una fila/evento. |
+| E1-TP36 | R13–R16 | Un cobro con tres o más líneas `EFECTIVO + YAPE + TARJETA + TARJETA`, incluyendo redondeo. | Medios distintos/repetidos son válidos; N líneas comparten una cabecera/actor/documento y el saldo llega exactamente a cero. |
+| E1-TP37 | R13–R15 | Validación y atomicidad de líneas: cero/negativo, lista vacía, medio inválido, suma menor para `TOTAL`, suma mayor al objetivo o fallo inducido en una línea. | Faltante no habilita confirmación y servidor lo rechaza para `TOTAL`; exceso/entrada inválida se rechaza; cero cabecera, líneas, auditoría, historial o estado parcial. |
+| E1-TP38 | R14–R16 | Dos cobros concurrentes sobre el mismo saldo final. | Uno confirma completo; el otro recalcula saldo cero/terminal y falla sin cabecera ni líneas huérfanas. |
+| E1-TP39 | R14–R16 | Dos actos parciales concurrentes cuya suma excedería saldo. | Serialización; sólo totales compatibles confirman y cada ganador conserva su agrupación/documento independiente. |
+| E1-TP40 | R15 | Doble clic/retry por timeout con la misma idempotency key de cobro. | Devuelve la misma cabecera y exactamente las mismas N líneas; una auditoría, transición y documento lógico, sin duplicados. |
 | E1-TP41 | R16 | Reapertura H5 antes de cualquier pago. | Sigue permitida y recorre cocina/entrega. |
 | E1-TP42 | R16 | Reapertura o mutación después del primer parcial. | Rechazada; saldo y detalles conservados. |
-| E1-TP43 | R03/R14–R16 | Cobro con sesión cerrada, otra caja u otro local; y cobro por Cajero B en sesión abierta por A. | Los tres primeros se rechazan; Cajero B puede cobrar en la misma caja/local y el pago registra B como actor. |
+| E1-TP43 | R03/R14–R16 | Cobro con sesión cerrada, otra caja u otro local; y cobro por Cajero B en sesión abierta por A. | Los tres primeros se rechazan sin filtrar datos; Cajero B puede cobrar en la misma caja/local y cabecera/líneas registran B como actor. |
 | E1-TP44 | R14–R16 | Cobro y cierre concurrentes. | Uno obtiene lock; ningún pago queda asociado a sesión ya cerrada. |
-| E1-TP45 | R17 | Pago con propina cero/positiva. | Venta y propina separadas; saldo sólo baja por importe. |
-| E1-TP46 | R17 | Propina negativa o importe+propina manipulado. | Rechazo/recálculo servidor; no se confía en total cliente. |
-| E1-TP47 | R17 | Propina efectivo vs electrónica. | Sólo propina efectivo aumenta efectivo esperado; reportes separan medios. |
-| E1-TP48 | R18 | Recibos parciales y ticket consolidado. | Aplica DF-06; muestra subtotal, descuento, pagos, propinas y saldo sin declararse fiscal. |
+| E1-TP45 | R17 | Cobro multi-medio con propina cero/positiva asociada a sus líneas. | Venta y propina permanecen separadas; saldo sólo baja por suma de importes y la propina total concilia con sus líneas. |
+| E1-TP46 | R17 | Propina negativa o totales de importe/propina manipulados. | Rechazo/recálculo servidor; no se confía en totales enviados por cliente. |
+| E1-TP47 | R05/R17/R21 | Cobro con líneas efectivo y electrónicas. | Efectivo esperado incorpora sólo importes/propinas `EFECTIVO`; reportes suman cada medio y no duplican la venta del cobro. |
+| E1-TP48 | R13–R18 | Documentos por acto: total multi-medio, parcial y dos parciales sucesivos. | Un cobro multi-medio genera un solo documento con todas sus líneas; cada parcial genera su recibo independiente; el acto final genera ticket consolidado sin declararse fiscal. |
 
 ### Auditoría, seguridad y aislamiento
 
 | ID | Requisitos | Caso | Resultado esperado |
 |---|---|---|---|
-| E1-TP49 | R19 | Reconstrucción de sesión compartida completa. | Apertura por A, movimientos/pagos por A y B, autorizaciones, anulación directa y cierre por B aparecen en orden con cada actor/hora. |
+| E1-TP49 | R19 | Reconstrucción de sesión compartida completa. | Apertura por A, movimientos/cobros por A y B, medios agrupados por acto, autorizaciones, anulación directa y cierre por B aparecen en orden con cada actor/hora. |
 | E1-TP50 | R19 | Valores anteriores/nuevos de descuento/anulación/cierre. | Snapshots suficientes y consistentes con tablas de dominio. |
 | E1-TP51 | R19–R20 | Cliente intenta INSERT/UPDATE/DELETE directo. | Denegado por privilegios/RLS; RPC única vía de escritura. |
 | E1-TP52 | R19–R20 | Manipulación de local/sesión/pedido IDs. | Sin lectura/escritura cruzada; respuesta no filtra datos. |
 | E1-TP53 | R20 | Intento de borrar actor/caja/pedido referenciado. | `ON DELETE RESTRICT` conserva trazabilidad. |
-| E1-TP54 | R19–R20 | Error a mitad de RPC. | Dominio y auditoría revierten juntos; cero huérfanos. |
+| E1-TP54 | R19–R20 | Error a mitad de RPC, incluida una línea intermedia de un cobro multi-medio. | Cabecera, todas las líneas, dominio y auditoría revierten juntos; cero huérfanos. |
 | E1-TP55 | R19–R20 | Funciones/owners/search_path/grants/policies. | `SECURITY DEFINER` endurecido; `PUBLIC`/`anon` revocados; mínimo privilegio. |
 
 ### Reportes, regresión y responsive
 
 | ID | Requisitos | Caso | Resultado esperado |
 |---|---|---|---|
-| E1-TP56 | R21 | Reporte de sesión con todos los conceptos. | Apertura, medios, entradas/salidas, esperado, diferencia, descuentos, anulaciones, propinas y parciales concilian. |
-| E1-TP57 | R21 | Resumen diario con parciales. | Importes se reflejan correctamente; conteo de pedido se realiza una vez al completar. |
+| E1-TP56 | R21 | Reporte de sesión con cobro multi-medio y todos los conceptos. | Apertura, cada medio, entradas/salidas, esperado, diferencia, descuentos, anulaciones, propinas y parciales concilian; venta no se duplica por agrupación. |
+| E1-TP57 | R21 | Resumen diario con cobros multi-medio y parciales. | Cada medio suma su parte, cada acto conserva identidad y el pedido se cuenta una sola vez al completar. |
 | E1-TP58 | R21 | Fecha Lima, dos locales y exportación. | Corte `America/Lima`, aislamiento y CSV coherente. |
 | E1-TP59 | R22 | UI sin caja abierta, vacía, cargando, error y reintento. | Estado inequívoco; acciones financieras deshabilitadas. |
-| E1-TP60 | R22 | Doble clic y respuesta obsoleta en todas las acciones sensibles. | Botones bloqueados y snapshot refrescado; sin falso éxito. |
-| E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build y verificaciones de seguridad/concurrencia previstas en las tareas. | Cobro total actual, entrega, terminalidad, reportes, RLS, Realtime e invariantes concurrentes sin regresión. |
+| E1-TP60 | R22 | Confirmación única, doble clic y respuesta obsoleta. | Clic inicial no invoca RPC; `Volver` no registra; confirmar ejecuta una vez; Realtime/resync invalida saldo/composición obsoletos y obliga a revisar. |
+| E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build y verificaciones de seguridad/concurrencia previstas en las tareas. | Cobro total de uno/N medios, entrega, terminalidad, reportes, RLS, Realtime e invariantes concurrentes sin regresión. |
 
 ## 3. Pruebas humanas
 
 | ID | Escenario | Evidencia requerida |
 |---|---|---|
-| E1-TP62 | Jornada de Caja en PC: abrir, cobro efectivo/electrónico, entrada, **salida**, parcial, propina, cierre con y sin diferencia. | Capturas/registro; esperado y arqueo conciliados; tiempos/pasos aceptables. |
+| E1-TP62 | Jornada de Caja en PC: abrir, cobro total de uno y varios medios (incluido repetido), `Cobrar una parte`, dos actos parciales, propina, entrada, **salida** y cierre con/sin diferencia. | Capturas/registro; composición/confirmación/documento por acto inequívocos, esperado y arqueo conciliados, tiempos/pasos aceptables. Permanece pausada hasta construir y desplegar el ajuste. |
 | E1-TP63 | Descuento solicitado por `CAJA` y autorizado por `ADMINISTRADOR`; anulación ejecutada directamente por `ADMINISTRADOR`, incluidos rechazos. | Descuento conserva solicitante/autorizador; anulación conserva únicamente actor administrador, motivo, fecha/hora y efectos en pedido/mesa/reportes. |
 | E1-TP64 | Responsive aplicable: Caja PC principal, tablet como contingencia y regresión del flujo de mozo/cocina. | Acciones críticas visibles sin solapamiento; flujo mesa→pago y Realtime conservados. |
 
 ## 4. Datos y concurrencia
 
-Fixtures mínimos: dos locales; dos cajas; dos usuarios `CAJA`; un `ADMINISTRADOR`; `MOZO`/`COCINA`; sesiones abiertas/cerradas; pedidos en cada estado; descuentos; pagos legacy, parciales y finales; movimientos; propinas. Los fixtures se crean y limpian en transacciones o procedimientos aprobados sólo en DEV.
+Fixtures mínimos: dos locales; dos cajas; dos usuarios `CAJA`; un `ADMINISTRADOR`; `MOZO`/`COCINA`; sesiones abiertas/cerradas; pedidos en cada estado; descuentos; pagos legacy sin cabecera; cobros de uno/N medios, parciales y finales; movimientos; propinas. Los fixtures se crean y limpian en transacciones o procedimientos aprobados sólo en DEV.
 
 Las pruebas concurrentes usarán conexiones/sesiones distintas y barreras reproducibles; no se simulará concurrencia sólo con llamadas secuenciales. Después de cada caso se verifican conteos, sumas, estados, locks liberados, auditoría y ausencia de residuos.
 
-Para el orden técnico corregido, T08 valida únicamente los aspectos estructurales/legacy aplicables de TP31–TP35: preservación exacta de pagos históricos, ausencia de sesiones retroactivas, columnas/constraints/índices/grants nuevos, asociación de todo pago nuevo con sesión abierta, propina separada, idempotencia y regresión del cobro total H5 modificado. Eliminar la unicidad por pedido prepara el modelo, pero T08 no habilita ni declara aprobados N pagos, pagos parciales, división operativa o selección por productos; esos comportamientos permanecen en T09/T10.
+La evidencia original de T08 valida los aspectos estructurales/legacy entonces aplicables de TP31–TP35: preservación exacta de pagos históricos, ausencia de sesiones retroactivas, columnas/constraints/índices/grants, asociación de pagos nuevos con sesión abierta, propina separada e idempotencia por fila. El delta T09 debe revalidar preservación exacta al introducir `cobro_id`, permitir `NULL` sólo para legacy y demostrar que no fabrica cabeceras retroactivas. La idempotencia por acto y la composición de N medios corresponden al nuevo contrato T09/T10.
 
 ## 5. Criterio de aprobación
 
 - DF-01–DF-04 y DF-06–DF-09 aprobadas y reflejadas en el spec; EC-06–EC-08 conservadas como decisiones cerradas.
 - TP01–TP61 automatizadas/técnicas aprobadas y TP62–TP64 aprobadas humanamente.
-- Cero sobrepago, doble apertura/cierre/cobro, acceso cruzado o auditoría faltante.
+- Cero sobrepago, doble apertura/cierre/cobro, cobro multi-medio parcial, acceso cruzado o auditoría faltante; idempotencia por acto y atomicidad de todas sus líneas.
 - Regresión vigente completa, migraciones local/DEV alineadas y defectos no bloqueantes clasificados.
 - Ninguna aceptación se crea hasta aprobación explícita del usuario.
 
@@ -218,6 +218,8 @@ La idempotencia devolvió la misma anulación sin duplicar historial ni auditor�
 No se ejecutaron las 305 pruebas Node, `typecheck` ni `build`: T07 modificó exclusivamente SQL, pruebas SQL y documentación. Tampoco se repitieron suites sin relación directa ni pruebas ya aprobadas cuyos contratos no cambiaron.
 
 ## 11. Evidencia incremental de E1-T09
+
+> **Evidencia histórica previa al ajuste TP62.** Los resultados siguientes demuestran la seguridad del contrato de pagos sucesivos construido, pero no validan todavía la nueva agrupación `cobro` + N medios. TP32–TP40 y TP43–TP48 deben revalidarse en su redacción vigente; TP31 se repite sólo para invariantes legacy afectados. Esta sección no autoriza considerar completado el delta.
 
 Replay limpio de 35 migraciones aprobado. El constraint conserva todos los eventos anteriores y añade `PAGO`; la RPC bloquea `sesion_caja → pedido → mesa`.
 
