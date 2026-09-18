@@ -112,7 +112,8 @@ begin
 
   if v_privilege_fingerprint not in (
     'd64f59917898b2943d5119205d55e110', -- baseline DBSTD/T03
-    '528f39f284ac3a065afca5154425dd8c'  -- pago evolucionado por E1
+    '528f39f284ac3a065afca5154425dd8c', -- pago evolucionado por E1
+    'f07c29578a5acb8bbb10c0e296873d93'  -- pago con vínculo/orden de cobro E1 DT-02
   ) then
     raise exception 'DBSTD-TP14 grants de tablas o columnas cambiaron: %',
       v_privilege_fingerprint;

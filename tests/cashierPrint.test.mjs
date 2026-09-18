@@ -20,9 +20,10 @@ test("TP48 distingue recibo parcial y ticket consolidado", () => {
   ])
     assert.match(page, new RegExp(x));
 });
-test("documento consolida pagos confirmados sin detalle persistido", () => {
+test("documento consolida cobros y sus N medios sin detalle persistido", () => {
   assert.match(page, /payments/);
-  assert.match(page, /Pago #/);
+  assert.match(page, /Cobro \{x\.chargeId\.slice/);
+  assert.match(page, /x\.lines\.map/);
   assert.doesNotMatch(page, /pago_detalle|subcuenta|subpedido/);
 });
 test("impresión conserva overlay y oculta acciones", () => {

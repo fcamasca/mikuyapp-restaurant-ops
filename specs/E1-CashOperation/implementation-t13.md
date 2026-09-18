@@ -1,16 +1,16 @@
 # E1 — Entrega parcial de construcción: T13
 
-Fecha: 2026-09-17. No constituye aceptación de E1.
+Fecha de revalidación delta: 2026-09-18. No constituye aceptación de E1.
 
 E1-T13 queda **COMPLETADA técnicamente en PostgreSQL local aislado y frontend**. TP62–TP64 y T14 permanecen pendientes de validación humana.
 
 ## Replay, regresión y seguridad
 
-- Replay limpio final: 40 migraciones ordenadas y `supabase/seed.sql`, sobre `mikuyapp-e1-t09-validation-20260914/e1_t13_48dff1ad25f3420d89653aa6252774be` (PostgreSQL 17, red `none`, sin bind mounts).
+- Replay limpio final del delta: 43 migraciones ordenadas y `supabase/seed.sql`, sobre `mikuyapp-e1-t09-validation-20260914/e1_t13_afcb03139d6247569824d3443ca43a36` (PostgreSQL 17, red `none`, sin bind mounts).
 - Migraciones históricas: intactas. Las correcciones se añadieron como `20260917000300_e1_t13_trigger_pago_security.sql` y `20260917000400_e1_t13_auditoria_orden.sql`.
 - Regresión SQL: H1–H6/PM-001 y E1 T03–T12 aprobadas sobre el contrato correspondiente; T03 se comprobó además con su runner histórico aislado.
 - Seguridad final: cero funciones `SECURITY DEFINER` públicas con owner/search path inseguro; cero ejecuciones financieras concedidas a `anon`; RLS, grants, FKs y atomicidad aprobados; cero conexiones T13 residuales.
-- Aplicación: 303/303 pruebas Node/React; `npm run typecheck` y `npm run build` aprobados. El build sólo advirtió sobre tamaño de chunk. No existe script/dependencia de lint.
+- Aplicación: 311/311 pruebas Node/React; `npm run typecheck` y `npm run build` aprobados. El build sólo advirtió sobre tamaño de chunk. No existe script/dependencia de lint.
 
 ## Carreras reales
 

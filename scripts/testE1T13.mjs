@@ -49,8 +49,9 @@ const migrations = readdirSync(resolve(root, 'supabase/migrations'))
 for (const migration of migrations) file(`supabase/migrations/${migration}`);
 file('supabase/seed.sql');
 
-assert.equal(migrations.at(-1), '20260917000400_e1_t13_auditoria_orden.sql');
+assert.equal(migrations.at(-1), '20260918000300_e1_delta_t12_reportes_cobro.sql');
 assert.match(sql("select pg_get_functiondef('public.tgf_bloquear_detalle_pedido_con_pago()'::regprocedure)"), /security definer/i);
-assert.match(sql("select pg_get_functiondef('public.rpc_registrar_pago_pedido_v2(bigint,uuid,numeric,text,numeric,uuid)'::regprocedure)"), /sesion_caja[\s\S]*for update[\s\S]*pedido[\s\S]*for update[\s\S]*mesa[\s\S]*for update/i);
-console.log(`PASS replay limpio final ${migrations.length} migraciones; seed aplicado; correcciones T13 presentes.`);
+assert.match(sql("select pg_get_functiondef('public.rpc_registrar_cobro_pedido(bigint,uuid,text,jsonb,uuid)'::regprocedure)"), /sesion_caja[\s\S]*for update[\s\S]*pedido[\s\S]*for update[\s\S]*mesa[\s\S]*for update/i);
+assert.match(sql("select pg_get_functiondef('public.rpc_registrar_pago_pedido_v2(bigint,uuid,numeric,text,numeric,uuid)'::regprocedure)"), /rpc_registrar_cobro_pedido/i);
+console.log(`PASS replay limpio final ${migrations.length} migraciones; seed aplicado; delta T09-T13 presente.`);
 console.log(`DATABASE=${database}`);

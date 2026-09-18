@@ -20,3 +20,6 @@ Entorno: contenedor local aislado `mikuyapp-e1-t09-validation-20260914`, base de
 El primer intento de TP49/TP50 informó una aserción genérica y no reprodujo al repetirla. Se mejoró exclusivamente el diagnóstico del fixture; no hubo defecto productivo ni cambio de migración. El runner se corrigió para clonar una baseline local validada y aplicar sólo T11 en ejecuciones futuras.
 
 No se ejecutaron la suite Node integral, `typecheck`, `build`, TP62–TP64 ni la regresión integral T13. No se inició T12, no se tocaron ambientes alojados, PM-002 ni `PLAN_MVP.md`, y no hubo commit, push o merge.
+# Delta homologado de auditoría por cobro — 2026-09-18
+
+Cada `cobro` nuevo produce exactamente un evento lógico `PAGO` con referencia a la cabecera y snapshot JSONB complementario de sus medios. Las filas históricas permanecen válidas sin cabecera fabricada. Se verificaron FK `RESTRICT`, índice único por cobro, inserción dentro de la RPC atómica e inexistencia de escritura directa por clientes. No se añadieron eventos ni revocación de descuentos.

@@ -78,11 +78,11 @@ test("consume importes autoritativos sin reconstruir neto o saldo", () => {
     [100, 20, 80, 30, 50],
   );
   assert.match(serviceSource, /obtener_pedidos_pendientes_pago_caja/);
-  assert.match(serviceSource, /rpc_obtener_pagos_pedido_caja/);
+  assert.match(serviceSource, /rpc_obtener_cobros_pedido_caja/);
   assert.doesNotMatch(page, /selected\.subtotal\s*-/);
   assert.doesNotMatch(page, /selected\.netTotal\s*-/);
 });
-test("registra pago v2 con sesión importe medio propina e idempotencia", async () => {
+test("registra un cobro atómico con N medios, propinas e idempotencia", async () => {
   const calls = [];
   const client = {
     rpc: async (name, args) => {
@@ -90,21 +90,23 @@ test("registra pago v2 con sesión importe medio propina e idempotencia", async 
       return {
         data: [
           {
-            pago_id: 7,
+            cobro_id: "c1",
             pedido_id: 10,
             pedido_estado: "ENTREGADO",
             mesa_id: "m1",
             mesa_estado: "PENDIENTE_PAGO",
-            importe: "20",
-            propina: "2",
-            medio: "TARJETA",
-            sesion_caja_id: "s1",
-            pagado_en: "2026-01-01",
+            total_aplicado: "20",
+            propina_total: "2",
+            medios: [
+              { pago_id: 7, orden: 1, medio: "TARJETA", importe: 10, propina: 2 },
+              { pago_id: 8, orden: 2, medio: "TARJETA", importe: 10, propina: 0 },
+            ],
+            cobrado_en: "2026-01-01",
             subtotal: "100",
             descuento: "20",
             total_neto: "80",
             ya_pagado: "50",
-            saldo: "30",
+            saldo_posterior: "30",
           },
         ],
         error: null,
@@ -118,20 +120,25 @@ test("registra pago v2 con sesión importe medio propina e idempotencia", async 
     context,
     10,
     "s1",
-    20,
-    "TARJETA",
-    2,
+    "PARCIAL",
+    [
+      { method: "TARJETA", amount: 10, tip: 2 },
+      { method: "TARJETA", amount: 10, tip: 0 },
+    ],
     "key",
   );
   assert.equal(r.ok, true);
   assert.equal(r.data.balance, 30);
-  assert.equal(calls[0].name, "rpc_registrar_pago_pedido_v2");
+  assert.equal(r.data.lines.length, 2);
+  assert.equal(calls[0].name, "rpc_registrar_cobro_pedido");
   assert.deepEqual(calls[0].args, {
     p_pedido_id: 10,
     p_sesion_caja_id: "s1",
-    p_importe_aplicar: 20,
-    p_medio: "TARJETA",
-    p_propina: 2,
+    p_tipo_cobro: "PARCIAL",
+    p_medios: [
+      { medio: "TARJETA", importe: 10, propina: 2 },
+      { medio: "TARJETA", importe: 10, propina: 0 },
+    ],
     p_idempotency_key: "key",
   });
 });
@@ -171,7 +178,7 @@ test("administración queda en shell admin sin capacidad de cobro", () => {
     "No elegible",
   ])
     assert.match(admin, new RegExp(text));
-  assert.doesNotMatch(admin, /registerPayment|rpc_registrar_pago_pedido_v2/);
+  assert.doesNotMatch(admin, /registerPayment|rpc_registrar_cobro_pedido/);
   assert.match(serviceSource, /rpc_obtener_pedidos_operacion_admin/);
   assert.match(serviceSource, /rpc_decidir_descuento_pedido/);
   assert.match(serviceSource, /anular_pedido_supervisado/);
@@ -189,7 +196,7 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
     "Productos del pedido",
     "Cobro",
     "pago realizado",
-    "Medio de pago",
+    "Agregar medio de pago",
   ]) assert.match(page, new RegExp(text));
 
   assert.match(page, /const fieldClass =/);
@@ -202,12 +209,14 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
   assert.doesNotMatch(page, /overflow-x-(?:auto|scroll)/);
 });
 
-test("TP62 UX prioriza saldo completo y revela excepciones bajo demanda", () => {
+test("TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demanda", () => {
   assert.match(page, /paymentToApply = partialMode \? partialAmount : \(selected\?\.balance \?\? 0\)/);
-  assert.match(page, /`Cobrar \$\{money\.format\(selected\.balance\)\}`/);
+  assert.match(page, /`Preparar cobro · \$\{money\.format\(selected\.balance\)\}`/);
   assert.match(page, /partialMode && <label[^>]*>Importe de esta parte/);
   assert.match(page, /Cobrar una parte/);
-  assert.match(page, /tipMode && <label[^>]*>Propina/);
+  assert.match(page, /Agregar medio de pago/);
+  assert.match(page, /paymentLines\.map/);
+  assert.match(page, /tipMode && <label[^>]*>Propina de este medio/);
   assert.match(page, /moreOptions && <div/);
   assert.match(page, /selectable=\{divideMode\}/);
   assert.match(page, /suggested > selected\.balance/);
@@ -223,7 +232,7 @@ test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
     "setPartialMode(false)",
     'setPaymentAmount("")',
     "setTipMode(false)",
-    'setTip("0")',
+    'setPaymentLines([{ method: "EFECTIVO", amount: "", tip: "0" }])',
     "setDivideMode(false)",
     "setSelectedLines(new Set())",
     "setDiscountMode(false)",
@@ -251,8 +260,8 @@ test("TP62 cobro prepara una confirmación y no invoca la RPC desde el formulari
   assert.match(page, /Confirmar cobro/);
 });
 
-test("TP62 modal resume el cobro total y parcial antes de registrar", () => {
-  for (const text of ["Mesa", "Pedido", "Importe", "Medio", "Propina", "Saldo actual", "Volver"])
+test("TP62 modal resume el cobro total, parcial y sus medios antes de registrar", () => {
+  for (const text of ["Mesa", "Pedido", "Importe", "Medios de pago", "Propina", "Saldo actual", "Volver"])
     assert.match(page, new RegExp(`>${text}<`));
   assert.match(page, /Este cobro completará el pedido y liberará la mesa\./);
   assert.match(page, /Después del pago quedará un saldo de/);
@@ -262,7 +271,8 @@ test("TP62 modal resume el cobro total y parcial antes de registrar", () => {
 test("TP62 confirmar registra una sola vez y Volver no registra", () => {
   assert.match(page, /if \(pending\.current\) return;/);
   assert.match(page, /disabled=\{busy\}[\s\S]*onClick=\{closePaymentConfirmation\}[\s\S]*>Volver<\/button>/);
-  assert.match(page, /disabled=\{busy\}[\s\S]*service\.registerPayment\(context, confirmation\.orderId/);
+  assert.match(page, /disabled=\{busy\}[\s\S]*service\.registerPayment\([\s\S]*confirmation\.orderId/);
+  assert.match(page, /confirmation\.lines\.map/);
   assert.match(page, /busy \? "Registrando cobro…"/);
 });
 

@@ -23,3 +23,6 @@ La vista existente `/ventas` evolucionó a reportes operativos: muestra resumen 
 Entorno: contenedor local aislado `mikuyapp-e1-t09-validation-20260914`, base `e1_t11_validation_20260917`, previamente validada hasta T11. Se aplicó T12 una vez; no se repitieron replay integral, suites SQL T03–T11, regresión integral T13 ni TP62–TP64.
 
 No se iniciaron T13–T14, no se modificaron `PLAN_MVP.md`, PM-002 ni ambientes alojados, y no hubo commit, push o merge.
+# Delta homologado de reportes por cobro — 2026-09-18
+
+Los reportes conservan el desglose monetario por cada fila `pago`, pero cuentan el acto una sola vez mediante `cobro` y cuentan cada pedido completado una sola vez. La compatibilidad legacy mantiene la semántica previa para filas sin cabecera. Las pruebas conciliaron un cobro EFECTIVO + YAPE de 100, propinas por 10, `cantidad_pagos = 1`, cero parciales y un pedido completado tanto por sesión como en el resumen diario.

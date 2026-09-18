@@ -49,15 +49,22 @@ export interface CashierPendingOrder {
   paid: number;
   balance: number;
 }
-export interface PersistedPayment {
+export interface PaymentMediumLine {
   paymentId: number;
+  order: number;
+  amount: number;
+  tip: number;
+  method: PaymentMethodCode;
+}
+export interface PersistedPayment {
+  chargeId: string;
   orderId: number;
   orderStatus: "ENTREGADO" | "PAGADO";
   tableId: string;
   tableStatus: "PENDIENTE_PAGO" | "LIBRE";
   amount: number;
   tip: number;
-  method: PaymentMethodCode;
+  lines: readonly PaymentMediumLine[];
   paidAt: string;
   subtotal: number;
   discount: number;
@@ -66,10 +73,11 @@ export interface PersistedPayment {
   balance: number;
 }
 export interface PaymentHistory {
-  paymentId: number;
+  chargeId: string;
+  chargeType: "TOTAL" | "PARCIAL";
   amount: number;
-  method: PaymentMethodCode;
   tip: number;
+  lines: readonly PaymentMediumLine[];
   actorName: string;
   paidAt: string;
   subtotal: number;
@@ -255,7 +263,7 @@ export function createCashierService(client: Client) {
     async getPayments(c: ValidatedProfileContext, id: number) {
       if (!allow(c, ["CAJA"])) return fail("No autorizado.");
       const r = await rpc<Record<string, unknown>[]>(
-        "rpc_obtener_pagos_pedido_caja",
+        "rpc_obtener_cobros_pedido_caja",
         { p_pedido_id: id },
       );
       return r.ok
@@ -337,21 +345,19 @@ export function createCashierService(client: Client) {
       c: ValidatedProfileContext,
       id: number,
       sid: string,
-      amount: number,
-      method: PaymentMethodCode,
-      tip: number,
+      chargeType: "TOTAL" | "PARCIAL",
+      paymentLines: readonly Omit<PaymentMediumLine, "paymentId" | "order">[],
       key: string,
     ): Promise<CashierResult<PersistedPayment>> {
-      if (!allow(c, ["CAJA"]) || !methods.has(method))
+      if (!allow(c, ["CAJA"]) || paymentLines.length === 0 || paymentLines.some((line) => !methods.has(line.method)))
         return fail("Pago inválido.");
       const r = await rpc<Record<string, unknown>[]>(
-        "rpc_registrar_pago_pedido_v2",
+        "rpc_registrar_cobro_pedido",
         {
           p_pedido_id: id,
           p_sesion_caja_id: sid,
-          p_importe_aplicar: amount,
-          p_medio: method,
-          p_propina: tip,
+          p_tipo_cobro: chargeType,
+          p_medios: paymentLines.map((line) => ({ medio: line.method, importe: line.amount, propina: line.tip })),
           p_idempotency_key: key,
         },
       );
@@ -441,34 +447,46 @@ const summary = (x: Record<string, unknown>): SessionSummary => ({
   salidas: Number(x.salidas),
 });
 const payment = (x: Record<string, unknown>): PersistedPayment => ({
-  paymentId: Number(x.pago_id),
+  chargeId: String(x.cobro_id),
   orderId: Number(x.pedido_id),
   orderStatus: x.pedido_estado as PersistedPayment["orderStatus"],
   tableId: String(x.mesa_id),
   tableStatus: x.mesa_estado as PersistedPayment["tableStatus"],
-  amount: Number(x.importe),
-  tip: Number(x.propina),
-  method: x.medio as PaymentMethodCode,
-  paidAt: String(x.pagado_en),
+  amount: Number(x.total_aplicado),
+  tip: Number(x.propina_total),
+  lines: paymentLines(x.medios),
+  paidAt: String(x.cobrado_en),
   subtotal: Number(x.subtotal),
   discount: Number(x.descuento),
   netTotal: Number(x.total_neto),
   paid: Number(x.ya_pagado),
-  balance: Number(x.saldo),
+  balance: Number(x.saldo_posterior),
 });
 const paymentHistory = (x: Record<string, unknown>): PaymentHistory => ({
-  paymentId: Number(x.pago_id),
-  amount: Number(x.importe),
-  method: x.medio as PaymentMethodCode,
-  tip: Number(x.propina),
+  chargeId: String(x.cobro_id),
+  chargeType: x.tipo_cobro as PaymentHistory["chargeType"],
+  amount: Number(x.total_aplicado),
+  tip: Number(x.propina_total),
+  lines: paymentLines(x.medios),
   actorName: String(x.actor_nombre),
-  paidAt: String(x.pagado_en),
+  paidAt: String(x.cobrado_en),
   subtotal: Number(x.subtotal),
   discount: Number(x.descuento),
   netTotal: Number(x.total_neto),
-  paid: Number(x.pagado_acumulado),
-  balance: Number(x.saldo),
+  paid: Number(x.total_neto) - Number(x.saldo_posterior),
+  balance: Number(x.saldo_posterior),
 });
+const paymentLines = (value: unknown): PaymentMediumLine[] =>
+  (Array.isArray(value) ? value : []).map((line) => {
+    const x = line as Record<string, unknown>;
+    return {
+      paymentId: Number(x.pago_id),
+      order: Number(x.orden),
+      amount: Number(x.importe),
+      tip: Number(x.propina),
+      method: x.medio as PaymentMethodCode,
+    };
+  });
 const adminOrder = (x: Record<string, unknown>): AdminOrder => ({
   orderId: Number(x.pedido_id),
   tableCode: String(x.mesa_codigo),

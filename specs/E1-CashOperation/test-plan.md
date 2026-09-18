@@ -282,6 +282,6 @@ Regresión `h6_t02_sales_exports.sql`: aprobada. Pruebas Node/React directamente
 
 ## 16. Puerta técnica integral E1-T13
 
-T13 aprobó la matriz técnica completa **TP01–TP61**. Evidencia detallada, comandos, carreras y defectos corregidos: `implementation-t13.md`. El replay limpio final aplicó las 40 migraciones en orden y el seed sobre PostgreSQL 17 local, aislado y sin bind mounts. La regresión SQL H1–H6/PM-001/E1, la revisión de seguridad, las carreras obligatorias, las 303 pruebas Node/React, `typecheck`, `build` y `git diff --check` aprobaron. No existe script/dependencia de lint, por lo que no se ejecutó ni se incorporó una herramienta nueva.
+T13 aprobó nuevamente la matriz técnica completa **TP01–TP61** sobre el delta de cobro. El replay limpio final aplicó las **43 migraciones** y el seed sobre PostgreSQL 17 local, aislado, sin red ni bind mounts. Aprobaron las regresiones SQL aplicables H1–H6/PM-001/E1, los deltas T09–T12, seguridad final, cinco carreras de cobro con conexiones independientes, **311/311 pruebas Node/React**, `typecheck`, `build` y `git diff --check`. Las inspecciones históricas basadas en inventarios/fingerprints exactos se homologaron únicamente para admitir los objetos y columnas aditivos aprobados, conservando sus invariantes de permisos y contratos. No existe script/dependencia de lint, por lo que no se ejecutó ni se incorporó una herramienta nueva. Evidencia detallada: `implementation-t13.md`.
 
 TP62–TP64 y T14 permanecen pendientes de ejecución humana; E1 no está aceptada.

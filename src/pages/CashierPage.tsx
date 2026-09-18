@@ -8,6 +8,7 @@ import {
   type SessionSummary,
   type CashierPendingOrder,
   type PaymentHistory,
+  type PaymentMediumLine,
   type PersistedPayment,
 } from "../services/cashierService";
 import type { ValidatedProfileContext } from "../services/profileContext";
@@ -24,7 +25,7 @@ interface PaymentConfirmation {
   orderId: number;
   tableCode: string;
   amount: number;
-  method: PaymentMethodCode;
+  lines: readonly PaymentMediumLine[];
   tip: number;
   currentBalance: number;
   partial: boolean;
@@ -106,10 +107,11 @@ function InternalDocument({
           {[
             ...payments,
             {
-              paymentId: payment.paymentId,
+              chargeId: payment.chargeId,
+              chargeType: complete ? "TOTAL" as const : "PARCIAL" as const,
               amount: payment.amount,
-              method: payment.method,
               tip: payment.tip,
+              lines: payment.lines,
               actorName: "Usuario actual",
               paidAt: payment.paidAt,
               subtotal: payment.subtotal,
@@ -121,12 +123,12 @@ function InternalDocument({
           ]
             .filter(
               (x, i, a) =>
-                a.findIndex((y) => y.paymentId === x.paymentId) === i,
+                a.findIndex((y) => y.chargeId === x.chargeId) === i,
             )
             .map((x) => (
-              <li key={x.paymentId}>
-                Pago #{x.paymentId}: {money.format(x.amount)} · {x.method} ·
-                propina {money.format(x.tip)}
+              <li key={x.chargeId}>
+                Cobro {x.chargeId.slice(0, 8)}: {money.format(x.amount)}
+                <ul>{x.lines.map((line) => <li key={line.paymentId}>{line.method}: {money.format(line.amount)} · propina {money.format(line.tip)}</li>)}</ul>
               </li>
             ))}
         </ul>
@@ -175,8 +177,7 @@ export default function CashierPage({
     [discountReason, setDiscountReason] = useState(""),
     [counted, setCounted] = useState(""),
     [paymentAmount, setPaymentAmount] = useState(""),
-    [tip, setTip] = useState("0"),
-    [method, setMethod] = useState<PaymentMethodCode>("EFECTIVO"),
+    [paymentLines, setPaymentLines] = useState([{ method: "EFECTIVO" as PaymentMethodCode, amount: "", tip: "0" }]),
     [discountType, setDiscountType] = useState<"IMPORTE" | "PORCENTAJE">(
       "IMPORTE",
     ),
@@ -211,7 +212,7 @@ export default function CashierPage({
     setPartialMode(false);
     setPaymentAmount("");
     setTipMode(false);
-    setTip("0");
+    setPaymentLines([{ method: "EFECTIVO", amount: "", tip: "0" }]);
     setDivideMode(false);
     setSelectedLines(new Set());
     setDiscountMode(false);
@@ -333,8 +334,16 @@ export default function CashierPage({
   );
   const partialAmount = n(paymentAmount);
   const invalidPartial = !Number.isFinite(partialAmount) || partialAmount <= 0 || partialAmount > (selected?.balance ?? 0);
-  const invalidTip = !Number.isFinite(n(tip)) || n(tip) < 0;
   const paymentToApply = partialMode ? partialAmount : (selected?.balance ?? 0);
+  const preparedLines = paymentLines.map((line, index) => {
+    const previous = paymentLines.slice(0, index).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const suggestedAmount = index === paymentLines.length - 1 && line.amount === "" ? Math.max(0, paymentToApply - previous) : Number(line.amount);
+    return { paymentId: 0, order: index + 1, method: line.method, amount: suggestedAmount, tip: tipMode ? Number(line.tip) : 0 };
+  });
+  const preparedTotal = preparedLines.reduce((sum, line) => sum + line.amount, 0);
+  const preparedTip = preparedLines.reduce((sum, line) => sum + line.tip, 0);
+  const invalidLines = preparedLines.some((line) => !Number.isFinite(line.amount) || line.amount <= 0 || !Number.isFinite(line.tip) || line.tip < 0);
+  const difference = paymentToApply - preparedTotal;
   const accumulatedPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
   return (
     <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
@@ -540,7 +549,7 @@ export default function CashierPage({
           </section>
         )}
         {paymentFeedback && <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950" role="status">
-          <b>Pago registrado: {money.format(paymentFeedback.amount)} · {paymentFeedback.method}</b>
+          <b>Cobro registrado: {money.format(paymentFeedback.amount)} · {paymentFeedback.lines.length} {paymentFeedback.lines.length === 1 ? "medio" : "medios"}</b>
           <p>Saldo restante: {money.format(paymentFeedback.balance)} · Pedido {paymentFeedback.orderStatus === "PAGADO" ? "PAGADO" : "pendiente de completar"}.</p>
         </div>}
         <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
@@ -622,13 +631,13 @@ export default function CashierPage({
                   className="mt-5 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-4"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (!session || busy || invalidTip || (partialMode && invalidPartial)) return;
+                    if (!session || busy || invalidLines || difference !== 0 || (partialMode && invalidPartial)) return;
                     const confirmation: PaymentConfirmation = {
                       orderId: selected.orderId,
                       tableCode: selected.tableCode,
                       amount: paymentToApply,
-                      method,
-                      tip: n(tip),
+                      lines: preparedLines,
+                      tip: preparedTip,
                       currentBalance: selected.balance,
                       partial: partialMode,
                     };
@@ -641,31 +650,45 @@ export default function CashierPage({
                     <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 4</p>
                     <h3 className="text-xl font-bold">Cobro</h3>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm font-semibold text-stone-700">
-                    <span className="block">Medio de pago</span>
-                    <select className={selectClass} value={method} onChange={(e) => setMethod(e.target.value as PaymentMethodCode)}>
-                      {methods.map((x) => <option key={x}>{x}</option>)}
-                    </select>
-                  </label>
-                  <div className="rounded-xl bg-white p-3 text-sm text-stone-600">Importe a cobrar<br /><b className="text-2xl text-emerald-800">{money.format(paymentToApply)}</b></div>
-                  </div>
+                  <div className="rounded-xl bg-white p-3 text-sm text-stone-600">Saldo objetivo<br /><b className="text-2xl text-emerald-800">{money.format(paymentToApply)}</b></div>
                   {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe de esta parte <span className="font-normal">(máximo {money.format(selected.balance)})</span>
                     <input className={fieldClass} min="0.01" max={selected.balance} step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" />
                     {invalidPartial && paymentAmount && <span className="mt-1 block text-sm text-rose-700">Ingresa un importe mayor que cero y no superior al saldo.</span>}
                   </label>}
-                  {tipMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Propina
-                    <input className={fieldClass} min="0" step="0.01" value={tip} onChange={(e) => setTip(e.target.value)} type="number" />
-                  </label>}
-                  {tipMode && !invalidTip && <p className="mt-2 text-sm">Propina: <b>{money.format(n(tip))}</b></p>}
-                  <button className={`${primaryButtonClass} mt-4 w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidTip || (partialMode && invalidPartial)}>
-                    {partialMode ? `Cobrar esta parte · ${money.format(paymentToApply)}` : `Cobrar ${money.format(selected.balance)}`}
+                  <div className="mt-4 space-y-3">
+                    {paymentLines.map((line, index) => {
+                      const prepared = preparedLines[index];
+                      return <div className="grid gap-3 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-[1fr_1fr_auto]" key={index}>
+                        <label className="text-sm font-semibold text-stone-700">Medio
+                          <select className={selectClass} value={line.method} onChange={(e) => setPaymentLines((old) => old.map((item, i) => i === index ? { ...item, method: e.target.value as PaymentMethodCode } : item))}>
+                            {methods.map((x) => <option key={x}>{x}</option>)}
+                          </select>
+                        </label>
+                        <label className="text-sm font-semibold text-stone-700">Importe
+                          <input className={fieldClass} min="0.01" step="0.01" type="number" value={line.amount === "" ? prepared.amount : line.amount} onChange={(e) => setPaymentLines((old) => old.map((item, i) => i === index ? { ...item, amount: e.target.value } : item))} />
+                        </label>
+                        {paymentLines.length > 1 && <button aria-label={`Quitar medio ${index + 1}`} className={auxiliaryButtonClass} type="button" onClick={() => setPaymentLines((old) => old.filter((_, i) => i !== index))}>Quitar</button>}
+                        {tipMode && <label className="text-sm font-semibold text-stone-700 sm:col-span-2">Propina de este medio
+                          <input className={fieldClass} min="0" step="0.01" type="number" value={line.tip} onChange={(e) => setPaymentLines((old) => old.map((item, i) => i === index ? { ...item, tip: e.target.value } : item))} />
+                        </label>}
+                      </div>;
+                    })}
+                  </div>
+                  <button className={`${secondaryButtonClass} mt-3`} type="button" onClick={() => setPaymentLines((old) => [...old, { method: "EFECTIVO", amount: "", tip: "0" }])}>Agregar medio de pago</button>
+                  <div className="mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-3">
+                    <p>Total preparado<br /><b>{money.format(preparedTotal)}</b></p>
+                    <p>Saldo a cubrir<br /><b>{money.format(paymentToApply)}</b></p>
+                    <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{money.format(Math.abs(difference))}</b></p>
+                  </div>
+                  {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}
+                  <button className={`${primaryButtonClass} mt-4 w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
+                    {partialMode ? `Preparar cobro parcial · ${money.format(paymentToApply)}` : `Preparar cobro · ${money.format(selected.balance)}`}
                   </button>
                 </form>
                 {confirmationNotice && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="status">{confirmationNotice}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button className={auxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>Cobrar una parte</button>
-                  <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setTip("0"); }}>Agregar propina</button>
+                  <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setPaymentLines((old) => old.map((line) => ({ ...line, tip: "0" }))); }}>Agregar propina</button>
                   <button className={auxiliaryButtonClass} type="button" onClick={() => setMoreOptions((value) => !value)}>Más opciones</button>
                 </div>
                 {moreOptions && <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
@@ -718,13 +741,16 @@ export default function CashierPage({
                   ) : paymentsOpen && (
                     <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                       {payments.map((x) => (
-                        <li className="rounded-xl border border-stone-200 bg-stone-50 p-3" key={x.paymentId}>
-                          <div className="flex items-start justify-between gap-3"><b>Pago #{x.paymentId}</b><span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-stone-700">{x.method}</span></div>
+                        <li className="rounded-xl border border-stone-200 bg-stone-50 p-3" key={x.chargeId}>
+                          <div className="flex items-start justify-between gap-3"><b>Cobro {x.chargeId.slice(0, 8)}</b><span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-stone-700">{x.chargeType}</span></div>
                           <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
                             <div><dt className="text-stone-500">Importe</dt><dd className="font-bold">{money.format(x.amount)}</dd></div>
                             <div><dt className="text-stone-500">Propina</dt><dd className="font-bold">{money.format(x.tip)}</dd></div>
                             <div><dt className="text-stone-500">Saldo</dt><dd className="font-bold">{money.format(x.balance)}</dd></div>
                           </dl>
+                          <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white px-3">
+                            {x.lines.map((line) => <li className="flex items-center justify-between gap-3 py-2 text-sm" key={line.paymentId}><span>{line.method}</span><span className="font-semibold">{money.format(line.amount)} · propina {money.format(line.tip)}</span></li>)}
+                          </ul>
                           <p className="mt-2 text-xs text-stone-500">Registrado por {x.actorName} · {new Date(x.paidAt).toLocaleString("es-PE")}</p>
                         </li>
                       ))}
@@ -747,7 +773,7 @@ export default function CashierPage({
                 <div><dt className="text-stone-600">Mesa</dt><dd className="font-bold">{paymentConfirmation.tableCode}</dd></div>
                 <div><dt className="text-stone-600">Pedido</dt><dd className="font-bold">#{paymentConfirmation.orderId}</dd></div>
                 <div><dt className="text-stone-600">Importe</dt><dd className="font-bold text-emerald-800">{money.format(paymentConfirmation.amount)}</dd></div>
-                <div><dt className="text-stone-600">Medio</dt><dd className="font-bold">{paymentConfirmation.method}</dd></div>
+                <div className="col-span-2"><dt className="text-stone-600">Medios de pago</dt><dd><ul className="mt-1 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white px-3">{paymentConfirmation.lines.map((line, index) => <li className="flex justify-between gap-3 py-2 font-bold" key={`${line.method}-${index}`}><span>{line.method}</span><span>{money.format(line.amount)}{line.tip > 0 ? ` · propina ${money.format(line.tip)}` : ""}</span></li>)}</ul></dd></div>
                 <div><dt className="text-stone-600">Propina</dt><dd className="font-bold">{money.format(paymentConfirmation.tip)}</dd></div>
                 <div><dt className="text-stone-600">Saldo actual</dt><dd className="font-bold">{money.format(paymentConfirmation.currentBalance)}</dd></div>
               </dl>
@@ -771,7 +797,14 @@ export default function CashierPage({
                       return;
                     }
                     void run(async () => {
-                      const r = await service.registerPayment(context, confirmation.orderId, session.id, confirmation.amount, confirmation.method, confirmation.tip, key());
+                      const r = await service.registerPayment(
+                        context,
+                        confirmation.orderId,
+                        session.id,
+                        confirmation.partial ? "PARCIAL" : "TOTAL",
+                        confirmation.lines.map(({ method, amount, tip }) => ({ method, amount, tip })),
+                        key(),
+                      );
                       if (r.ok) {
                         setDocumentOrder(selected);
                         setDocument(r.data);
