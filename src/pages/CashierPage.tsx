@@ -27,6 +27,19 @@ const money = new Intl.NumberFormat("es-PE", {
   methods: PaymentMethodCode[] = ["EFECTIVO", "YAPE", "PLIN", "TARJETA"];
 const n = (v: string) => Number(v),
   key = () => crypto.randomUUID();
+const formatDiscountValue = (discount: AdminDiscount) =>
+  discount.tipo === "PORCENTAJE"
+    ? `${Number(discount.valor_solicitado).toFixed(2)}%`
+    : money.format(discount.valor_solicitado);
+const fieldClass =
+    "mt-1.5 min-h-12 w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base font-medium text-stone-950 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-stone-100",
+  selectClass = `${fieldClass} appearance-auto pr-9`,
+  primaryButtonClass =
+    "min-h-12 rounded-xl bg-emerald-700 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-50",
+  secondaryButtonClass =
+    "min-h-12 rounded-xl border border-emerald-700 bg-white px-5 py-3 font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-50",
+  auxiliaryButtonClass =
+    "min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50";
 function Lines({
   order,
   select,
@@ -37,19 +50,19 @@ function Lines({
   onSelect: (id: number) => void;
 }) {
   return (
-    <ul className="mt-3 divide-y">
+    <ul className="mt-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white">
       {order.lines.map((x) => (
-        <li className="flex gap-3 py-2" key={x.detailId}>
+        <li className="flex items-center gap-3 px-3 py-3" key={x.detailId}>
           <input
             aria-label={`Seleccionar ${x.productName}`}
             checked={select.has(x.detailId)}
             onChange={() => onSelect(x.detailId)}
             type="checkbox"
           />
-          <span className="grow">
+          <span className="grow text-sm text-stone-700">
             {x.quantity} × {x.productName}
           </span>
-          <b>{money.format(x.lineAmount)}</b>
+          <b className="whitespace-nowrap text-stone-950">{money.format(x.lineAmount)}</b>
         </li>
       ))}
     </ul>
@@ -167,6 +180,9 @@ export default function CashierPage({
     );
   const pending = useRef(false);
   const selected = orders.find((x) => x.orderId === selectedId) ?? null;
+  const openedByName = session?.abierta_por === context.profile.id
+    ? context.profile.nombre
+    : "Otro cajero autorizado";
   const refresh = useCallback(async (
     showLoading = true,
     isCurrent: () => boolean = () => true,
@@ -278,14 +294,14 @@ export default function CashierPage({
   return (
     <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
       <div className="mx-auto max-w-7xl">
-        <header className="flex flex-wrap justify-between gap-3">
+        <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-semibold text-emerald-700">MikuyApp · Caja</p>
             <h1 className="text-3xl font-bold">Sesión y cobros</h1>
             <p>{context.local.nombre}</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={onNavigateToSales}>Resumen diario</button>
+            <button className={auxiliaryButtonClass} onClick={onNavigateToSales}>Resumen diario</button>
             <AuthenticatedUserMenu
               context={context}
               isSigningOut={isSigningOut}
@@ -294,24 +310,31 @@ export default function CashierPage({
           </div>
         </header>
         {error && (
-          <div className="mt-4 rounded-xl bg-rose-50 p-4">
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
             <p role="alert">{error}</p>
-            <button disabled={loading} onClick={() => setAttempt((x) => x + 1)}>
+            <button className={`${secondaryButtonClass} mt-3`} disabled={loading} onClick={() => setAttempt((x) => x + 1)}>
               Reintentar
             </button>
           </div>
         )}
-        <section className="mt-5 rounded-2xl bg-white p-4">
-          <h2 className="font-bold">Estado de caja</h2>
+        <section className="mt-5 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 pb-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 1</p>
+              <h2 className="text-xl font-bold">Estado de caja</h2>
+            </div>
+            {session && <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-800">Sesión {session.estado.toLowerCase()}</span>}
+          </div>
           {loading ? (
             <p aria-busy="true">Cargando caja…</p>
           ) : cashboxes.length === 0 ? (
             <p>No hay caja física disponible.</p>
           ) : (
             <>
-              <label>
-                Caja física
+              <label className="mt-4 block max-w-md text-sm font-semibold text-stone-700">
+                <span className="block">Caja física</span>
                 <select
+                  className={selectClass}
                   disabled={busy}
                   value={cashboxId}
                   onChange={(e) => {
@@ -327,26 +350,27 @@ export default function CashierPage({
                 </select>
               </label>
               {session ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                  <p>
-                    Sesión: <b>{session.estado}</b>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+                    Estado<br /><b className="text-base text-stone-950">{session.estado}</b>
                   </p>
-                  <p>
-                    Abierta por: <b>{session.abierta_por}</b>
+                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+                    Abierta por<br /><b className="text-base text-stone-950">{openedByName}</b>
                   </p>
-                  <p>
-                    Monto inicial: <b>{money.format(session.monto_inicial)}</b>
+                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+                    Monto inicial<br /><b className="text-base text-stone-950">{money.format(session.monto_inicial)}</b>
                   </p>
-                  <p>
-                    Efectivo esperado:{" "}
-                    <b>{money.format(summary?.efectivo_esperado ?? 0)}</b>
+                  <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
+                    Efectivo esperado<br />
+                    <b className="text-lg text-emerald-950">{money.format(summary?.efectivo_esperado ?? 0)}</b>
                   </p>
                 </div>
               ) : (
-                <div className="mt-3">
-                  <label>
-                    Monto inicial
+                <div className="mt-4 flex flex-col gap-3 sm:max-w-md">
+                  <label className="block text-sm font-semibold text-stone-700">
+                    <span className="block">Monto inicial</span>
                     <input
+                      className={fieldClass}
                       min="0"
                       step="0.01"
                       value={initial}
@@ -355,6 +379,7 @@ export default function CashierPage({
                     />
                   </label>
                   <button
+                    className={primaryButtonClass}
                     disabled={busy}
                     onClick={() =>
                       service &&
@@ -376,15 +401,16 @@ export default function CashierPage({
           )}
         </section>
         {session && (
-          <details className="mt-4 rounded-2xl bg-white p-4">
-            <summary className="font-bold">
+          <details className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+            <summary className="cursor-pointer text-base font-bold text-stone-900">
               Movimientos, historial y cierre
             </summary>
             <p className="mt-2 text-sm">
               Historial reciente: {history.length} sesiones.
             </p>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
               <form
+                className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (service)
@@ -400,8 +426,10 @@ export default function CashierPage({
                     );
                 }}
               >
-                <h3>Movimiento</h3>
+                <h3 className="text-lg font-bold">Registrar movimiento</h3>
+                <label className="block text-sm font-semibold text-stone-700">Tipo
                 <select
+                  className={selectClass}
                   value={movement}
                   onChange={(e) =>
                     setMovement(e.target.value as typeof movement)
@@ -410,20 +438,26 @@ export default function CashierPage({
                   <option>ENTRADA</option>
                   <option>SALIDA</option>
                 </select>
+                </label>
+                <label className="block text-sm font-semibold text-stone-700">Importe
                 <input
-                  aria-label="Importe movimiento"
+                  className={fieldClass}
                   value={movementAmount}
                   onChange={(e) => setMovementAmount(e.target.value)}
                   type="number"
                 />
+                </label>
+                <label className="block text-sm font-semibold text-stone-700">Motivo
                 <input
-                  aria-label="Motivo movimiento"
+                  className={fieldClass}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                 />
-                <button disabled={busy}>Confirmar movimiento</button>
+                </label>
+                <button className={secondaryButtonClass} disabled={busy}>Confirmar movimiento</button>
               </form>
               <form
+                className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (service)
@@ -438,31 +472,36 @@ export default function CashierPage({
                     );
                 }}
               >
-                <h3>Cierre de caja</h3>
-                <p>
-                  Efectivo esperado{" "}
-                  {money.format(summary?.efectivo_esperado ?? 0)}
+                <h3 className="text-lg font-bold">Cierre de caja</h3>
+                <p className="rounded-lg bg-white p-3 text-sm text-stone-600">
+                  Efectivo esperado<br />
+                  <b className="text-lg text-stone-950">{money.format(summary?.efectivo_esperado ?? 0)}</b>
                 </p>
+                <label className="block text-sm font-semibold text-stone-700">Efectivo contado
                 <input
-                  aria-label="Efectivo contado"
+                  className={fieldClass}
                   value={counted}
                   onChange={(e) => setCounted(e.target.value)}
                   type="number"
                 />
+                </label>
                 <p>PostgreSQL calculará y confirmará la diferencia.</p>
+                <label className="block text-sm font-semibold text-stone-700">Motivo de diferencia
                 <input
-                  aria-label="Motivo de diferencia"
+                  className={fieldClass}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                 />
-                <button disabled={busy}>Confirmar cierre</button>
+                </label>
+                <button className={primaryButtonClass} disabled={busy}>Confirmar cierre</button>
               </form>
             </div>
           </details>
         )}
-        <div className="mt-5 grid gap-5 lg:grid-cols-[22rem_1fr]">
-          <section className="rounded-2xl bg-white p-4">
-            <h2 className="font-bold">Pedidos pendientes</h2>
+        <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
+          <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 2</p>
+            <h2 className="text-xl font-bold">Pedidos pendientes</h2>
             {loading ? (
               <p>Cargando pedidos pendientes…</p>
             ) : orders.length === 0 ? (
@@ -470,7 +509,7 @@ export default function CashierPage({
             ) : (
               orders.map((x) => (
                 <button
-                  className="mt-2 block w-full rounded-xl border p-3 text-left"
+                  className={`mt-3 block w-full rounded-xl border p-3 text-left transition focus:outline-none focus:ring-4 focus:ring-emerald-100 ${selectedId === x.orderId ? "border-emerald-600 bg-emerald-50 shadow-sm" : "border-stone-200 hover:border-emerald-300 hover:bg-stone-50"}`}
                   key={x.orderId}
                   onClick={() => {
                     setSelectedId(x.orderId);
@@ -478,66 +517,59 @@ export default function CashierPage({
                     setPaymentAmount(String(x.balance));
                   }}
                 >
-                  Mesa {x.tableCode} · Pedido #{x.orderId}
-                  <br />
-                  Saldo {money.format(x.balance)}
+                  <span className="block font-bold text-stone-950">Mesa {x.tableCode}</span>
+                  <span className="text-sm text-stone-600">Pedido #{x.orderId}</span>
+                  <span className="mt-2 block text-sm text-stone-600">Saldo <b className="text-base text-emerald-800">{money.format(x.balance)}</b></span>
                 </button>
               ))
             )}
           </section>
-          <section className="rounded-2xl bg-white p-4">
+          <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
             {selected ? (
               <>
-                <h2 className="text-2xl font-bold">
-                  Pedido #{selected.orderId}
-                </h2>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                  <p>
-                    Subtotal
-                    <br />
-                    <b>{money.format(selected.subtotal)}</b>
+                <div className="border-b border-stone-200 pb-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 3</p>
+                  <h2 className="text-2xl font-bold">Detalle del pedido #{selected.orderId}</h2>
+                  <p className="text-stone-600">Mesa {selected.tableCode} · {selected.tableName}</p>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+                    Subtotal<br /><b className="text-base text-stone-950">{money.format(selected.subtotal)}</b>
                   </p>
-                  <p>
-                    Descuento
-                    <br />
-                    <b>{money.format(selected.discount)}</b>
+                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+                    Descuento<br /><b className="text-base text-stone-950">{money.format(selected.discount)}</b>
                   </p>
-                  <p>
-                    Total neto
-                    <br />
-                    <b>{money.format(selected.netTotal)}</b>
+                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+                    Total neto<br /><b className="text-base text-stone-950">{money.format(selected.netTotal)}</b>
                   </p>
-                  <p>
-                    Pagado
-                    <br />
-                    <b>{money.format(selected.paid)}</b>
+                  <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">
+                    Pagado<br /><b className="text-base text-stone-950">{money.format(selected.paid)}</b>
                   </p>
-                  <p>
-                    Saldo
-                    <br />
-                    <b>{money.format(selected.balance)}</b>
+                  <p className="col-span-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 sm:col-span-1">
+                    Saldo<br /><b className="text-xl text-emerald-950">{money.format(selected.balance)}</b>
                   </p>
                 </div>
-                <Lines
-                  order={selected}
-                  select={selectedLines}
-                  onSelect={(id) =>
-                    setSelectedLines((old) => {
-                      const x = new Set(old);
-                      x.has(id) ? x.delete(id) : x.add(id);
-                      return x;
-                    })
-                  }
-                />
-                <p>Importe sugerido por selección: {money.format(suggested)}</p>
-                <button
-                  type="button"
-                  onClick={() => setPaymentAmount(String(suggested))}
-                >
-                  Usar importe sugerido
-                </button>
+                <section className="mt-5 rounded-xl border border-stone-200 bg-stone-50 p-4">
+                  <h3 className="font-bold">Productos del pedido</h3>
+                  <p className="text-sm text-stone-600">Selecciona productos sólo para calcular un importe sugerido.</p>
+                  <Lines
+                    order={selected}
+                    select={selectedLines}
+                    onSelect={(id) =>
+                      setSelectedLines((old) => {
+                        const x = new Set(old);
+                        x.has(id) ? x.delete(id) : x.add(id);
+                        return x;
+                      })
+                    }
+                  />
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-stone-600">Importe sugerido por selección<br /><b className="text-lg text-stone-950">{money.format(suggested)}</b></p>
+                    <button className={auxiliaryButtonClass} type="button" onClick={() => setPaymentAmount(String(suggested))}>Usar importe sugerido</button>
+                  </div>
+                </section>
                 <form
-                  className="mt-4 grid gap-2 sm:grid-cols-2"
+                  className="mt-5 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-4"
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (service && session)
@@ -559,44 +591,51 @@ export default function CashierPage({
                       });
                   }}
                 >
-                  <label>
-                    Importe a aplicar
+                  <div className="mb-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 4</p>
+                    <h3 className="text-xl font-bold">Cobro</h3>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                  <label className="block text-sm font-semibold text-stone-700">
+                    <span className="block">Importe a aplicar</span>
                     <input
+                      className={fieldClass}
+                      min="0.01"
+                      step="0.01"
                       value={paymentAmount}
                       onChange={(e) => setPaymentAmount(e.target.value)}
                       type="number"
                     />
                   </label>
-                  <label>
-                    Propina separada
+                  <label className="block text-sm font-semibold text-stone-700">
+                    <span className="block">Medio de pago</span>
+                    <select className={selectClass} value={method} onChange={(e) => setMethod(e.target.value as PaymentMethodCode)}>
+                      {methods.map((x) => <option key={x}>{x}</option>)}
+                    </select>
+                  </label>
+                  <label className="block text-sm font-semibold text-stone-700">
+                    <span className="block">Propina separada</span>
                     <input
+                      className={fieldClass}
+                      min="0"
+                      step="0.01"
                       value={tip}
                       onChange={(e) => setTip(e.target.value)}
                       type="number"
                     />
                   </label>
-                  <select
-                    value={method}
-                    onChange={(e) =>
-                      setMethod(e.target.value as PaymentMethodCode)
-                    }
-                  >
-                    {methods.map((x) => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </select>
-                  <button aria-busy={busy} disabled={busy || !session}>
+                  </div>
+                  <button className={`${primaryButtonClass} mt-4 w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session}>
                     Registrar pago
                   </button>
                 </form>
                 {discount && (
-                  <p className="mt-3 text-sm">
-                    Descuento: <b>{discount.estado}</b> · {discount.tipo}{' '}
-                    {discount.valor_solicitado}
+                  <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    Descuento: <b>{discount.estado}</b> · {discount.tipo} · {formatDiscountValue(discount)}
                   </p>
                 )}
                 <form
-                  className="mt-4 flex flex-wrap gap-2"
+                  className="mt-4 rounded-xl border border-stone-200 bg-white p-4"
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (service)
@@ -612,43 +651,47 @@ export default function CashierPage({
                       );
                   }}
                 >
-                  <select
-                    value={discountType}
-                    onChange={(e) =>
-                      setDiscountType(e.target.value as typeof discountType)
-                    }
-                  >
-                    <option>IMPORTE</option>
-                    <option>PORCENTAJE</option>
-                  </select>
-                  <input
-                    aria-label="Valor descuento"
-                    value={discountValue}
-                    onChange={(e) => setDiscountValue(e.target.value)}
-                  />
-                  <input
-                    aria-label="Motivo descuento"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                  />
-                  <button disabled={busy || selected.paid > 0}>
+                  <h3 className="font-bold">Solicitar descuento</h3>
+                  <p className="text-sm text-stone-600">Requiere autorización de un administrador antes del primer pago.</p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                    <label className="block text-sm font-semibold text-stone-700">Tipo
+                      <select className={selectClass} value={discountType} onChange={(e) => setDiscountType(e.target.value as typeof discountType)}>
+                        <option>IMPORTE</option>
+                        <option>PORCENTAJE</option>
+                      </select>
+                    </label>
+                    <label className="block text-sm font-semibold text-stone-700">Valor
+                      <input className={fieldClass} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} />
+                    </label>
+                    <label className="block text-sm font-semibold text-stone-700">Motivo
+                      <input className={fieldClass} value={reason} onChange={(e) => setReason(e.target.value)} />
+                    </label>
+                  </div>
+                  <button className={`${secondaryButtonClass} mt-4 w-full sm:w-auto`} disabled={busy || selected.paid > 0}>
                     Solicitar descuento
                   </button>
                 </form>
-                <h3 className="mt-5 font-bold">Pagos confirmados</h3>
-                {payments.length === 0 ? (
-                  <p>Sin pagos confirmados.</p>
-                ) : (
-                  <ul>
-                    {payments.map((x) => (
-                      <li key={x.paymentId}>
-                        #{x.paymentId} · {money.format(x.amount)} · {x.method} ·
-                        propina {money.format(x.tip)} · {x.actorName} · saldo{" "}
-                        {money.format(x.balance)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <section className="mt-5 border-t border-stone-200 pt-5">
+                  <h3 className="text-lg font-bold">Pagos confirmados</h3>
+                  <p className="text-sm text-stone-600">Historial autoritativo del pedido seleccionado.</p>
+                  {payments.length === 0 ? (
+                    <p className="mt-3 rounded-xl bg-stone-50 p-4 text-stone-600">Sin pagos confirmados.</p>
+                  ) : (
+                    <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {payments.map((x) => (
+                        <li className="rounded-xl border border-stone-200 bg-stone-50 p-3" key={x.paymentId}>
+                          <div className="flex items-start justify-between gap-3"><b>Pago #{x.paymentId}</b><span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-stone-700">{x.method}</span></div>
+                          <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                            <div><dt className="text-stone-500">Importe</dt><dd className="font-bold">{money.format(x.amount)}</dd></div>
+                            <div><dt className="text-stone-500">Propina</dt><dd className="font-bold">{money.format(x.tip)}</dd></div>
+                            <div><dt className="text-stone-500">Saldo</dt><dd className="font-bold">{money.format(x.balance)}</dd></div>
+                          </dl>
+                          <p className="mt-2 text-xs text-stone-500">Registrado por {x.actorName}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
               </>
             ) : (
               <p>Selecciona un pedido.</p>

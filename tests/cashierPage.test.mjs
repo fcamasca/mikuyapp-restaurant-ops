@@ -176,3 +176,35 @@ test("administración queda en shell admin sin capacidad de cobro", () => {
   assert.match(serviceSource, /rpc_decidir_descuento_pedido/);
   assert.match(serviceSource, /anular_pedido_supervisado/);
 });
+
+test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () => {
+  for (const text of [
+    "Paso 1",
+    "Paso 2",
+    "Paso 3",
+    "Paso 4",
+    "Estado de caja",
+    "Pedidos pendientes",
+    "Detalle del pedido",
+    "Productos del pedido",
+    "Cobro",
+    "Pagos confirmados",
+    "Medio de pago",
+  ]) assert.match(page, new RegExp(text));
+
+  assert.match(page, /const fieldClass =/);
+  assert.match(page, /border border-stone-300/);
+  assert.match(page, /focus:ring-4/);
+  assert.match(page, /primaryButtonClass\s*=/);
+  assert.match(page, /bg-emerald-700/);
+  assert.match(page, /className=\{selectClass\}/);
+  assert.match(page, /lg:grid-cols-\[22rem_minmax\(0,1fr\)\]/);
+  assert.doesNotMatch(page, /overflow-x-(?:auto|scroll)/);
+});
+
+test("TP62 UX muestra nombre local y nunca expone el UUID del cajero", () => {
+  assert.match(page, /session\?\.abierta_por === context\.profile\.id/);
+  assert.match(page, /context\.profile\.nombre/);
+  assert.match(page, /Otro cajero autorizado/);
+  assert.doesNotMatch(page, /<b[^>]*>\{session\.abierta_por\}<\/b>/);
+});
