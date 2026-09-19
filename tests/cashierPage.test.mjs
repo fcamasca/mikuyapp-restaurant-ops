@@ -242,6 +242,23 @@ test("TP62 compacta saldo y controles por fila sin permitir eliminar la primera"
   assert.doesNotMatch(page, /Preparar cobro/);
 });
 
+test("TP62 prioriza cobro, compacta el resumen y colapsa productos", () => {
+  const panel = page.slice(page.indexOf("Detalle del pedido #"));
+  const header = panel.indexOf("Detalle del pedido #");
+  const summary = panel.indexOf("Subtotal <b");
+  const charge = panel.indexOf(">Cobro</h3>");
+  const products = panel.indexOf("Productos del pedido ({selected.lines.length})");
+  const history = panel.indexOf("pago realizado");
+
+  assert.ok(header < summary && summary < charge && charge < products && products < history);
+  assert.match(panel, /flex flex-wrap items-center gap-x-5[\s\S]*Subtotal <b[\s\S]*Descuento <b[\s\S]*Total neto <b[\s\S]*Pagado <b[\s\S]*SALDO <b/);
+  assert.doesNotMatch(panel, /grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5/);
+  assert.match(page, /\[productsOpen, setProductsOpen\] = useState\(false\)/);
+  assert.match(page, /\{productsOpen \? "Ocultar detalle" : "Ver detalle"\}/);
+  assert.match(page, /productsOpen && <div/);
+  assert.match(page, /setProductsOpen\(true\); setDivideMode\(true\)/);
+});
+
 test("TP62 alinea la mesa a la derecha del encabezado del pedido", () => {
   assert.match(page, /flex flex-wrap items-baseline justify-between[\s\S]*Detalle del pedido #\{selected\.orderId\}[\s\S]*bg-emerald-100[\s\S]*\{selected\.tableName\}/);
   assert.doesNotMatch(page, /Mesa \{selected\.tableCode\} · \{selected\.tableName\}/);
@@ -256,6 +273,7 @@ test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
     "setTipMode(false)",
     'setPaymentLines([{ method: "EFECTIVO", amount: "", tip: "0" }])',
     "setDivideMode(false)",
+    "setProductsOpen(false)",
     "setSelectedLines(new Set())",
     "setDiscountMode(false)",
   ]) assert.match(page, new RegExp(reset.replace(/[()[\]]/g, "\\$&")));
