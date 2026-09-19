@@ -66,7 +66,7 @@ function Lines({
       {order.lines.map((x) => (
         <li className="flex items-center gap-3 px-3 py-3" key={x.detailId}>
           {selectable && <input aria-label={`Seleccionar ${x.productName}`} checked={select.has(x.detailId)} onChange={() => onSelect(x.detailId)} type="checkbox" />}
-          <span className="grow text-sm text-stone-700">
+          <span className="grow text-base text-stone-700">
             {x.quantity} × {x.productName}
           </span>
           <b className="whitespace-nowrap text-stone-950">{money.format(x.lineAmount)}</b>
@@ -578,7 +578,6 @@ export default function CashierPage({
                   <p>Descuento <b className="ml-1 text-stone-950">{money.format(selected.discount)}</b></p>
                   <p>Total neto <b className="ml-1 text-stone-950">{money.format(selected.netTotal)}</b></p>
                   <p>Pagado <b className="ml-1 text-stone-950">{money.format(selected.paid)}</b></p>
-                  <p className="rounded-lg bg-emerald-100 px-3 py-1.5 font-bold text-emerald-900">SALDO <b className="ml-1 text-lg text-emerald-950">{money.format(selected.balance)}</b></p>
                 </div>
                 <form
                   className="mt-5 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-4"
@@ -635,20 +634,22 @@ export default function CashierPage({
                     <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{money.format(Math.abs(difference))}</b></p>
                   </div>
                   {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}
-                  <button className={`${primaryButtonClass} mt-4 w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
-                    {partialMode ? `Cobrar parte · ${money.format(paymentToApply)}` : `Cobrar · ${money.format(selected.balance)}`}
-                  </button>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <button className={`${primaryButtonClass} w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
+                      {partialMode ? `Cobrar parte · ${money.format(paymentToApply)}` : `Cobrar · ${money.format(selected.balance)}`}
+                    </button>
+                    <div className="flex flex-wrap gap-2 sm:ml-auto sm:justify-end">
+                      <button className={auxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>Cobrar una parte</button>
+                      <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setPaymentLines((old) => old.map((line) => ({ ...line, tip: "0" }))); }}>Agregar propina</button>
+                      <button className={auxiliaryButtonClass} type="button" onClick={() => setMoreOptions((value) => !value)}>Más opciones</button>
+                    </div>
+                  </div>
+                  {moreOptions && <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
+                    <button className={secondaryButtonClass} type="button" onClick={() => { setProductsOpen(true); setDivideMode(true); setDiscountMode(false); setMoreOptions(false); }}>Dividir por productos</button>
+                    <button className={secondaryButtonClass} disabled={selected.paid > 0} type="button" onClick={() => { setDiscountMode(true); setDivideMode(false); setMoreOptions(false); }}>Solicitar descuento</button>
+                  </div>}
                 </form>
                 {confirmationNotice && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="status">{confirmationNotice}</p>}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button className={auxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>Cobrar una parte</button>
-                  <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setPaymentLines((old) => old.map((line) => ({ ...line, tip: "0" }))); }}>Agregar propina</button>
-                  <button className={auxiliaryButtonClass} type="button" onClick={() => setMoreOptions((value) => !value)}>Más opciones</button>
-                </div>
-                {moreOptions && <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
-                  <button className={secondaryButtonClass} type="button" onClick={() => { setProductsOpen(true); setDivideMode(true); setDiscountMode(false); setMoreOptions(false); }}>Dividir por productos</button>
-                  <button className={secondaryButtonClass} disabled={selected.paid > 0} type="button" onClick={() => { setDiscountMode(true); setDivideMode(false); setMoreOptions(false); }}>Solicitar descuento</button>
-                </div>}
                 {discount && (
                   <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                     Descuento: <b>{discount.estado}</b> · {discount.tipo} · {formatDiscountValue(discount)}
@@ -685,47 +686,6 @@ export default function CashierPage({
                     Solicitar descuento
                   </button>
                 </form>}
-                <section className="mt-5 border-t border-stone-200 pt-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-bold">Productos del pedido ({selected.lines.length})</h3>
-                    <button
-                      className={auxiliaryButtonClass}
-                      type="button"
-                      onClick={() => {
-                        if (productsOpen) {
-                          setDivideMode(false);
-                          setSelectedLines(new Set());
-                        }
-                        setProductsOpen((value) => !value);
-                      }}
-                    >
-                      {productsOpen ? "Ocultar detalle" : "Ver detalle"}
-                    </button>
-                  </div>
-                  {productsOpen && <div className="mt-3 rounded-xl bg-stone-50 p-4">
-                    <p className="text-sm text-stone-600">Selecciona productos sólo para calcular un importe sugerido.</p>
-                    <Lines
-                      order={selected}
-                      select={selectedLines}
-                      selectable={divideMode}
-                      onSelect={(id) =>
-                        setSelectedLines((old) => {
-                          const x = new Set(old);
-                          x.has(id) ? x.delete(id) : x.add(id);
-                          return x;
-                        })
-                      }
-                    />
-                    {divideMode && <div className="mt-3 rounded-xl border border-stone-200 bg-white p-3">
-                      <p className="text-sm">Total seleccionado <b>{money.format(suggested)}</b> · Saldo <b>{money.format(selected.balance)}</b></p>
-                      {suggested > selected.balance && <p className="mt-1 text-sm font-semibold text-rose-700">La selección excede el saldo por {money.format(suggested - selected.balance)}.</p>}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button className={secondaryButtonClass} disabled={suggested <= 0 || suggested > selected.balance} type="button" onClick={() => { setPartialMode(true); setPaymentAmount(String(suggested)); setDivideMode(false); setSelectedLines(new Set()); }}>Usar importe seleccionado</button>
-                        <button className={auxiliaryButtonClass} type="button" onClick={() => { setDivideMode(false); setSelectedLines(new Set()); }}>Cerrar</button>
-                      </div>
-                    </div>}
-                  </div>}
-                </section>
                 <section className="mt-5 border-t border-stone-200 pt-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-lg font-bold">{payments.length} {payments.length === 1 ? "pago realizado" : "pagos realizados"} · {money.format(accumulatedPayments)} acumulado</h3>
@@ -751,6 +711,46 @@ export default function CashierPage({
                       ))}
                     </ul>
                   )}
+                </section>
+                <section className="mt-5 border-t border-stone-200 pt-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-bold">Productos del pedido ({selected.lines.length})</h3>
+                    <button
+                      className={auxiliaryButtonClass}
+                      type="button"
+                      onClick={() => {
+                        if (productsOpen) {
+                          setDivideMode(false);
+                          setSelectedLines(new Set());
+                        }
+                        setProductsOpen((value) => !value);
+                      }}
+                    >
+                      {productsOpen ? "Ocultar detalle" : "Ver detalle"}
+                    </button>
+                  </div>
+                  {productsOpen && <div className="mt-3 rounded-xl bg-stone-50 p-4">
+                    <Lines
+                      order={selected}
+                      select={selectedLines}
+                      selectable={divideMode}
+                      onSelect={(id) =>
+                        setSelectedLines((old) => {
+                          const x = new Set(old);
+                          x.has(id) ? x.delete(id) : x.add(id);
+                          return x;
+                        })
+                      }
+                    />
+                    {divideMode && <div className="mt-3 rounded-xl border border-stone-200 bg-white p-3">
+                      <p className="text-sm">Total seleccionado <b>{money.format(suggested)}</b> · Saldo <b>{money.format(selected.balance)}</b></p>
+                      {suggested > selected.balance && <p className="mt-1 text-sm font-semibold text-rose-700">La selección excede el saldo por {money.format(suggested - selected.balance)}.</p>}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button className={secondaryButtonClass} disabled={suggested <= 0 || suggested > selected.balance} type="button" onClick={() => { setPartialMode(true); setPaymentAmount(String(suggested)); setDivideMode(false); setSelectedLines(new Set()); }}>Usar importe seleccionado</button>
+                        <button className={auxiliaryButtonClass} type="button" onClick={() => { setDivideMode(false); setSelectedLines(new Set()); }}>Cerrar</button>
+                      </div>
+                    </div>}
+                  </div>}
                 </section>
               </>
             ) : (

@@ -242,7 +242,7 @@ test("TP62 compacta saldo y controles por fila sin permitir eliminar la primera"
   assert.doesNotMatch(page, /Preparar cobro/);
 });
 
-test("TP62 prioriza cobro, compacta el resumen y colapsa productos", () => {
+test("TP62 prioriza cobro e historial, compacta el resumen y colapsa productos", () => {
   const panel = page.slice(page.indexOf("Detalle del pedido #"));
   const header = panel.indexOf("Detalle del pedido #");
   const summary = panel.indexOf("Subtotal <b");
@@ -250,13 +250,22 @@ test("TP62 prioriza cobro, compacta el resumen y colapsa productos", () => {
   const products = panel.indexOf("Productos del pedido ({selected.lines.length})");
   const history = panel.indexOf("pago realizado");
 
-  assert.ok(header < summary && summary < charge && charge < products && products < history);
-  assert.match(panel, /flex flex-wrap items-center gap-x-5[\s\S]*Subtotal <b[\s\S]*Descuento <b[\s\S]*Total neto <b[\s\S]*Pagado <b[\s\S]*SALDO <b/);
+  assert.ok(header < summary && summary < charge && charge < history && history < products);
+  assert.match(panel, /flex flex-wrap items-center gap-x-5[\s\S]*Subtotal <b[\s\S]*Descuento <b[\s\S]*Total neto <b[\s\S]*Pagado <b/);
+  assert.doesNotMatch(panel.slice(summary, charge), /SALDO/);
   assert.doesNotMatch(panel, /grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5/);
   assert.match(page, /\[productsOpen, setProductsOpen\] = useState\(false\)/);
   assert.match(page, /\{productsOpen \? "Ocultar detalle" : "Ver detalle"\}/);
   assert.match(page, /productsOpen && <div/);
   assert.match(page, /setProductsOpen\(true\); setDivideMode\(true\)/);
+  assert.doesNotMatch(page, /Selecciona productos sólo para calcular un importe sugerido/);
+  assert.match(page, /grow text-base text-stone-700/);
+});
+
+test("TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la derecha", () => {
+  const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
+  assert.match(paymentForm, /sm:ml-auto sm:justify-end/);
+  assert.match(paymentForm, /Cobrar una parte[\s\S]*Agregar propina[\s\S]*Más opciones/);
 });
 
 test("TP62 alinea la mesa a la derecha del encabezado del pedido", () => {
