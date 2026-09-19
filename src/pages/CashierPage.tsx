@@ -384,7 +384,8 @@ export default function CashierPage({
     0,
   );
   const partialAmount = n(paymentAmount);
-  const invalidPartial = !Number.isFinite(partialAmount) || partialAmount <= 0 || partialAmount > (selected?.balance ?? 0);
+  const hasPartialObjective = paymentAmount.trim() !== "";
+  const invalidPartial = !Number.isFinite(partialAmount) || partialAmount <= 0 || partialAmount >= (selected?.balance ?? 0);
   const paymentToApply = partialMode ? partialAmount : (selected?.balance ?? 0);
   const preparedLines = paymentLines.map((line, index) => {
     const previous = paymentLines.slice(0, index).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -650,9 +651,9 @@ export default function CashierPage({
                     <h3 className="text-xl font-bold">Cobro</h3>
                     <p className="text-sm font-semibold text-stone-600">Saldo: <b className="text-xl text-emerald-800">{money.format(selected.balance)}</b></p>
                   </div>
-                  {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe de esta parte <span className="font-normal">(máximo {money.format(selected.balance)})</span>
-                    <input className={fieldClass} min="0.01" max={selected.balance} step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" />
-                    {invalidPartial && paymentAmount && <span className="mt-1 block text-sm text-rose-700">Ingresa un importe mayor que cero y no superior al saldo.</span>}
+                  {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe de esta parte <span className="font-normal">(menor a {money.format(selected.balance)})</span>
+                    <input className={fieldClass} min="0.01" max={Math.max(0.01, selected.balance - 0.01)} step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" />
+                    {invalidPartial && paymentAmount && <span className="mt-1 block text-sm text-rose-700">Ingresa un importe mayor que cero y menor al saldo.</span>}
                   </label>}
                   <div className="mt-4 space-y-3">
                     {paymentLines.map((line, index) => {
@@ -678,10 +679,10 @@ export default function CashierPage({
                   </div>
                   <div className={`mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white p-3 ${partialMode ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
                     {partialMode && <p>Saldo vigente<br /><b>{money.format(selected.balance)}</b></p>}
-                    {partialMode && <p>Objetivo parcial<br /><b>{money.format(paymentToApply)}</b></p>}
+                    {partialMode && <p>Objetivo parcial<br /><b>{hasPartialObjective ? money.format(paymentToApply) : "—"}</b></p>}
                     <p>Total preparado<br /><b>{money.format(preparedTotal)}</b></p>
                     {!partialMode && <p>Saldo a cubrir<br /><b>{money.format(paymentToApply)}</b></p>}
-                    <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{money.format(Math.abs(difference))}</b></p>
+                    <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{partialMode && !hasPartialObjective ? "—" : money.format(Math.abs(difference))}</b></p>
                   </div>
                   {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}
                   <div className="mt-4 flex flex-wrap items-center gap-2 md:flex-nowrap">

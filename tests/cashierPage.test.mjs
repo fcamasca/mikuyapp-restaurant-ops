@@ -274,9 +274,11 @@ test("TP62 modo parcial conserva saldo real, separa objetivo y permite volver a 
   const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
   assert.match(paymentForm, /Saldo: <b[^>]*>\{money\.format\(selected\.balance\)\}/);
   assert.match(paymentForm, /partialMode && <p>Saldo vigente[\s\S]*money\.format\(selected\.balance\)/);
-  assert.match(paymentForm, /partialMode && <p>Objetivo parcial[\s\S]*money\.format\(paymentToApply\)/);
+  assert.match(paymentForm, /Importe de esta parte[\s\S]*\(menor a \{money\.format\(selected\.balance\)\}\)/);
+  assert.match(paymentForm, /partialMode && <p>Objetivo parcial[\s\S]*hasPartialObjective \? money\.format\(paymentToApply\) : "—"/);
   assert.match(paymentForm, /Total preparado[\s\S]*money\.format\(preparedTotal\)/);
   assert.match(paymentForm, /difference >= 0 \? "Falta" : "Exceso"/);
+  assert.match(paymentForm, /partialMode && !hasPartialObjective \? "—" : money\.format\(Math\.abs\(difference\)\)/);
   assert.match(paymentForm, /\{partialMode \? "Cobro total" : "Cobrar una parte"\}/);
 });
 
@@ -286,7 +288,7 @@ test("TP62 alinea la mesa a la derecha del encabezado del pedido", () => {
 });
 
 test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
-  assert.match(page, /partialAmount <= 0 \|\| partialAmount > \(selected\?\.balance \?\? 0\)/);
+  assert.match(page, /partialAmount <= 0 \|\| partialAmount >= \(selected\?\.balance \?\? 0\)/);
   assert.match(page, /partialMode && invalidPartial/);
   for (const reset of [
     "setPartialMode(false)",
