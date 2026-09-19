@@ -80,37 +80,45 @@ function InternalDocument({
   order,
   payments,
   localName,
+  createdAt,
   onClose,
 }: {
-  payment: PersistedPayment;
+  payment: PersistedPayment | null;
   order: CashierPendingOrder;
   payments: readonly PaymentHistory[];
   localName: string;
+  createdAt: string;
   onClose: () => void;
 }) {
-  const complete = payment.balance === 0;
-  const documentPayments = [
-    ...payments,
-    {
-      chargeId: payment.chargeId,
-      chargeType: complete ? "TOTAL" as const : "PARCIAL" as const,
-      amount: payment.amount,
-      tip: payment.tip,
-      lines: payment.lines,
-      actorName: "Usuario actual",
-      paidAt: payment.paidAt,
-      subtotal: payment.subtotal,
-      discount: payment.discount,
-      netTotal: payment.netTotal,
-      paid: payment.paid,
-      balance: payment.balance,
-    },
-  ].filter(
+  const preAccount = payment === null;
+  const complete = payment?.balance === 0;
+  const documentPayments = payment ? [
+      ...payments,
+      {
+        chargeId: payment.chargeId,
+        chargeType: complete ? "TOTAL" as const : "PARCIAL" as const,
+        amount: payment.amount,
+        tip: payment.tip,
+        lines: payment.lines,
+        actorName: "Usuario actual",
+        paidAt: payment.paidAt,
+        subtotal: payment.subtotal,
+        discount: payment.discount,
+        netTotal: payment.netTotal,
+        paid: payment.paid,
+        balance: payment.balance,
+      },
+    ].filter(
     (item, index, all) =>
       all.findIndex((candidate) => candidate.chargeId === item.chargeId) === index,
-  );
+    ) : [];
   const displayedPayments = complete ? documentPayments : documentPayments.slice(-1);
   const displayedTip = displayedPayments.reduce((total, item) => total + item.tip, 0);
+  const subtotal = payment?.subtotal ?? order.subtotal;
+  const discount = payment?.discount ?? order.discount;
+  const netTotal = payment?.netTotal ?? order.netTotal;
+  const balance = payment?.balance ?? order.balance;
+  const title = preAccount ? "PRECUENTA" : complete ? "TICKET INTERNO" : "RECIBO INTERNO";
   return (
     <div className="print-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <article className="print-document flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
@@ -118,7 +126,7 @@ function InternalDocument({
           <header className="text-center">
             <h2 className="text-2xl font-black tracking-wide">MikuyApp</h2>
             {localName.trim() && <p className="mt-1 font-semibold text-stone-700">{localName}</p>}
-            <p className="mt-5 text-xl font-black tracking-widest">{complete ? "TICKET INTERNO" : "RECIBO INTERNO"}</p>
+            <p className="mt-5 text-xl font-black tracking-widest">{title}</p>
             <p className="mt-1 text-sm font-bold text-rose-700">No válido como comprobante fiscal</p>
           </header>
           <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
@@ -126,9 +134,9 @@ function InternalDocument({
             <span>Pedido #{order.orderId}</span>
             <span>Mesa {order.tableCode}</span>
           </div>
-          <p className="mt-1 text-sm text-stone-600">{new Date(payment.paidAt).toLocaleString("es-PE", { timeZone: "America/Lima" })}</p>
+          <p className="mt-1 text-sm text-stone-600">{new Date(payment?.paidAt ?? createdAt).toLocaleString("es-PE", { timeZone: "America/Lima" })}</p>
 
-          {complete && <>
+          {(preAccount || complete) && <>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
             <div className="grid grid-cols-[3rem_1fr_auto] gap-2 border-b border-stone-300 pb-2 text-xs font-bold uppercase text-stone-600">
               <span>Cant.</span><span>Producto</span><span>Importe</span>
@@ -142,28 +150,31 @@ function InternalDocument({
             </ul>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
             <dl className="space-y-1.5">
-              <div className="flex justify-between gap-4"><dt>Subtotal</dt><dd>{money.format(payment.subtotal)}</dd></div>
-              <div className="flex justify-between gap-4"><dt>Descuento</dt><dd>{money.format(payment.discount)}</dd></div>
-              <div className="flex justify-between gap-4 text-lg font-black"><dt>TOTAL</dt><dd>{money.format(payment.netTotal)}</dd></div>
+              <div className="flex justify-between gap-4"><dt>Subtotal</dt><dd>{money.format(subtotal)}</dd></div>
+              <div className="flex justify-between gap-4"><dt>Descuento</dt><dd>{money.format(discount)}</dd></div>
+              {preAccount && order.paid > 0 && <div className="flex justify-between gap-4"><dt>Pagado</dt><dd>{money.format(order.paid)}</dd></div>}
+              <div className="flex justify-between gap-4 text-lg font-black"><dt>{preAccount ? "TOTAL A PAGAR" : "TOTAL"}</dt><dd>{money.format(preAccount ? order.balance : netTotal)}</dd></div>
             </dl>
           </>}
 
-          <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-          <h3 className="text-sm font-black uppercase tracking-wider">Formas de pago</h3>
-          <ul className="mt-2 space-y-1.5">
-            {displayedPayments.flatMap((item) => item.lines).map((line, index) => (
-              <li className="flex justify-between gap-4" key={`${line.paymentId}-${index}`}>
-                <span className="capitalize">{line.method.toLocaleLowerCase("es-PE")}</span>
-                <b>{money.format(line.amount)}</b>
-              </li>
-            ))}
-          </ul>
-          <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-          <dl className="space-y-1.5">
-            {!complete && <div className="flex justify-between gap-4 text-lg font-black"><dt>IMPORTE COBRADO</dt><dd>{money.format(payment.amount)}</dd></div>}
-            <div className="flex justify-between gap-4"><dt>Propina</dt><dd>{money.format(displayedTip)}</dd></div>
-            <div className="flex justify-between gap-4 font-black"><dt>{complete ? "SALDO" : "SALDO PENDIENTE"}</dt><dd>{money.format(payment.balance)}</dd></div>
-          </dl>
+          {!preAccount && payment && <>
+            <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+            <h3 className="text-sm font-black uppercase tracking-wider">Formas de pago</h3>
+            <ul className="mt-2 space-y-1.5">
+              {displayedPayments.flatMap((item) => item.lines).map((line, index) => (
+                <li className="flex justify-between gap-4" key={`${line.paymentId}-${index}`}>
+                  <span className="capitalize">{line.method.toLocaleLowerCase("es-PE")}</span>
+                  <b>{money.format(line.amount)}</b>
+                </li>
+              ))}
+            </ul>
+            <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+            <dl className="space-y-1.5">
+              {!complete && <div className="flex justify-between gap-4 text-lg font-black"><dt>IMPORTE COBRADO</dt><dd>{money.format(payment.amount)}</dd></div>}
+              <div className="flex justify-between gap-4"><dt>Propina</dt><dd>{money.format(displayedTip)}</dd></div>
+              <div className="flex justify-between gap-4 font-black"><dt>{complete ? "SALDO" : "SALDO PENDIENTE"}</dt><dd>{money.format(balance)}</dd></div>
+            </dl>
+          </>}
           <p className="mt-6 text-center text-xs text-stone-500">Operado con MikuyApp</p>
         </div>
         <div className="no-print flex shrink-0 gap-3 border-t border-stone-200 bg-white p-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
@@ -228,6 +239,8 @@ export default function CashierPage({
     [confirmationNotice, setConfirmationNotice] = useState<string | null>(null),
     [paymentFeedback, setPaymentFeedback] = useState<PersistedPayment | null>(null),
     [document, setDocument] = useState<PersistedPayment | null>(null),
+    [documentMode, setDocumentMode] = useState<"PRECUENTA" | "PAYMENT" | null>(null),
+    [documentCreatedAt, setDocumentCreatedAt] = useState(""),
     [documentOrder, setDocumentOrder] = useState<CashierPendingOrder | null>(
       null,
     );
@@ -672,6 +685,7 @@ export default function CashierPage({
                       {partialMode ? `Cobrar parte · ${money.format(paymentToApply)}` : `Cobrar · ${money.format(selected.balance)}`}
                     </button>
                     <div className="flex flex-wrap gap-2 sm:ml-auto sm:justify-end">
+                      <button className={auxiliaryButtonClass} type="button" onClick={() => { setDocumentOrder(selected); setDocument(null); setDocumentMode("PRECUENTA"); setDocumentCreatedAt(new Date().toISOString()); }}>Precuenta</button>
                       <button className={auxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>Cobrar una parte</button>
                       <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setPaymentLines((old) => old.map((line) => ({ ...line, tip: "0" }))); }}>Agregar propina</button>
                       <button className={auxiliaryButtonClass} type="button" onClick={() => setMoreOptions((value) => !value)}>Más opciones</button>
@@ -836,6 +850,8 @@ export default function CashierPage({
                       if (r.ok) {
                         setDocumentOrder(selected);
                         setDocument(r.data);
+                        setDocumentMode("PAYMENT");
+                        setDocumentCreatedAt(r.data.paidAt);
                         setPaymentFeedback(r.data);
                         closePaymentConfirmation();
                       }
@@ -850,14 +866,17 @@ export default function CashierPage({
             </section>
           </div>
         )}
-        {document && documentOrder && (
+        {documentMode && documentOrder && (documentMode === "PRECUENTA" || document) && (
         <InternalDocument
           order={documentOrder}
-          payment={document}
+          payment={documentMode === "PAYMENT" ? document : null}
           payments={payments}
           localName={context.local.nombre}
+          createdAt={documentCreatedAt}
           onClose={() => {
             setDocument(null);
+            setDocumentMode(null);
+            setDocumentCreatedAt("");
             setDocumentOrder(null);
           }}
         />

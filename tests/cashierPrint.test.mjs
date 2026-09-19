@@ -7,8 +7,8 @@ const page = readFileSync(
   ),
   css = readFileSync(new URL("../src/index.css", import.meta.url), "utf8");
 test("TP48 distingue recibo parcial y ticket consolidado", () => {
-  assert.match(page, /payment\.balance\s*===\s*0/);
-  assert.match(page, /"TICKET INTERNO" : "RECIBO INTERNO"/);
+  assert.match(page, /payment\?\.balance\s*===\s*0/);
+  assert.match(page, /preAccount \? "PRECUENTA" : complete \? "TICKET INTERNO" : "RECIBO INTERNO"/);
   assert.match(page, /No válido como comprobante fiscal/);
   for (const x of [
     "Subtotal",
@@ -20,12 +20,26 @@ test("TP48 distingue recibo parcial y ticket consolidado", () => {
   ])
     assert.match(page, new RegExp(x));
 });
+test("precuenta reutiliza el documento con snapshot vigente y sin mutaciones", () => {
+  const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
+  const preAccountButton = paymentForm.match(/<button[^>]*onClick=\{\(\) => \{ setDocumentOrder\(selected\);[\s\S]*?>Precuenta<\/button>/)?.[0] ?? "";
+  assert.ok(preAccountButton);
+  assert.match(preAccountButton, /setDocument\(null\)/);
+  assert.match(preAccountButton, /setDocumentMode\("PRECUENTA"\)/);
+  assert.doesNotMatch(preAccountButton, /service\.|registerPayment|rpc|run\(/);
+  assert.match(page, /\(preAccount \|\| complete\) && <>[\s\S]*order\.lines\.map/);
+  assert.match(page, /TOTAL A PAGAR/);
+  assert.match(page, /money\.format\(preAccount \? order\.balance : netTotal\)/);
+  assert.match(page, /preAccount && order\.paid > 0[\s\S]*Pagado/);
+  assert.match(page, /!preAccount && payment && <>[\s\S]*Formas de pago/);
+  assert.match(page, /setDocumentMode\(null\)/);
+});
 test("ticket final muestra consumo completo y medios repetidos sin identificadores técnicos visibles", () => {
   const documentComponent = page.slice(
     page.indexOf("function InternalDocument"),
     page.indexOf("export default function CashierPage"),
   );
-  assert.match(page, /complete && <>[\s\S]*order\.lines\.map/);
+  assert.match(page, /\(preAccount \|\| complete\) && <>[\s\S]*order\.lines\.map/);
   assert.match(page, /line\.quantity/);
   assert.match(page, /line\.productName/);
   assert.match(page, /money\.format\(line\.lineAmount\)/);
