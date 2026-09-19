@@ -144,9 +144,10 @@ test("registra un cobro atómico con N medios, propinas e idempotencia", async (
 });
 test("TP35, TP45-47 y TP59-60 están representados", () => {
   for (const text of [
-    "Caja física",
+    "Estado de caja",
     "Abrir o recuperar sesión",
-    "No hay caja física disponible.",
+    "No hay una caja activa configurada para este local.",
+    "Hay varias cajas activas configuradas.",
     "Cargando caja…",
     "Reintentar",
     "Subtotal",
@@ -186,7 +187,6 @@ test("administración queda en shell admin sin capacidad de cobro", () => {
 
 test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () => {
   for (const text of [
-    "Paso 1",
     "Paso 2",
     "Paso 3",
     "Paso 4",
@@ -207,6 +207,16 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
   assert.match(page, /className=\{selectClass\}/);
   assert.match(page, /lg:grid-cols-\[22rem_minmax\(0,1fr\)\]/);
   assert.doesNotMatch(page, /overflow-x-(?:auto|scroll)/);
+});
+
+test("TP62 usa automáticamente la única caja activa y no muestra selector ni cajero duplicado", () => {
+  assert.match(page, /boxes\.data\.length === 1 \? boxes\.data\[0\]\.id : ""/);
+  assert.match(page, /cashboxes\.length > 1/);
+  assert.match(page, /varias cajas activas configuradas/);
+  assert.match(page, /\{cashboxes\[0\]\.codigo\} · \{cashboxes\[0\]\.nombre\}/);
+  assert.doesNotMatch(page, />Caja física</);
+  assert.doesNotMatch(page, />Cajero</);
+  assert.doesNotMatch(page, /setCashboxId\(e\.target\.value\)/);
 });
 
 test("TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demanda", () => {
@@ -244,10 +254,9 @@ test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
   assert.match(page, /\[discountReason, setDiscountReason\]/);
 });
 
-test("TP62 UX muestra nombre local y nunca expone el UUID del cajero", () => {
-  assert.match(page, /session\?\.abierta_por === context\.profile\.id/);
-  assert.match(page, /context\.profile\.nombre/);
-  assert.match(page, /Otro cajero autorizado/);
+test("TP62 UX no repite cajero ni expone el UUID de quien abrió", () => {
+  assert.doesNotMatch(page, /openedByName/);
+  assert.doesNotMatch(page, /Otro cajero autorizado/);
   assert.doesNotMatch(page, /<b[^>]*>\{session\.abierta_por\}<\/b>/);
 });
 

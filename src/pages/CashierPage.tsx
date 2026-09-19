@@ -200,9 +200,6 @@ export default function CashierPage({
   const pending = useRef(false),
     paymentConfirmationRef = useRef<PaymentConfirmation | null>(null);
   const selected = orders.find((x) => x.orderId === selectedId) ?? null;
-  const openedByName = session?.abierta_por === context.profile.id
-    ? context.profile.nombre
-    : "Otro cajero autorizado";
   const clearPaymentOptions = useCallback(() => {
     if (paymentConfirmationRef.current) {
       paymentConfirmationRef.current = null;
@@ -237,8 +234,12 @@ export default function CashierPage({
       return;
     }
     setCashboxes(boxes.data);
-    const chosen = cashboxId || boxes.data[0]?.id || "";
-    if (!cashboxId) setCashboxId(chosen);
+    const chosen = boxes.data.length === 1 ? boxes.data[0].id : "";
+    setCashboxId(chosen);
+    if (!chosen) {
+      setSession(null);
+      setSummary(null);
+    }
     const [s, o] = chosen
       ? await Promise.all([
           service.getActiveSession(context, chosen),
@@ -263,7 +264,7 @@ export default function CashierPage({
     } else setError(o.error.message);
     clearPaymentOptions();
     setLoading(false);
-  }, [cashboxId, clearPaymentOptions, context, service]);
+  }, [clearPaymentOptions, context, service]);
   useEffect(() => {
     void refresh();
   }, [attempt, refresh]);
@@ -371,51 +372,36 @@ export default function CashierPage({
             </button>
           </div>
         )}
-        <section className="mt-4 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 pb-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 1</p>
-              <h2 className="text-xl font-bold">Estado de caja</h2>
-            </div>
-            {session && <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-800">Sesión {session.estado.toLowerCase()}</span>}
-          </div>
+        <section className="mt-3 rounded-xl border border-stone-200 bg-white px-3 py-2 shadow-sm">
           {loading ? (
             <p aria-busy="true">Cargando caja…</p>
           ) : cashboxes.length === 0 ? (
-            <p>No hay caja física disponible.</p>
+            <p role="alert">No hay una caja activa configurada para este local.</p>
+          ) : cashboxes.length > 1 ? (
+            <p role="alert">Hay varias cajas activas configuradas. Solicita al administrador dejar una sola caja activa para operar E1.</p>
           ) : (
             <>
-              <label className="mt-4 block max-w-md text-sm font-semibold text-stone-700">
-                <span className="block">Caja física</span>
-                <select
-                  className={selectClass}
-                  disabled={busy}
-                  value={cashboxId}
-                  onChange={(e) => {
-                    setCashboxId(e.target.value);
-                    setSession(null);
-                  }}
-                >
-                  {cashboxes.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.codigo} · {x.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
               {session ? (
-                <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-stone-100 pt-3 text-sm">
-                  <p><span className="text-stone-500">Estado</span> <b>{session.estado}</b></p>
-                  <p><span className="text-stone-500">Cajero</span> <b>{openedByName}</b></p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                  <p className="font-bold text-stone-950">{cashboxes[0].codigo} · {cashboxes[0].nombre}</p>
+                  <span aria-hidden="true" className="hidden text-stone-300 sm:inline">|</span>
+                  <b className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">{session.estado}</b>
+                  <span aria-hidden="true" className="hidden text-stone-300 sm:inline">|</span>
                   <p><span className="text-stone-500">Inicial</span> <b>{money.format(session.monto_inicial)}</b></p>
+                  <span aria-hidden="true" className="hidden text-stone-300 sm:inline">|</span>
                   <p><span className="text-stone-500">Esperado</span> <b className="text-emerald-800">{money.format(summary?.efectivo_esperado ?? 0)}</b></p>
-                  <div className="flex flex-wrap gap-2 sm:ml-auto">
-                    <button className={auxiliaryButtonClass} onClick={() => setCashPanel(cashPanel === "MOVEMENT" ? null : "MOVEMENT")} type="button">Movimientos</button>
-                    <button className={secondaryButtonClass} onClick={() => setCashPanel(cashPanel === "CLOSE" ? null : "CLOSE")} type="button">Cerrar caja</button>
+                  <div className="flex flex-wrap gap-2 lg:ml-auto">
+                    <button className="rounded-lg border border-stone-300 bg-stone-50 px-3 py-2 font-semibold text-stone-800 hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200" onClick={() => setCashPanel(cashPanel === "MOVEMENT" ? null : "MOVEMENT")} type="button">Movimientos</button>
+                    <button className="rounded-lg border border-emerald-700 bg-white px-3 py-2 font-bold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-100" onClick={() => setCashPanel(cashPanel === "CLOSE" ? null : "CLOSE")} type="button">Cerrar caja</button>
                   </div>
                 </div>
               ) : (
-                <div className="mt-4 flex flex-col gap-3 sm:max-w-md">
+                <div className="py-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div><p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Estado de caja</p><h2 className="text-lg font-bold">{cashboxes[0].codigo} · {cashboxes[0].nombre}</h2></div>
+                    <span className="rounded-full bg-stone-100 px-2.5 py-1 text-sm font-bold text-stone-700">SIN SESIÓN</span>
+                  </div>
+                  <div className="mt-2 flex flex-col gap-2 sm:max-w-md">
                   <label className="block text-sm font-semibold text-stone-700">
                     <span className="block">Monto inicial</span>
                     <input
@@ -444,6 +430,7 @@ export default function CashierPage({
                   >
                     Abrir o recuperar sesión
                   </button>
+                  </div>
                 </div>
               )}
             </>
@@ -552,7 +539,7 @@ export default function CashierPage({
           <b>Cobro registrado: {money.format(paymentFeedback.amount)} · {paymentFeedback.lines.length} {paymentFeedback.lines.length === 1 ? "medio" : "medios"}</b>
           <p>Saldo restante: {money.format(paymentFeedback.balance)} · Pedido {paymentFeedback.orderStatus === "PAGADO" ? "PAGADO" : "pendiente de completar"}.</p>
         </div>}
-        <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
+        <div className="mt-3 grid min-w-0 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
           <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 2</p>
             <h2 className="text-xl font-bold">Pedidos pendientes</h2>
