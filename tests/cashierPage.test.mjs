@@ -187,17 +187,14 @@ test("administración queda en shell admin sin capacidad de cobro", () => {
 
 test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () => {
   for (const text of [
-    "Paso 2",
-    "Paso 3",
-    "Paso 4",
     "Estado de caja",
     "Pedidos pendientes",
     "Detalle del pedido",
     "Productos del pedido",
     "Cobro",
     "pago realizado",
-    "Agregar medio de pago",
   ]) assert.match(page, new RegExp(text));
+  assert.doesNotMatch(page, /Paso [1-4]/i);
 
   assert.match(page, /const fieldClass =/);
   assert.match(page, /border border-stone-300/);
@@ -221,10 +218,9 @@ test("TP62 usa automáticamente la única caja activa y no muestra selector ni c
 
 test("TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demanda", () => {
   assert.match(page, /paymentToApply = partialMode \? partialAmount : \(selected\?\.balance \?\? 0\)/);
-  assert.match(page, /`Preparar cobro · \$\{money\.format\(selected\.balance\)\}`/);
+  assert.match(page, /`Cobrar · \$\{money\.format\(selected\.balance\)\}`/);
   assert.match(page, /partialMode && <label[^>]*>Importe de esta parte/);
   assert.match(page, /Cobrar una parte/);
-  assert.match(page, /Agregar medio de pago/);
   assert.match(page, /paymentLines\.map/);
   assert.match(page, /tipMode && <label[^>]*>Propina de este medio/);
   assert.match(page, /moreOptions && <div/);
@@ -233,6 +229,17 @@ test("TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demand
   assert.match(page, /disabled=\{suggested <= 0 \|\| suggested > selected\.balance\}/);
   assert.match(page, /discountMode && <form/);
   assert.match(page, /paymentsOpen && \(/);
+});
+
+test("TP62 compacta saldo y controles por fila sin permitir eliminar la primera", () => {
+  assert.match(page, />Cobro<\/h3>[\s\S]*Saldo: <b/);
+  assert.doesNotMatch(page, /Saldo objetivo/);
+  assert.match(page, /aria-label=\{`Agregar medio después de la línea \$\{index \+ 1\}`\}/);
+  assert.match(page, /index > 0 && <button aria-label=\{`Quitar medio/);
+  assert.match(page, /rounded-full bg-emerald-700/);
+  assert.match(page, /rounded-full bg-rose-700/);
+  assert.doesNotMatch(page, />Agregar medio de pago<\/button>/);
+  assert.doesNotMatch(page, /Preparar cobro/);
 });
 
 test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {

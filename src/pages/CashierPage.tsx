@@ -541,7 +541,6 @@ export default function CashierPage({
         </div>}
         <div className="mt-3 grid min-w-0 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
           <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 2</p>
             <h2 className="text-xl font-bold">Pedidos pendientes</h2>
             {loading ? (
               <p>Cargando pedidos pendientes…</p>
@@ -569,7 +568,6 @@ export default function CashierPage({
             {selected ? (
               <>
                 <div className="border-b border-stone-200 pb-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 3</p>
                   <h2 className="text-2xl font-bold">Detalle del pedido #{selected.orderId}</h2>
                   <p className="text-stone-600">Mesa {selected.tableCode} · {selected.tableName}</p>
                 </div>
@@ -633,11 +631,10 @@ export default function CashierPage({
                     setPaymentConfirmation(confirmation);
                   }}
                 >
-                  <div className="mb-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Paso 4</p>
+                  <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className="text-xl font-bold">Cobro</h3>
+                    <p className="text-sm font-semibold text-stone-600">Saldo: <b className="text-xl text-emerald-800">{money.format(paymentToApply)}</b></p>
                   </div>
-                  <div className="rounded-xl bg-white p-3 text-sm text-stone-600">Saldo objetivo<br /><b className="text-2xl text-emerald-800">{money.format(paymentToApply)}</b></div>
                   {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe de esta parte <span className="font-normal">(máximo {money.format(selected.balance)})</span>
                     <input className={fieldClass} min="0.01" max={selected.balance} step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" />
                     {invalidPartial && paymentAmount && <span className="mt-1 block text-sm text-rose-700">Ingresa un importe mayor que cero y no superior al saldo.</span>}
@@ -654,14 +651,16 @@ export default function CashierPage({
                         <label className="text-sm font-semibold text-stone-700">Importe
                           <input className={fieldClass} min="0.01" step="0.01" type="number" value={line.amount === "" ? prepared.amount : line.amount} onChange={(e) => setPaymentLines((old) => old.map((item, i) => i === index ? { ...item, amount: e.target.value } : item))} />
                         </label>
-                        {paymentLines.length > 1 && <button aria-label={`Quitar medio ${index + 1}`} className={auxiliaryButtonClass} type="button" onClick={() => setPaymentLines((old) => old.filter((_, i) => i !== index))}>Quitar</button>}
+                        <div className="flex items-end gap-2 self-end">
+                          <button aria-label={`Agregar medio después de la línea ${index + 1}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-700 text-xl font-bold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-200" type="button" onClick={() => setPaymentLines((old) => [...old.slice(0, index + 1), { method: "EFECTIVO", amount: "", tip: "0" }, ...old.slice(index + 1)])}>+</button>
+                          {index > 0 && <button aria-label={`Quitar medio ${index + 1}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-700 text-xl font-bold text-white shadow-sm hover:bg-rose-800 focus:outline-none focus:ring-4 focus:ring-rose-200" type="button" onClick={() => setPaymentLines((old) => old.filter((_, i) => i !== index))}>−</button>}
+                        </div>
                         {tipMode && <label className="text-sm font-semibold text-stone-700 sm:col-span-2">Propina de este medio
                           <input className={fieldClass} min="0" step="0.01" type="number" value={line.tip} onChange={(e) => setPaymentLines((old) => old.map((item, i) => i === index ? { ...item, tip: e.target.value } : item))} />
                         </label>}
                       </div>;
                     })}
                   </div>
-                  <button className={`${secondaryButtonClass} mt-3`} type="button" onClick={() => setPaymentLines((old) => [...old, { method: "EFECTIVO", amount: "", tip: "0" }])}>Agregar medio de pago</button>
                   <div className="mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-3">
                     <p>Total preparado<br /><b>{money.format(preparedTotal)}</b></p>
                     <p>Saldo a cubrir<br /><b>{money.format(paymentToApply)}</b></p>
@@ -669,7 +668,7 @@ export default function CashierPage({
                   </div>
                   {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}
                   <button className={`${primaryButtonClass} mt-4 w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
-                    {partialMode ? `Preparar cobro parcial · ${money.format(paymentToApply)}` : `Preparar cobro · ${money.format(selected.balance)}`}
+                    {partialMode ? `Cobrar parte · ${money.format(paymentToApply)}` : `Cobrar · ${money.format(selected.balance)}`}
                   </button>
                 </form>
                 {confirmationNotice && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="status">{confirmationNotice}</p>}
