@@ -49,7 +49,9 @@ const fieldClass =
   secondaryButtonClass =
     "min-h-12 rounded-xl border border-emerald-700 bg-white px-5 py-3 font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-50",
   auxiliaryButtonClass =
-    "min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50";
+    "min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50",
+  compactAuxiliaryButtonClass =
+    "min-h-10 whitespace-nowrap rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50";
 function Lines({
   order,
   select,
@@ -646,7 +648,7 @@ export default function CashierPage({
                 >
                   <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className="text-xl font-bold">Cobro</h3>
-                    <p className="text-sm font-semibold text-stone-600">Saldo: <b className="text-xl text-emerald-800">{money.format(paymentToApply)}</b></p>
+                    <p className="text-sm font-semibold text-stone-600">Saldo: <b className="text-xl text-emerald-800">{money.format(selected.balance)}</b></p>
                   </div>
                   {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe de esta parte <span className="font-normal">(máximo {money.format(selected.balance)})</span>
                     <input className={fieldClass} min="0.01" max={selected.balance} step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" />
@@ -674,21 +676,23 @@ export default function CashierPage({
                       </div>;
                     })}
                   </div>
-                  <div className="mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-3">
+                  <div className={`mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white p-3 ${partialMode ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+                    {partialMode && <p>Saldo vigente<br /><b>{money.format(selected.balance)}</b></p>}
+                    {partialMode && <p>Objetivo parcial<br /><b>{money.format(paymentToApply)}</b></p>}
                     <p>Total preparado<br /><b>{money.format(preparedTotal)}</b></p>
-                    <p>Saldo a cubrir<br /><b>{money.format(paymentToApply)}</b></p>
+                    {!partialMode && <p>Saldo a cubrir<br /><b>{money.format(paymentToApply)}</b></p>}
                     <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{money.format(Math.abs(difference))}</b></p>
                   </div>
                   {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <button className={`${primaryButtonClass} w-full sm:w-auto`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 md:flex-nowrap">
+                    <button className={`${primaryButtonClass} w-full sm:w-auto md:shrink-0`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
                       {partialMode ? `Cobrar parte · ${money.format(paymentToApply)}` : `Cobrar · ${money.format(selected.balance)}`}
                     </button>
-                    <div className="flex flex-wrap gap-2 sm:ml-auto sm:justify-end">
-                      <button className={auxiliaryButtonClass} type="button" onClick={() => { setDocumentOrder(selected); setDocument(null); setDocumentMode("PRECUENTA"); setDocumentCreatedAt(new Date().toISOString()); }}>Precuenta</button>
-                      <button className={auxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>Cobrar una parte</button>
-                      <button className={auxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setPaymentLines((old) => old.map((line) => ({ ...line, tip: "0" }))); }}>Agregar propina</button>
-                      <button className={auxiliaryButtonClass} type="button" onClick={() => setMoreOptions((value) => !value)}>Más opciones</button>
+                    <div className="flex flex-wrap gap-2 md:ml-auto md:flex-nowrap md:justify-end">
+                      <button className={compactAuxiliaryButtonClass} type="button" onClick={() => { setDocumentOrder(selected); setDocument(null); setDocumentMode("PRECUENTA"); setDocumentCreatedAt(new Date().toISOString()); }}>Precuenta</button>
+                      <button className={compactAuxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>{partialMode ? "Cobro total" : "Cobrar una parte"}</button>
+                      <button className={compactAuxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setPaymentLines((old) => old.map((line) => ({ ...line, tip: "0" }))); }}>Propina</button>
+                      <button className={compactAuxiliaryButtonClass} type="button" onClick={() => setMoreOptions((value) => !value)}>Más opciones</button>
                     </div>
                   </div>
                   {moreOptions && <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3">

@@ -156,7 +156,7 @@ test("TP35, TP45-47 y TP59-60 están representados", () => {
     "Pagado",
     "Saldo",
     "Dividir por productos",
-    "Agregar propina",
+    "Propina",
     "EFECTIVO",
     "YAPE",
     "TARJETA",
@@ -264,8 +264,20 @@ test("TP62 prioriza cobro e historial, compacta el resumen y colapsa productos",
 
 test("TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la derecha", () => {
   const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
-  assert.match(paymentForm, /sm:ml-auto sm:justify-end/);
-  assert.match(paymentForm, /Cobrar una parte[\s\S]*Agregar propina[\s\S]*Más opciones/);
+  assert.match(paymentForm, /md:flex-nowrap/);
+  assert.match(paymentForm, /md:ml-auto md:flex-nowrap md:justify-end/);
+  assert.match(paymentForm, /Precuenta[\s\S]*Cobrar una parte[\s\S]*Propina[\s\S]*Más opciones/);
+  assert.doesNotMatch(paymentForm, /overflow-x-(?:auto|scroll)/);
+});
+
+test("TP62 modo parcial conserva saldo real, separa objetivo y permite volver a cobro total", () => {
+  const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
+  assert.match(paymentForm, /Saldo: <b[^>]*>\{money\.format\(selected\.balance\)\}/);
+  assert.match(paymentForm, /partialMode && <p>Saldo vigente[\s\S]*money\.format\(selected\.balance\)/);
+  assert.match(paymentForm, /partialMode && <p>Objetivo parcial[\s\S]*money\.format\(paymentToApply\)/);
+  assert.match(paymentForm, /Total preparado[\s\S]*money\.format\(preparedTotal\)/);
+  assert.match(paymentForm, /difference >= 0 \? "Falta" : "Exceso"/);
+  assert.match(paymentForm, /\{partialMode \? "Cobro total" : "Cobrar una parte"\}/);
 });
 
 test("TP62 alinea la mesa a la derecha del encabezado del pedido", () => {
