@@ -100,7 +100,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | DF-04 | Límite comercial del descuento. | No se fija porcentaje arbitrario; todo descuento requiere autorización de `ADMINISTRADOR`. |
 | DF-06 | Documentos por acto de cobro. | Un documento interno por cobro: recibo para cada acto parcial y ticket consolidado cuando el acto completa el saldo; un cobro con N medios se confirma y documenta una sola vez, detallando sus líneas. |
 | DF-07 | Cierre supervisor. | `ADMINISTRADOR` puede ejecutarlo con motivo y auditoría. |
-| DF-08 | Selección de caja física. | Caja configurable/seleccionable; no queda vinculada permanentemente al navegador. |
+| DF-08 | Caja física operativa en E1. | `/caja` usa automáticamente la única caja activa/configurada del local. No muestra selector ni elige arbitrariamente si existen varias; la selección explícita por el usuario `CAJA` se difiere a una evolución posterior. El modelo conserva soporte backend para múltiples cajas. |
 | DF-09 | División mediante selección de productos. | La selección sólo ayuda a calcular; se persiste importe, no asignación histórica por líneas. |
 
 No quedan decisiones funcionales ni técnicas abiertas para construir el ajuste detectado en TP62. EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 define la representación mínima elegida. La construcción y revalidación de este ajuste aún no se han ejecutado.
