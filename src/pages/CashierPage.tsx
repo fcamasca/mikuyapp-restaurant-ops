@@ -567,9 +567,9 @@ export default function CashierPage({
           <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
             {selected ? (
               <>
-                <div className="border-b border-stone-200 pb-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-stone-200 pb-4">
                   <h2 className="text-2xl font-bold">Detalle del pedido #{selected.orderId}</h2>
-                  <p className="text-stone-600">Mesa {selected.tableCode} · {selected.tableName}</p>
+                  <p className="rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-900">{selected.tableName}</p>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                   <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-600">

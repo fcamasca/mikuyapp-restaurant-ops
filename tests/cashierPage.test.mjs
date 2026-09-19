@@ -242,6 +242,11 @@ test("TP62 compacta saldo y controles por fila sin permitir eliminar la primera"
   assert.doesNotMatch(page, /Preparar cobro/);
 });
 
+test("TP62 alinea la mesa a la derecha del encabezado del pedido", () => {
+  assert.match(page, /flex flex-wrap items-baseline justify-between[\s\S]*Detalle del pedido #\{selected\.orderId\}[\s\S]*bg-emerald-100[\s\S]*\{selected\.tableName\}/);
+  assert.doesNotMatch(page, /Mesa \{selected\.tableCode\} · \{selected\.tableName\}/);
+});
+
 test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
   assert.match(page, /partialAmount <= 0 \|\| partialAmount > \(selected\?\.balance \?\? 0\)/);
   assert.match(page, /partialMode && invalidPartial/);
