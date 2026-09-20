@@ -25,6 +25,45 @@ export interface SessionSummary {
   entradas: number;
   salidas: number;
 }
+export interface CloseSnapshot {
+  sesion_caja_id: string;
+  caja_id: string;
+  local_id: string;
+  cerrado_por: string;
+  cerrado_en: string;
+  tipo_cierre: "NORMAL" | "SUPERVISOR";
+  pago_efectivo: number;
+  propina_efectivo: number;
+  pago_yape: number;
+  propina_yape: number;
+  pago_plin: number;
+  propina_plin: number;
+  pago_tarjeta: number;
+  propina_tarjeta: number;
+  entradas: number;
+  salidas: number;
+  efectivo_esperado: number;
+  efectivo_contado: number;
+  diferencia: number;
+  motivo: string | null;
+}
+export interface SessionCashReport {
+  sessionId: string;
+  cashboxCode: string;
+  cashboxName: string;
+  openedBy: string;
+  closedBy: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  initialAmount: number;
+  salesByMethod: Readonly<Record<PaymentMethodCode, number>>;
+  tipsByMethod: Readonly<Record<PaymentMethodCode, number>>;
+  entries: number;
+  exits: number;
+  expectedCash: number;
+  countedCash: number | null;
+  difference: number | null;
+}
 export interface CashMovement {
   id: string;
   sessionId: string;
@@ -268,6 +307,15 @@ export function createCashierService(client: Client) {
       );
       return r.ok ? { ok: true as const, data: summary(r.data) } : r;
     },
+    async getSessionReport(c: ValidatedProfileContext, id: string) {
+      if (!allow(c, ["CAJA", "ADMINISTRADOR"])) return fail("No autorizado.");
+      const r = await rpc<Record<string, unknown>[]>("rpc_obtener_reportes_sesion_caja", {
+        p_sesion_caja_id: id,
+      });
+      return r.ok && r.data?.[0]
+        ? { ok: true as const, data: sessionReport(r.data[0]) }
+        : r.ok ? fail("No pudimos cargar el reporte de la sesión.") : r;
+    },
     async getMovements(c: ValidatedProfileContext, id: string) {
       if (!allow(c, ["CAJA", "ADMINISTRADOR"])) return fail("No autorizado.");
       const r = await rpc<Record<string, unknown>[]>(
@@ -360,12 +408,12 @@ export function createCashierService(client: Client) {
       key: string,
     ) {
       return allow(c, ["CAJA"])
-        ? rpc("rpc_cerrar_sesion_caja", {
+        ? rpc<Record<string, unknown>>("rpc_cerrar_sesion_caja", {
             p_sesion_caja_id: sid,
             p_efectivo_contado: counted,
             p_motivo_diferencia: reason,
             p_idempotency_key: key,
-          })
+          }).then((r) => r.ok ? { ok: true as const, data: closeSnapshot(r.data) } : r)
         : Promise.resolve(fail("No autorizado."));
     },
     requestDiscount(
@@ -490,6 +538,29 @@ const summary = (x: Record<string, unknown>): SessionSummary => ({
   propina_efectivo: Number(x.propina_efectivo),
   entradas: Number(x.entradas),
   salidas: Number(x.salidas),
+});
+const closeSnapshot = (x: Record<string, unknown>): CloseSnapshot => ({
+  sesion_caja_id: String(x.sesion_caja_id),
+  caja_id: String(x.caja_id), local_id: String(x.local_id), cerrado_por: String(x.cerrado_por),
+  cerrado_en: String(x.cerrado_en), tipo_cierre: x.tipo_cierre as CloseSnapshot["tipo_cierre"],
+  pago_efectivo: Number(x.pago_efectivo), propina_efectivo: Number(x.propina_efectivo),
+  pago_yape: Number(x.pago_yape), propina_yape: Number(x.propina_yape),
+  pago_plin: Number(x.pago_plin), propina_plin: Number(x.propina_plin),
+  pago_tarjeta: Number(x.pago_tarjeta), propina_tarjeta: Number(x.propina_tarjeta),
+  entradas: Number(x.entradas), salidas: Number(x.salidas), efectivo_esperado: Number(x.efectivo_esperado),
+  efectivo_contado: Number(x.efectivo_contado), diferencia: Number(x.diferencia),
+  motivo: x.motivo == null ? null : String(x.motivo),
+});
+const sessionReport = (x: Record<string, unknown>): SessionCashReport => ({
+  sessionId: String(x.sesion_caja_id), cashboxCode: String(x.caja_codigo), cashboxName: String(x.caja_nombre),
+  openedBy: String(x.abierta_por_nombre), closedBy: x.cerrada_por_nombre == null ? null : String(x.cerrada_por_nombre),
+  openedAt: String(x.abierta_en), closedAt: x.cerrada_en == null ? null : String(x.cerrada_en),
+  initialAmount: Number(x.monto_inicial),
+  salesByMethod: { EFECTIVO: Number(x.venta_efectivo), YAPE: Number(x.venta_yape), PLIN: Number(x.venta_plin), TARJETA: Number(x.venta_tarjeta) },
+  tipsByMethod: { EFECTIVO: Number(x.propina_efectivo), YAPE: Number(x.propina_yape), PLIN: Number(x.propina_plin), TARJETA: Number(x.propina_tarjeta) },
+  entries: Number(x.entradas), exits: Number(x.salidas), expectedCash: Number(x.efectivo_esperado),
+  countedCash: x.efectivo_contado == null ? null : Number(x.efectivo_contado),
+  difference: x.diferencia == null ? null : Number(x.diferencia),
 });
 const cashMovement = (x: Record<string, unknown>): CashMovement => ({
   id: String(x.id),

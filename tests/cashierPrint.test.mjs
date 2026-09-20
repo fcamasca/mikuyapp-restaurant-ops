@@ -101,7 +101,8 @@ test("impresión térmica conserva overlay, permite contenido largo y oculta acc
 });
 test("impresión renderiza una sola copia y elimina el layout de aplicación", () => {
   assert.equal((page.match(/<InternalDocument/g) ?? []).length, 1);
-  assert.equal((page.match(/className="print-document/g) ?? []).length, 1);
+  assert.equal((page.match(/className="print-document/g) ?? []).length, 2);
+  assert.match(page, /\{closeReport && <CloseReportDocument/);
   assert.match(css, /#root > main > :not\(\.print-overlay\)[\s\S]*display: none !important/);
   assert.match(css, /\.print-overlay \{[\s\S]*position: static !important[\s\S]*overflow: visible !important/);
   assert.match(css, /\.print-document \{[\s\S]*position: static !important/);

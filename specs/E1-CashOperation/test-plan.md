@@ -45,8 +45,8 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP14 | R04 | **Salida de caja** y lote mixto de varias entradas/salidas. | Cada fila explícita queda trazable; el lote completo actualiza esperado con la fórmula vigente. |
 | E1-TP15 | R04 | Importe cero/negativo, motivo vacío, sesión cerrada o una fila inválida dentro del lote. | Rechazo atómico: cero movimientos, auditorías o cabecera idempotente parcial. |
 | E1-TP16 | R04–R05 | Entradas/salidas concurrentes, reintento del lote y reutilización conflictiva de clave. | Todos los eventos válidos se suman una vez; misma clave/datos retorna el lote original y otros datos se rechazan. |
-| E1-TP17 | R05–R07 | Cierre correcto sin diferencia. | Snapshot por medio/movimiento, esperado=contado, diferencia cero, sesión cerrada. |
-| E1-TP18 | R05–R07 | Diferencia, doble cierre y cierre vs cobro/movimiento. | Aplica DF-02; sólo un cierre; operación perdedora falla/recarga sin parcialidad. La carrera cierre-vs-cobro se ejecuta en T05 después de T08, cuando todo pago nuevo ya queda asociado a sesión. |
+| E1-TP17 | R05–R07 | Cierre correcto sin diferencia. | El primer clic no muta; resumen previo muestra componentes, `contado - esperado = 0` y no exige motivo. Sólo confirmar ejecuta una vez la RPC; la sesión queda cerrada y el reporte posterior usa el snapshot persistido. |
+| E1-TP18 | R05–R07 | Diferencia, Volver, doble cierre y cierre vs cobro/movimiento. | Diferencia visible; motivo obligatorio si es distinta de cero; Volver no muta; sólo un cierre. El reporte interno conserva actores/fechas/importes del snapshot y permite impresión manual de 80 mm, no fiscal. La carrera cierre-vs-cobro se ejecuta en T05 después de T08. |
 
 ### Descuentos y anulaciones
 
@@ -115,7 +115,7 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 
 | ID | Escenario | Evidencia requerida |
 |---|---|---|
-| E1-TP62 | Jornada de Caja en PC: abrir, cobro total de uno y varios medios (incluido repetido), `Cobrar una parte`, dos actos parciales, propina, entrada, **salida** y cierre con/sin diferencia. | Capturas/registro; composición/confirmación/documento por acto inequívocos, esperado y arqueo conciliados, tiempos/pasos aceptables. Permanece pausada hasta construir y desplegar el ajuste. |
+| E1-TP62 | Jornada de Caja en PC: abrir, cobro total de uno y varios medios (incluido repetido), `Cobrar una parte`, dos actos parciales, propina, entrada, **salida** y cierre con/sin diferencia. | Capturas/registro; composición/confirmación/documento por acto inequívocos. El cierre se revisa antes de mutar, Volver conserva la sesión, diferencia exige motivo y el reporte interno posterior se imprime manualmente en 80 mm desde snapshots. TP62 permanece abierto hasta repetir humanamente ambos cierres. |
 | E1-TP63 | Descuento solicitado por `CAJA` y autorizado por `ADMINISTRADOR`; anulación ejecutada directamente por `ADMINISTRADOR`, incluidos rechazos. | Descuento conserva solicitante/autorizador; anulación conserva únicamente actor administrador, motivo, fecha/hora y efectos en pedido/mesa/reportes. |
 | E1-TP64 | Responsive aplicable: Caja PC principal, tablet como contingencia y regresión del flujo de mozo/cocina. | Acciones críticas visibles sin solapamiento; flujo mesa→pago y Realtime conservados. |
 

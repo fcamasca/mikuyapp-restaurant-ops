@@ -165,6 +165,25 @@ test("lee movimientos con actor y registra siempre mediante lote", async () => {
     { name: "registrar_movimientos_caja", args: { p_sesion_caja_id: "s1", p_movimientos: [{ tipo: "ENTRADA", importe: 15, motivo: "Cambio" }, { tipo: "SALIDA", importe: 3, motivo: "Compra menor" }], p_idempotency_key: "batch-key" } },
   ]);
 });
+test("cierre consume reporte y snapshot autoritativos", async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name, args) => {
+      calls.push({ name, args });
+      if (name === "rpc_obtener_reportes_sesion_caja") return { data: [{ sesion_caja_id: "s1", caja_codigo: "C1", caja_nombre: "Principal", abierta_por_nombre: "Caja A", cerrada_por_nombre: null, abierta_en: "2026-09-20T10:00:00Z", cerrada_en: null, monto_inicial: 100, venta_efectivo: 20, venta_yape: 5, venta_plin: 0, venta_tarjeta: 0, propina_efectivo: 2, propina_yape: 0, propina_plin: 0, propina_tarjeta: 0, entradas: 10, salidas: 5, efectivo_esperado: 127, efectivo_contado: null, diferencia: null }], error: null };
+      return { data: { sesion_caja_id: "s1", caja_id: "c1", local_id: "l1", cerrado_por: "u1", cerrado_en: "2026-09-20T18:00:00Z", tipo_cierre: "NORMAL", monto_inicial: 100, pago_efectivo: 20, propina_efectivo: 2, pago_yape: 5, propina_yape: 0, pago_plin: 0, propina_plin: 0, pago_tarjeta: 0, propina_tarjeta: 0, entradas: 10, salidas: 5, efectivo_esperado: 127, efectivo_contado: 125, diferencia: -2, motivo: "Faltante" }, error: null };
+    },
+    from() { throw Error("not used"); },
+  };
+  const service = createCashierService(client);
+  const report = await service.getSessionReport(context, "s1");
+  const closed = await service.closeSession(context, "s1", 125, "Faltante", "close-key");
+  assert.equal(report.ok, true);
+  assert.deepEqual([report.data.cashboxCode, report.data.openedBy, report.data.expectedCash], ["C1", "Caja A", 127]);
+  assert.equal(closed.ok, true);
+  assert.deepEqual([closed.data.efectivo_contado, closed.data.diferencia, closed.data.motivo], [125, -2, "Faltante"]);
+  assert.deepEqual(calls.map(({ name }) => name), ["rpc_obtener_reportes_sesion_caja", "rpc_cerrar_sesion_caja"]);
+});
 test("TP35, TP45-47 y TP59-60 están representados", () => {
   for (const text of [
     "Estado de caja",
@@ -401,6 +420,23 @@ test("TP62 presenta movimientos históricos bloqueados y altas batch en una sola
   assert.match(page, /getSummary\(context, s\.data\.id\)[\s\S]*getMovements\(context, s\.data\.id\)/);
   assert.match(page, /min-w-\[46rem\] table-fixed/);
   assert.doesNotMatch(page, /<th[^>]*>Acción<\/th>/);
+});
+
+test("TP62 revisa el cierre antes de mutar y usa el snapshot para el reporte", () => {
+  const closeForm = page.match(/\{cashPanel === "CLOSE" &&[\s\S]*?<\/form>/)?.[0] ?? "";
+  assert.match(closeForm, /Revisar cierre/);
+  assert.match(closeForm, /setCloseConfirmation\(true\)/);
+  assert.doesNotMatch(closeForm, /service\.closeSession/);
+  assert.match(page, /Resumen previo al cierre/);
+  for (const text of ["Cobros en efectivo", "Propinas en efectivo", "Efectivo contado", "Diferencia (contado - esperado)", "Confirmar cierre", "Volver"])
+    assert.ok(page.includes(text));
+  assert.match(page, /disabled=\{busy \|\| \(closeReasonRequired && closeReason\.trim\(\) === ""\)\}/);
+  assert.match(page, /pending\.current = true[\s\S]*service\.closeSession/);
+  assert.match(page, /setCloseReport\(\{[\s\S]*\.\.\.result\.data/);
+  assert.match(page, /monto_inicial: sessionReport\.initialAmount/);
+  assert.match(page, /REPORTE INTERNO DE CIERRE/);
+  assert.match(page, /No válido como comprobante fiscal/);
+  assert.match(page, /CloseReportDocument[\s\S]*window\.print\(\)/);
 });
 
 test("TP62 UX no repite cajero ni expone el UUID de quien abrió", () => {

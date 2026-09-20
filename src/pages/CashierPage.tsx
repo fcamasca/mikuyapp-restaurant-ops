@@ -6,6 +6,8 @@ import {
   type Cashbox,
   type CashSession,
   type CashMovement,
+  type CloseSnapshot,
+  type SessionCashReport,
   type SessionSummary,
   type CashierPendingOrder,
   type PaymentHistory,
@@ -37,6 +39,14 @@ interface MovementDraft {
   type: "ENTRADA" | "SALIDA";
   amount: string;
   reason: string;
+}
+interface CloseReport extends CloseSnapshot {
+  cashboxCode: string;
+  cashboxName: string;
+  openedBy: string;
+  closedBy: string;
+  openedAt: string;
+  monto_inicial: number;
 }
 const money = new Intl.NumberFormat("es-PE", {
     style: "currency",
@@ -256,6 +266,54 @@ function InternalDocument({
     </div>
   );
 }
+function CloseReportDocument({ report, localName, onClose }: { report: CloseReport; localName: string; onClose: () => void }) {
+  const row = (label: string, value: string, strong = false) => <div className={`flex justify-between gap-4 ${strong ? "ticket-total" : ""}`}><dt>{label}</dt><dd className="text-right">{value}</dd></div>;
+  return <div className="print-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <article className="print-document ticket-document flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="ticket-scroll overflow-y-auto p-6">
+        <header className="text-center">
+          <h2 className="ticket-brand">MikuyApp</h2>
+          <p className="ticket-location mt-1 text-stone-700">{localName}</p>
+          <p className="ticket-type mt-5 tracking-widest">REPORTE INTERNO DE CIERRE</p>
+          <p className="ticket-disclaimer mt-1 text-rose-700">No válido como comprobante fiscal</p>
+        </header>
+        <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+        <dl className="space-y-1.5">
+          {row("Caja", `${report.cashboxCode} · ${report.cashboxName}`)}
+          {row("Apertura", new Date(report.openedAt).toLocaleString("es-PE", { timeZone: "America/Lima" }))}
+          {row("Cierre", new Date(report.cerrado_en).toLocaleString("es-PE", { timeZone: "America/Lima" }))}
+          {row("Abierto por", report.openedBy)}
+          {row("Cerrado por", report.closedBy)}
+        </dl>
+        <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+        <h3 className="ticket-section-title uppercase tracking-wider">Resumen financiero</h3>
+        <dl className="mt-2 space-y-1.5">
+          {row("Monto inicial", money.format(report.monto_inicial))}
+          {row("Venta efectivo", money.format(report.pago_efectivo))}
+          {row("Venta Yape", money.format(report.pago_yape))}
+          {row("Venta Plin", money.format(report.pago_plin))}
+          {row("Venta tarjeta", money.format(report.pago_tarjeta))}
+          {row("Propina efectivo", money.format(report.propina_efectivo))}
+          {row("Propinas otros medios", money.format(report.propina_yape + report.propina_plin + report.propina_tarjeta))}
+          {row("Entradas", money.format(report.entradas))}
+          {row("Salidas", money.format(report.salidas))}
+        </dl>
+        <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+        <dl className="space-y-1.5">
+          {row("EFECTIVO ESPERADO", money.format(report.efectivo_esperado), true)}
+          {row("EFECTIVO CONTADO", money.format(report.efectivo_contado), true)}
+          {row("DIFERENCIA", money.format(report.diferencia), true)}
+          {report.motivo && row("Motivo", report.motivo)}
+        </dl>
+        <p className="ticket-footer mt-6 text-center text-stone-500">Operado con MikuyApp</p>
+      </div>
+      <div className="ticket-actions no-print flex shrink-0 gap-3 border-t border-stone-200 bg-white p-4">
+        <button className={`${auxiliaryButtonClass} flex-1`} onClick={onClose} type="button">Cerrar</button>
+        <button className={`${primaryButtonClass} flex-1`} onClick={() => window.print()} type="button">Imprimir</button>
+      </div>
+    </article>
+  </div>;
+}
 export default function CashierPage({
   context,
   isSigningOut,
@@ -271,6 +329,7 @@ export default function CashierPage({
     [cashboxId, setCashboxId] = useState(""),
     [session, setSession] = useState<CashSession | null>(null),
     [summary, setSummary] = useState<SessionSummary | null>(null),
+    [sessionReport, setSessionReport] = useState<SessionCashReport | null>(null),
     [movements, setMovements] = useState<readonly CashMovement[]>([]),
     [history, setHistory] = useState<readonly Record<string, unknown>[]>([]),
     [orders, setOrders] = useState<readonly CashierPendingOrder[]>([]),
@@ -303,6 +362,8 @@ export default function CashierPage({
     [moreOptions, setMoreOptions] = useState(false),
     [paymentsOpen, setPaymentsOpen] = useState(false),
     [cashPanel, setCashPanel] = useState<"MOVEMENT" | "CLOSE" | null>(null),
+    [closeConfirmation, setCloseConfirmation] = useState(false),
+    [closeReport, setCloseReport] = useState<CloseReport | null>(null),
     [paymentConfirmation, setPaymentConfirmation] = useState<PaymentConfirmation | null>(null),
     [confirmationNotice, setConfirmationNotice] = useState<string | null>(null),
     [paymentFeedback, setPaymentFeedback] = useState<PersistedPayment | null>(null),
@@ -314,7 +375,8 @@ export default function CashierPage({
       null,
     );
   const pending = useRef(false),
-    paymentConfirmationRef = useRef<PaymentConfirmation | null>(null);
+    paymentConfirmationRef = useRef<PaymentConfirmation | null>(null),
+    closeKeyRef = useRef<string | null>(null);
   const selected = orders.find((x) => x.orderId === selectedId) ?? null;
   const clearPaymentOptions = useCallback(() => {
     if (paymentConfirmationRef.current) {
@@ -356,6 +418,7 @@ export default function CashierPage({
     if (!chosen) {
       setSession(null);
       setSummary(null);
+      setSessionReport(null);
       setMovements([]);
     }
     const [s, o] = chosen
@@ -369,16 +432,20 @@ export default function CashierPage({
     else if (s) {
       setSession(s.data);
       if (s.data) {
-        const [sr, mr] = await Promise.all([
+        const [sr, mr, rr] = await Promise.all([
           service.getSummary(context, s.data.id),
           service.getMovements(context, s.data.id),
+          service.getSessionReport(context, s.data.id),
         ]);
         if (!isCurrent()) return;
         setSummary(sr.ok ? sr.data : null);
         setMovements(mr.ok ? mr.data : []);
+        setSessionReport(rr.ok ? rr.data : null);
         if (!mr.ok) setError(mr.error.message);
+        if (!rr.ok) setError(rr.error.message);
       } else {
         setSummary(null);
+        setSessionReport(null);
         setMovements([]);
       }
     }
@@ -486,6 +553,10 @@ export default function CashierPage({
     }),
     { entries: 0, exits: 0 },
   );
+  const countedAmount = n(counted);
+  const validCounted = counted.trim() !== "" && Number.isFinite(countedAmount) && countedAmount >= 0;
+  const closeDifference = validCounted ? countedAmount - (summary?.efectivo_esperado ?? 0) : 0;
+  const closeReasonRequired = closeDifference !== 0;
   return (
     <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
       <div className="mx-auto max-w-7xl">
@@ -643,16 +714,10 @@ export default function CashierPage({
                 className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (service)
-                    void run(() =>
-                      service.closeSession(
-                        context,
-                        session.id,
-                        n(counted),
-                            closeReason || null,
-                        key(),
-                      ),
-                    );
+                  if (validCounted && summary && sessionReport) {
+                    closeKeyRef.current = key();
+                    setCloseConfirmation(true);
+                  }
                 }}
               >
                 <h3 className="text-lg font-bold">Cierre de caja</h3>
@@ -668,7 +733,7 @@ export default function CashierPage({
                   type="number"
                 />
                 </label>
-                <p>PostgreSQL calculará y confirmará la diferencia.</p>
+                <p>Diferencia preliminar (contado - esperado): <b>{validCounted ? money.format(closeDifference) : "—"}</b></p>
                 <label className="block text-sm font-semibold text-stone-700">Motivo de diferencia
                 <input
                   className={fieldClass}
@@ -676,7 +741,7 @@ export default function CashierPage({
                       onChange={(e) => setCloseReason(e.target.value)}
                 />
                 </label>
-                <button className={primaryButtonClass} disabled={busy}>Confirmar cierre</button>
+                <button className={primaryButtonClass} disabled={busy || !validCounted || !summary || !sessionReport}>Revisar cierre</button>
               </form>
               }
             </div>
@@ -1032,6 +1097,65 @@ export default function CashierPage({
             </section>
           </div>
         )}
+        {closeConfirmation && session && summary && sessionReport && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4" role="presentation">
+            <section aria-labelledby="close-confirmation-title" aria-modal="true" className="max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl" role="dialog">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Confirmación requerida</p>
+              <h2 className="mt-1 text-xl font-bold" id="close-confirmation-title">Resumen previo al cierre</h2>
+              <dl className="mt-4 grid gap-x-6 gap-y-3 rounded-xl bg-stone-50 p-4 text-sm sm:grid-cols-2">
+                <div><dt className="text-stone-600">Caja</dt><dd className="font-bold">{sessionReport.cashboxCode} · {sessionReport.cashboxName}</dd></div>
+                <div><dt className="text-stone-600">Monto inicial</dt><dd className="font-bold">{money.format(summary.monto_inicial)}</dd></div>
+                <div><dt className="text-stone-600">Cobros en efectivo</dt><dd className="font-bold">{money.format(summary.pago_efectivo)}</dd></div>
+                <div><dt className="text-stone-600">Propinas en efectivo</dt><dd className="font-bold">{money.format(summary.propina_efectivo)}</dd></div>
+                <div><dt className="text-stone-600">Entradas</dt><dd className="font-bold">{money.format(summary.entradas)}</dd></div>
+                <div><dt className="text-stone-600">Salidas</dt><dd className="font-bold">{money.format(summary.salidas)}</dd></div>
+                <div><dt className="text-stone-600">Efectivo esperado</dt><dd className="font-bold">{money.format(summary.efectivo_esperado)}</dd></div>
+                <div><dt className="text-stone-600">Efectivo contado</dt><dd className="font-bold">{money.format(countedAmount)}</dd></div>
+                <div className="sm:col-span-2"><dt className="text-stone-600">Diferencia (contado - esperado)</dt><dd className={`text-lg font-bold ${closeDifference === 0 ? "text-emerald-700" : "text-rose-700"}`}>{money.format(closeDifference)}</dd></div>
+                {closeReasonRequired && <div className="sm:col-span-2"><dt className="text-stone-600">Motivo de diferencia</dt><dd className="font-bold">{closeReason.trim() || "Debe ingresar un motivo antes de confirmar."}</dd></div>}
+              </dl>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button className={auxiliaryButtonClass} disabled={busy} onClick={() => { setCloseConfirmation(false); closeKeyRef.current = null; }} type="button">Volver</button>
+                <button
+                  aria-busy={busy}
+                  className={primaryButtonClass}
+                  disabled={busy || (closeReasonRequired && closeReason.trim() === "")}
+                  onClick={() => {
+                    if (!service || !closeKeyRef.current || pending.current) return;
+                    pending.current = true;
+                    setBusy(true);
+                    setError(null);
+                    void service.closeSession(context, session.id, countedAmount, closeReason.trim() || null, closeKeyRef.current).then(async (result) => {
+                      if (!result.ok) {
+                        setError(result.error.message);
+                        return;
+                      }
+                      setCloseReport({
+                        ...result.data,
+                        cashboxCode: sessionReport.cashboxCode,
+                        cashboxName: sessionReport.cashboxName,
+                        openedBy: sessionReport.openedBy,
+                        closedBy: context.profile.nombre,
+                        openedAt: sessionReport.openedAt,
+                        monto_inicial: sessionReport.initialAmount,
+                      });
+                      setCloseConfirmation(false);
+                      closeKeyRef.current = null;
+                      setCashPanel(null);
+                      setCounted("");
+                      setCloseReason("");
+                      await refresh();
+                    }).finally(() => {
+                      pending.current = false;
+                      setBusy(false);
+                    });
+                  }}
+                  type="button"
+                >{busy ? "Cerrando caja…" : "Confirmar cierre"}</button>
+              </div>
+            </section>
+          </div>
+        )}
         {documentMode && documentOrder && (documentMode === "PRECUENTA" || document) && (
         <InternalDocument
           order={documentOrder}
@@ -1048,6 +1172,7 @@ export default function CashierPage({
           }}
         />
       )}
+      {closeReport && <CloseReportDocument report={closeReport} localName={context.local.nombre} onClose={() => setCloseReport(null)} />}
     </main>
   );
 }
