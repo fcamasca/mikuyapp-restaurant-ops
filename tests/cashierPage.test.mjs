@@ -372,20 +372,34 @@ test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
 });
 
 test("TP62 presenta movimientos históricos bloqueados y altas batch en una sola grilla", () => {
-  for (const heading of ["Hora", "Tipo", "Importe", "Motivo", "Registrado por"])
+  for (const heading of ["Nro", "Hora", "Tipo", "Importe", "Motivo", "Registrado por"])
     assert.match(page, new RegExp(`>${heading}<`));
   assert.match(page, /movements\.map\(\(item, index\) => <tr className="bg-stone-100 text-stone-700"/);
   assert.match(page, /index === movements\.length - 1 && movementDrafts\.length === 0/);
   assert.match(page, /aria-label="Agregar primer movimiento"/);
-  assert.match(page, /movementDrafts\.map\(\(draft\) => <tr className="bg-white"/);
+  assert.match(page, /movementDrafts\.map\(\(draft, index\) => <tr className="bg-white"/);
   assert.match(page, /aria-label="Agregar otra fila de movimiento"/);
   assert.match(page, /aria-label="Eliminar fila de movimiento"/);
-  assert.match(page, /context\.profile\.nombre/);
+  assert.match(page, /title="Agregar movimiento"/);
+  assert.match(page, /title="Agregar otra fila"/);
+  assert.match(page, /title="Eliminar esta fila"/);
+  assert.match(page, /movements\.length \+ index \+ 1/);
+  assert.match(page, /item\.type === "SALIDA" && "− "/);
+  assert.doesNotMatch(page, /draft\.type === "SALIDA" \? "−" : "\+"/);
+  assert.match(page, />Totales registrados<\/th>/);
+  assert.match(page, /Entradas \{money\.format\(movementTotals\.entries\)\}/);
+  assert.match(page, /Salidas \{money\.format\(movementTotals\.exits\)\}/);
+  assert.match(page, /movementTotals\.entries - movementTotals\.exits/);
+  assert.match(page, /userInitials\(item\.actorName\)/);
+  assert.match(page, /title=\{item\.actorName\}/);
+  assert.doesNotMatch(page, /userInitials\(context\.profile\.nombre\)/);
+  assert.match(page, /movementDrafts\.map\([\s\S]*className="flex items-center justify-end"/);
+  assert.match(page, /w-\[40%\][\s\S]*w-\[14%\]/);
   assert.match(page, />Guardar<\/button>[\s\S]*>Cancelar<\/button>/);
   assert.match(page, /service\.registerMovements\([\s\S]*movementDrafts\.map/);
   assert.match(page, /setMovementDrafts\(\[\]\)[\s\S]*setMovementNotice\("Movimientos registrados correctamente"\)/);
   assert.match(page, /getSummary\(context, s\.data\.id\)[\s\S]*getMovements\(context, s\.data\.id\)/);
-  assert.match(page, /min-w-\[42rem\] table-fixed/);
+  assert.match(page, /min-w-\[46rem\] table-fixed/);
   assert.doesNotMatch(page, /<th[^>]*>Acción<\/th>/);
 });
 

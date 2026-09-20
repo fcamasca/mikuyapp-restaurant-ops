@@ -49,6 +49,11 @@ const formatDiscountValue = (discount: AdminDiscount) =>
   discount.tipo === "PORCENTAJE"
     ? `${Number(discount.valor_solicitado).toFixed(2)}%`
     : money.format(discount.valor_solicitado);
+const userInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  return `${parts[0][0]}${parts.length > 1 ? parts.at(-1)?.[0] ?? "" : ""}`.toLocaleUpperCase("es-PE");
+};
 const fieldClass =
     "mt-1.5 min-h-12 w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base font-medium text-stone-950 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-stone-100",
   selectClass = `${fieldClass} appearance-auto pr-9`,
@@ -474,6 +479,13 @@ export default function CashierPage({
   const chronologicalPayments = [...payments].sort(
     (left, right) => new Date(left.paidAt).getTime() - new Date(right.paidAt).getTime(),
   );
+  const movementTotals = movements.reduce(
+    (totals, movement) => ({
+      entries: totals.entries + (movement.type === "ENTRADA" ? movement.amount : 0),
+      exits: totals.exits + (movement.type === "SALIDA" ? movement.amount : 0),
+    }),
+    { entries: 0, exits: 0 },
+  );
   return (
     <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
       <div className="mx-auto max-w-7xl">
@@ -597,25 +609,29 @@ export default function CashierPage({
               >
                 <h3 className="text-lg font-bold">Movimientos de caja</h3>
                 <div className="mt-3 overflow-x-auto rounded-xl border border-stone-200">
-                  <table className="w-full min-w-[42rem] table-fixed text-left text-sm">
-                    <colgroup><col className="w-[11%]" /><col className="w-[16%]" /><col className="w-[16%]" /><col className="w-[29%]" /><col className="w-[28%]" /></colgroup>
+                  <table className="w-full min-w-[46rem] table-fixed text-left text-sm">
+                    <colgroup><col className="w-[7%]" /><col className="w-[10%]" /><col className="w-[14%]" /><col className="w-[15%]" /><col className="w-[40%]" /><col className="w-[14%]" /></colgroup>
                     <thead className="bg-stone-100 text-stone-600"><tr>
-                      <th className="px-3 py-2 font-semibold">Hora</th><th className="px-3 py-2 font-semibold">Tipo</th><th className="px-3 py-2 text-right font-semibold">Importe</th><th className="px-3 py-2 font-semibold">Motivo</th><th className="px-3 py-2 font-semibold">Registrado por</th>
+                      <th className="px-3 py-2 text-center font-semibold">Nro</th><th className="px-3 py-2 font-semibold">Hora</th><th className="px-3 py-2 font-semibold">Tipo</th><th className="px-3 py-2 text-right font-semibold">Importe</th><th className="px-3 py-2 font-semibold">Motivo</th><th className="px-3 py-2 font-semibold">Registrado por</th>
                     </tr></thead>
                     <tbody className="divide-y divide-stone-200">
                       {movements.map((item, index) => <tr className="bg-stone-100 text-stone-700" key={item.id}>
-                        <td className="px-3 py-2">{new Date(item.createdAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })}</td>
-                        <td className="px-3 py-2 font-semibold">{item.type}</td><td className="px-3 py-2 text-right">{money.format(item.amount)}</td><td className="px-3 py-2">{item.reason}</td>
-                        <td className="px-3 py-2"><div className="flex items-center justify-between gap-2"><span>{item.actorName}</span>{index === movements.length - 1 && movementDrafts.length === 0 && <button aria-label="Agregar movimiento" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => { setMovementNotice(null); setMovementDrafts([{ id: key(), type: "ENTRADA", amount: "", reason: "" }]); }} type="button">+</button>}</div></td>
+                        <td className="px-3 py-2 text-center tabular-nums">{index + 1}</td><td className="px-3 py-2">{new Date(item.createdAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })}</td>
+                        <td className="px-3 py-2 font-semibold">{item.type}</td><td className="px-3 py-2 text-right"><span aria-label={`${item.type === "SALIDA" ? "menos " : ""}${money.format(item.amount)}`}>{item.type === "SALIDA" && "− "}{money.format(item.amount)}</span></td><td className="px-3 py-2">{item.reason}</td>
+                        <td className="px-3 py-2"><div className="flex items-center justify-between gap-2"><abbr aria-label={`Registrado por ${item.actorName}`} className="font-bold no-underline" title={item.actorName}>{userInitials(item.actorName)}</abbr>{index === movements.length - 1 && movementDrafts.length === 0 && <button aria-label="Agregar movimiento" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => { setMovementNotice(null); setMovementDrafts([{ id: key(), type: "ENTRADA", amount: "", reason: "" }]); }} title="Agregar movimiento" type="button">+</button>}</div></td>
                       </tr>)}
-                      {movements.length === 0 && movementDrafts.length === 0 && <tr><td className="px-3 py-4 text-center text-stone-500" colSpan={5}>Sin movimientos registrados <button aria-label="Agregar primer movimiento" className="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => { setMovementNotice(null); setMovementDrafts([{ id: key(), type: "ENTRADA", amount: "", reason: "" }]); }} type="button">+</button></td></tr>}
-                      {movementDrafts.map((draft) => <tr className="bg-white" key={draft.id}>
-                        <td className="px-3 py-2 text-stone-500">—</td><td className="px-2 py-2"><select aria-label="Tipo de movimiento" className="min-h-10 w-full rounded-lg border border-stone-300 bg-white px-2" value={draft.type} onChange={(e) => setMovementDrafts((rows) => rows.map((row) => row.id === draft.id ? { ...row, type: e.target.value as MovementDraft["type"] } : row))}><option>ENTRADA</option><option>SALIDA</option></select></td>
+                      {movements.length === 0 && movementDrafts.length === 0 && <tr><td className="px-3 py-4 text-center text-stone-500" colSpan={6}>Sin movimientos registrados <button aria-label="Agregar primer movimiento" className="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => { setMovementNotice(null); setMovementDrafts([{ id: key(), type: "ENTRADA", amount: "", reason: "" }]); }} title="Agregar primer movimiento" type="button">+</button></td></tr>}
+                      {movementDrafts.map((draft, index) => <tr className="bg-white" key={draft.id}>
+                        <td className="px-3 py-2 text-center tabular-nums">{movements.length + index + 1}</td><td className="px-3 py-2 text-stone-500">—</td><td className="px-2 py-2"><select aria-label="Tipo de movimiento" className="min-h-10 w-full rounded-lg border border-stone-300 bg-white px-2" value={draft.type} onChange={(e) => setMovementDrafts((rows) => rows.map((row) => row.id === draft.id ? { ...row, type: e.target.value as MovementDraft["type"] } : row))}><option>ENTRADA</option><option>SALIDA</option></select></td>
                         <td className="px-2 py-2"><input aria-label="Importe del movimiento" className="min-h-10 w-full rounded-lg border border-stone-300 px-2 text-right" min="0.01" step="0.01" type="number" value={draft.amount} onChange={(e) => setMovementDrafts((rows) => rows.map((row) => row.id === draft.id ? { ...row, amount: e.target.value } : row))} /></td>
                         <td className="px-2 py-2"><input aria-label="Motivo del movimiento" className="min-h-10 w-full rounded-lg border border-stone-300 px-2" value={draft.reason} onChange={(e) => setMovementDrafts((rows) => rows.map((row) => row.id === draft.id ? { ...row, reason: e.target.value } : row))} /></td>
-                        <td className="px-3 py-2"><div className="flex items-center justify-between gap-2"><span>{context.profile.nombre}</span><span className="flex gap-1"><button aria-label="Agregar otra fila de movimiento" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => setMovementDrafts((rows) => [...rows, { id: key(), type: "ENTRADA", amount: "", reason: "" }])} type="button">+</button><button aria-label="Eliminar fila de movimiento" className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-700 text-lg font-bold text-white" onClick={() => setMovementDrafts((rows) => rows.filter((row) => row.id !== draft.id))} type="button">−</button></span></div></td>
+                        <td className="px-3 py-2"><div className="flex items-center justify-end"><span className="flex gap-1"><button aria-label="Agregar otra fila de movimiento" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => setMovementDrafts((rows) => [...rows, { id: key(), type: "ENTRADA", amount: "", reason: "" }])} title="Agregar otra fila" type="button">+</button><button aria-label="Eliminar fila de movimiento" className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-700 text-lg font-bold text-white" onClick={() => setMovementDrafts((rows) => rows.filter((row) => row.id !== draft.id))} title="Eliminar esta fila" type="button">−</button></span></div></td>
                       </tr>)}
                     </tbody>
+                    <tfoot className="border-t border-stone-300 bg-stone-50 font-semibold text-stone-700"><tr>
+                      <th className="px-3 py-2 text-left" colSpan={2}>Totales registrados</th>
+                      <td className="px-3 py-2" colSpan={4}><div className="flex flex-wrap justify-end gap-x-5 gap-y-1"><span>Entradas {money.format(movementTotals.entries)}</span><span>Salidas {money.format(movementTotals.exits)}</span><span className="text-stone-950">Neto movimientos {money.format(movementTotals.entries - movementTotals.exits)}</span></div></td>
+                    </tr></tfoot>
                   </table>
                 </div>
                 {movementDrafts.length > 0 && <div className="mt-4 flex justify-end gap-2"><button className={secondaryButtonClass} disabled={busy || movementDrafts.some((draft) => !Number.isFinite(n(draft.amount)) || n(draft.amount) <= 0 || draft.reason.trim() === "")}>Guardar</button><button className={auxiliaryButtonClass} disabled={busy} onClick={() => setMovementDrafts([])} type="button">Cancelar</button></div>}
