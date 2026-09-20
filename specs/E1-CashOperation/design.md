@@ -39,6 +39,8 @@ Homologación TP03/TP04: recuperar una sesión ya abierta no es un error funcion
 
 RPC `registrar_movimiento_caja(p_sesion_id, p_tipo, p_importe, p_motivo, p_idempotency_key)` bloquea sesión, exige que continúe abierta, corresponda a la caja indicada y pertenezca al local del actor `CAJA` activo. No exige que el actor sea `abierta_por`. Inserta movimiento con su actor y auditoría en la misma transacción. No hay edición/borrado.
 
+Se conserva esa RPC individual por compatibilidad. La operación de Caja usa `registrar_movimientos_caja(p_sesion_id, p_movimientos jsonb, p_idempotency_key)`: recibe únicamente una lista acotada de `{tipo, importe, motivo}`, deriva actor/local/hora en servidor, aplica las mismas validaciones y locks, y registra todo el lote o nada. La idempotencia pertenece al lote; cada fila conserva su movimiento y evento de auditoría propios. Un elemento inválido revierte cabecera de idempotencia, movimientos y auditorías del lote completo.
+
 Una función de lectura calcula:
 
 `esperado = inicial + pagos EFECTIVO + propinas EFECTIVO + entradas - salidas`
@@ -116,11 +118,15 @@ Crear snapshots RPC de sesión activa, cierre/histórico y reporte. Derivan loca
 
 Como soporte técnico aditivo de T10, `obtener_pedidos_pendientes_pago_caja()` conserva sus campos H5 y añade `subtotal`, `descuento`, `total_neto`, `pagado_acumulado` y `saldo`, resueltos en PostgreSQL. Una lectura CAJA por pedido agrupa los cobros confirmados y expone para cada acto actor/hora/total/saldo posterior y sus líneas de medio/importe/propina. Una lectura operacional separada para `ADMINISTRADOR` presenta pedidos del mismo local en los estados relevantes para descuento/anulación, existencia de cobros y totales autoritativos; no concede capacidad de cobro.
 
+`rpc_obtener_movimientos_sesion_caja(p_sesion_id)` devuelve `id`, sesión, tipo, importe, motivo, actor ID/nombre y hora en orden cronológico. Sólo `CAJA` o `ADMINISTRADOR` activos pueden leer sesiones de su propio local; el local deriva del contexto servidor y la función resuelve el nombre sin ampliar el `SELECT` directo de `perfil_usuario`.
+
 No publicar payload financiero como verdad. La opción mínima es conservar `pago` fuera de Realtime y hacer resync explícito después de comandos; para cambios de sesión/movimientos entre terminales, se pueden publicar tablas con RLS si la verificación confirma filtrado suficiente o usar una tabla de señales sin montos. La decisión técnica debe privilegiar no exponer importes por eventos. `pedido`/`mesa` siguen anunciando pago final.
 
 ## D12. UX de Caja
 
 La cabecera fija usa automáticamente la única caja activa/configurada del local y muestra, en una fila cuando el ancho lo permite, código/nombre de caja, estado de sesión, inicial, esperado y acciones de movimientos/cierre. No repite el usuario conectado ni presenta selector de caja. Si existen cero o varias cajas activas, la UI informa la configuración inválida y no elige una arbitrariamente; la selección explícita se difiere a una evolución posterior sin eliminar el soporte backend para múltiples cajas. Sin sesión abierta, cobro y movimientos quedan deshabilitados y el foco es “Abrir caja”. Con sesión abierta, cualquier `CAJA` activo del local puede continuar y se priorizan pedidos pendientes/cobro; movimientos e historial quedan secundarios. La lista lateral de pedidos puede colapsarse: conserva una barra angosta con el control de expansión y etiquetas seleccionables por código de mesa, resaltando la selección vigente y permitiendo cambiar de pedido sin expandirla; admite desplazamiento vertical para listas largas, sin desplazamiento horizontal. Cierre presenta resumen y diferencia antes de confirmar y conserva quién cerró en la trazabilidad.
+
+Movimientos se presenta como una única grilla `Hora | Tipo | Importe | Motivo | Registrado por`. Las filas históricas quedan bloqueadas con fondo gris; el último histórico —o el estado vacío— ofrece `+`. Las filas nuevas muestran hora `—`, actor actual no editable y controles `+`/`−` al extremo derecho sin columna Acción. `Guardar` usa siempre la RPC batch, refresca histórico y efectivo esperado, limpia la edición y confirma el éxito; `Cancelar` descarta sólo filas nuevas. No existe aprobación administrativa para entradas/salidas.
 
 Descuento muestra solicitante, autorización y motivo. Anulación muestra el administrador que la ejecutó, fecha/hora y motivo, sin solicitante/autorizador separados. En cobro normal, el objetivo es todo el saldo: se inicia con una línea de medio y `Agregar medio de pago` añade líneas con medio e importe, incluidos medios repetidos. La UI presenta los mismos conceptos en cobro total y parcial: saldo pendiente, importe a cobrar, importe distribuido entre medios y faltante/exceso; sólo habilita confirmación cuando la distribución coincide exactamente. `Cobrar una parte` abre un modo explícito con total menor al saldo y puede usar la misma composición de medios.
 

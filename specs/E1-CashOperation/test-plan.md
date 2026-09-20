@@ -41,10 +41,10 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 
 | ID | Requisitos | Caso | Resultado esperado |
 |---|---|---|---|
-| E1-TP13 | R04 | Entrada manual normal. | Evento positivo, motivo, actor/hora/sesión y auditoría. |
-| E1-TP14 | R04 | **Salida de caja** normal. | Evento `SALIDA` explícito reduce esperado y queda trazable. |
-| E1-TP15 | R04 | Importe cero/negativo, motivo vacío o sesión cerrada. | Rechazo sin fila ni auditoría huérfana. |
-| E1-TP16 | R04–R05 | Entradas/salidas concurrentes y reintentos. | Todos los eventos válidos se suman una vez; idempotencia impide duplicados. |
+| E1-TP13 | R04 | Entrada manual normal y lote de una fila. | Evento positivo, motivo, actor/hora/sesión y auditoría; lectura autorizada devuelve actor_nombre y orden cronológico. |
+| E1-TP14 | R04 | **Salida de caja** y lote mixto de varias entradas/salidas. | Cada fila explícita queda trazable; el lote completo actualiza esperado con la fórmula vigente. |
+| E1-TP15 | R04 | Importe cero/negativo, motivo vacío, sesión cerrada o una fila inválida dentro del lote. | Rechazo atómico: cero movimientos, auditorías o cabecera idempotente parcial. |
+| E1-TP16 | R04–R05 | Entradas/salidas concurrentes, reintento del lote y reutilización conflictiva de clave. | Todos los eventos válidos se suman una vez; misma clave/datos retorna el lote original y otros datos se rechazan. |
 | E1-TP17 | R05–R07 | Cierre correcto sin diferencia. | Snapshot por medio/movimiento, esperado=contado, diferencia cero, sesión cerrada. |
 | E1-TP18 | R05–R07 | Diferencia, doble cierre y cierre vs cobro/movimiento. | Aplica DF-02; sólo un cierre; operación perdedora falla/recarga sin parcialidad. La carrera cierre-vs-cobro se ejecuta en T05 después de T08, cuando todo pago nuevo ya queda asociado a sesión. |
 
@@ -95,10 +95,10 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP49 | R19 | Reconstrucción de sesión compartida completa. | Apertura por A, movimientos/cobros por A y B, medios agrupados por acto, autorizaciones, anulación directa y cierre por B aparecen en orden con cada actor/hora. |
 | E1-TP50 | R19 | Valores anteriores/nuevos de descuento/anulación/cierre. | Snapshots suficientes y consistentes con tablas de dominio. |
 | E1-TP51 | R19–R20 | Cliente intenta INSERT/UPDATE/DELETE directo. | Denegado por privilegios/RLS; RPC única vía de escritura. |
-| E1-TP52 | R19–R20 | Manipulación de local/sesión/pedido IDs. | Sin lectura/escritura cruzada; respuesta no filtra datos. |
+| E1-TP52 | R19–R20 | Manipulación de local/sesión/pedido IDs, incluida lectura/batch de movimientos por CAJA/ADMIN y rechazo a MOZO/COCINA/anon. | Sin lectura/escritura cruzada; respuesta no filtra datos y no se amplía lectura directa de perfiles. |
 | E1-TP53 | R20 | Intento de borrar actor/caja/pedido referenciado. | `ON DELETE RESTRICT` conserva trazabilidad. |
 | E1-TP54 | R19–R20 | Error a mitad de RPC, incluida una línea intermedia de un cobro multi-medio. | Cabecera, todas las líneas, dominio y auditoría revierten juntos; cero huérfanos. |
-| E1-TP55 | R19–R20 | Funciones/owners/search_path/grants/policies. | `SECURITY DEFINER` endurecido; `PUBLIC`/`anon` revocados; mínimo privilegio. |
+| E1-TP55 | R19–R20 | Funciones/owners/search_path/grants/policies, incluidas RPC de lectura y lote de movimientos. | `SECURITY DEFINER` endurecido; `PUBLIC`/`anon` revocados; mínimo privilegio y escritura directa denegada. |
 
 ### Reportes, regresión y responsive
 
@@ -107,8 +107,8 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP56 | R21 | Reporte de sesión con cobro multi-medio y todos los conceptos. | Apertura, cada medio, entradas/salidas, esperado, diferencia, descuentos, anulaciones, propinas y parciales concilian; venta no se duplica por agrupación. |
 | E1-TP57 | R21 | Resumen diario con cobros multi-medio y parciales. | Cada medio suma su parte, cada acto conserva identidad y el pedido se cuenta una sola vez al completar. |
 | E1-TP58 | R21 | Fecha Lima, dos locales y exportación. | Corte `America/Lima`, aislamiento y CSV coherente. |
-| E1-TP59 | R22 | UI sin caja abierta, vacía, cargando, error y reintento. | Estado inequívoco; acciones financieras deshabilitadas. |
-| E1-TP60 | R22 | Confirmación única, doble clic y respuesta obsoleta. | Clic inicial no invoca RPC; `Volver` no registra; confirmar ejecuta una vez; Realtime/resync invalida saldo/composición obsoletos y obliga a revisar. |
+| E1-TP59 | R22 | UI sin caja abierta, vacía, cargando, error/reintento y grilla de movimientos sin históricos. | Estado inequívoco; `+` inicia la primera fila; históricos bloqueados, nuevas editables y responsive sin perder columnas/controles. |
+| E1-TP60 | R22 | Confirmación única, doble clic/respuesta obsoleta y edición de movimientos con `+`, `−`, Guardar y Cancelar. | Cobro conserva su protección; Cancelar no persiste y Guardar invoca una vez el lote, refresca esperado/histórico y muestra confirmación. |
 | E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build y verificaciones de seguridad/concurrencia previstas en las tareas. | Cobro total de uno/N medios, entrega, terminalidad, reportes, RLS, Realtime e invariantes concurrentes sin regresión. |
 
 ## 3. Pruebas humanas
