@@ -651,7 +651,7 @@ export default function CashierPage({
                     <h3 className="text-xl font-bold">Cobro</h3>
                     <p className="text-sm font-semibold text-stone-600">Saldo: <b className="text-xl text-emerald-800">{money.format(selected.balance)}</b></p>
                   </div>
-                  {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe de esta parte <span className="font-normal">(menor a {money.format(selected.balance)})</span>
+                  {partialMode && <label className="mt-4 block max-w-sm text-sm font-semibold text-stone-700">Importe a cobrar <span className="font-normal">(menor a {money.format(selected.balance)})</span>
                     <input className={fieldClass} min="0.01" max={Math.max(0.01, selected.balance - 0.01)} step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" />
                     {invalidPartial && paymentAmount && <span className="mt-1 block text-sm text-rose-700">Ingresa un importe mayor que cero y menor al saldo.</span>}
                   </label>}
@@ -677,11 +677,10 @@ export default function CashierPage({
                       </div>;
                     })}
                   </div>
-                  <div className={`mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white p-3 ${partialMode ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
-                    {partialMode && <p>Saldo vigente<br /><b>{money.format(selected.balance)}</b></p>}
-                    {partialMode && <p>Objetivo parcial<br /><b>{hasPartialObjective ? money.format(paymentToApply) : "—"}</b></p>}
-                    <p>Total preparado<br /><b>{money.format(preparedTotal)}</b></p>
-                    {!partialMode && <p>Saldo a cubrir<br /><b>{money.format(paymentToApply)}</b></p>}
+                  <div className="mt-4 grid gap-2 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-4">
+                    <p>Saldo pendiente<br /><b>{money.format(selected.balance)}</b></p>
+                    <p>A cobrar<br /><b>{partialMode && !hasPartialObjective ? "—" : money.format(paymentToApply)}</b></p>
+                    <p>Distribuido<br /><b>{money.format(preparedTotal)}</b></p>
                     <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{partialMode && !hasPartialObjective ? "—" : money.format(Math.abs(difference))}</b></p>
                   </div>
                   {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}

@@ -219,7 +219,7 @@ test("TP62 usa automáticamente la única caja activa y no muestra selector ni c
 test("TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demanda", () => {
   assert.match(page, /paymentToApply = partialMode \? partialAmount : \(selected\?\.balance \?\? 0\)/);
   assert.match(page, /`Cobrar · \$\{money\.format\(selected\.balance\)\}`/);
-  assert.match(page, /partialMode && <label[^>]*>Importe de esta parte/);
+  assert.match(page, /partialMode && <label[^>]*>Importe a cobrar/);
   assert.match(page, /Cobrar una parte/);
   assert.match(page, /paymentLines\.map/);
   assert.match(page, /tipMode && <label[^>]*>Propina de este medio/);
@@ -270,16 +270,17 @@ test("TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la der
   assert.doesNotMatch(paymentForm, /overflow-x-(?:auto|scroll)/);
 });
 
-test("TP62 modo parcial conserva saldo real, separa objetivo y permite volver a cobro total", () => {
+test("TP62 usa el mismo lenguaje operativo en cobro total y parcial", () => {
   const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
   assert.match(paymentForm, /Saldo: <b[^>]*>\{money\.format\(selected\.balance\)\}/);
-  assert.match(paymentForm, /partialMode && <p>Saldo vigente[\s\S]*money\.format\(selected\.balance\)/);
-  assert.match(paymentForm, /Importe de esta parte[\s\S]*\(menor a \{money\.format\(selected\.balance\)\}\)/);
-  assert.match(paymentForm, /partialMode && <p>Objetivo parcial[\s\S]*hasPartialObjective \? money\.format\(paymentToApply\) : "—"/);
-  assert.match(paymentForm, /Total preparado[\s\S]*money\.format\(preparedTotal\)/);
+  assert.match(paymentForm, /Importe a cobrar[\s\S]*\(menor a \{money\.format\(selected\.balance\)\}\)/);
+  assert.match(paymentForm, /Saldo pendiente[\s\S]*money\.format\(selected\.balance\)/);
+  assert.match(paymentForm, /A cobrar[\s\S]*partialMode && !hasPartialObjective \? "—" : money\.format\(paymentToApply\)/);
+  assert.match(paymentForm, /Distribuido[\s\S]*money\.format\(preparedTotal\)/);
   assert.match(paymentForm, /difference >= 0 \? "Falta" : "Exceso"/);
   assert.match(paymentForm, /partialMode && !hasPartialObjective \? "—" : money\.format\(Math\.abs\(difference\)\)/);
   assert.match(paymentForm, /\{partialMode \? "Cobro total" : "Cobrar una parte"\}/);
+  assert.doesNotMatch(paymentForm, /Objetivo parcial|Total preparado|Importe de esta parte/);
 });
 
 test("TP62 alinea la mesa a la derecha del encabezado del pedido", () => {
