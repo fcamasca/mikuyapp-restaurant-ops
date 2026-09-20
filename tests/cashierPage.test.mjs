@@ -142,6 +142,29 @@ test("registra un cobro atómico con N medios, propinas e idempotencia", async (
     p_idempotency_key: "key",
   });
 });
+test("lee movimientos con actor y registra siempre mediante lote", async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name, args) => {
+      calls.push({ name, args });
+      return { data: [{ id: "m1", sesion_caja_id: "s1", tipo: "ENTRADA", importe: "15", motivo: "Cambio", actor_id: "u1", actor_nombre: "Caja", creado_en: "2026-09-19T10:00:00Z" }], error: null };
+    },
+    from() { throw Error("not used"); },
+  };
+  const service = createCashierService(client);
+  const read = await service.getMovements(context, "s1");
+  const saved = await service.registerMovements(context, "s1", [
+    { type: "ENTRADA", amount: 15, reason: "Cambio" },
+    { type: "SALIDA", amount: 3, reason: "Compra menor" },
+  ], "batch-key");
+  assert.equal(read.ok, true);
+  assert.deepEqual(read.data[0], { id: "m1", sessionId: "s1", type: "ENTRADA", amount: 15, reason: "Cambio", actorId: "u1", actorName: "Caja", createdAt: "2026-09-19T10:00:00Z" });
+  assert.equal(saved.ok, true);
+  assert.deepEqual(calls, [
+    { name: "rpc_obtener_movimientos_sesion_caja", args: { p_sesion_caja_id: "s1" } },
+    { name: "registrar_movimientos_caja", args: { p_sesion_caja_id: "s1", p_movimientos: [{ tipo: "ENTRADA", importe: 15, motivo: "Cambio" }, { tipo: "SALIDA", importe: 3, motivo: "Compra menor" }], p_idempotency_key: "batch-key" } },
+  ]);
+});
 test("TP35, TP45-47 y TP59-60 están representados", () => {
   for (const text of [
     "Estado de caja",
@@ -165,7 +188,7 @@ test("TP35, TP45-47 y TP59-60 están representados", () => {
   assert.match(page, /pending\.current/);
   assert.match(page, /disabled=\{busy/);
   assert.match(page, /await refresh\(\)/);
-  assert.match(page, /rpc_registrar_movimiento_caja|registerMovement/);
+  assert.match(serviceSource, /registerMovements|registrar_movimientos_caja/i);
   assert.match(page, /rpc_cerrar_sesion_caja|closeSession/);
 });
 test("administración queda en shell admin sin capacidad de cobro", () => {
@@ -203,7 +226,7 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
   assert.match(page, /bg-emerald-700/);
   assert.match(page, /className=\{selectClass\}/);
   assert.match(page, /lg:grid-cols-\[22rem_minmax\(0,1fr\)\]/);
-  assert.doesNotMatch(page, /overflow-x-(?:auto|scroll)/);
+  assert.doesNotMatch(page, /min-w-screen|w-screen/);
 });
 
 test("TP62 permite ocultar y mostrar la lista de pedidos sin perder el detalle", () => {
@@ -343,9 +366,27 @@ test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
   ]) assert.match(page, new RegExp(reset.replace(/[()[\]]/g, "\\$&")));
   assert.match(page, /clearPaymentOptions\(\);[\s\S]*setSelectedId/);
   assert.match(page, /clearPaymentOptions\(\);[\s\S]*setLoading\(false\)/);
-  assert.match(page, /\[movementReason, setMovementReason\]/);
+  assert.match(page, /\[movementDrafts, setMovementDrafts\]/);
   assert.match(page, /\[closeReason, setCloseReason\]/);
   assert.match(page, /\[discountReason, setDiscountReason\]/);
+});
+
+test("TP62 presenta movimientos históricos bloqueados y altas batch en una sola grilla", () => {
+  for (const heading of ["Hora", "Tipo", "Importe", "Motivo", "Registrado por"])
+    assert.match(page, new RegExp(`>${heading}<`));
+  assert.match(page, /movements\.map\(\(item, index\) => <tr className="bg-stone-100 text-stone-700"/);
+  assert.match(page, /index === movements\.length - 1 && movementDrafts\.length === 0/);
+  assert.match(page, /aria-label="Agregar primer movimiento"/);
+  assert.match(page, /movementDrafts\.map\(\(draft\) => <tr className="bg-white"/);
+  assert.match(page, /aria-label="Agregar otra fila de movimiento"/);
+  assert.match(page, /aria-label="Eliminar fila de movimiento"/);
+  assert.match(page, /context\.profile\.nombre/);
+  assert.match(page, />Guardar<\/button>[\s\S]*>Cancelar<\/button>/);
+  assert.match(page, /service\.registerMovements\([\s\S]*movementDrafts\.map/);
+  assert.match(page, /setMovementDrafts\(\[\]\)[\s\S]*setMovementNotice\("Movimientos registrados correctamente"\)/);
+  assert.match(page, /getSummary\(context, s\.data\.id\)[\s\S]*getMovements\(context, s\.data\.id\)/);
+  assert.match(page, /min-w-\[42rem\] table-fixed/);
+  assert.doesNotMatch(page, /<th[^>]*>Acción<\/th>/);
 });
 
 test("TP62 UX no repite cajero ni expone el UUID de quien abrió", () => {

@@ -25,6 +25,21 @@ export interface SessionSummary {
   entradas: number;
   salidas: number;
 }
+export interface CashMovement {
+  id: string;
+  sessionId: string;
+  type: "ENTRADA" | "SALIDA";
+  amount: number;
+  reason: string;
+  actorId: string;
+  actorName: string;
+  createdAt: string;
+}
+export interface NewCashMovement {
+  type: "ENTRADA" | "SALIDA";
+  amount: number;
+  reason: string;
+}
 export interface CashierLine {
   detailId: number;
   productId: string;
@@ -253,6 +268,16 @@ export function createCashierService(client: Client) {
       );
       return r.ok ? { ok: true as const, data: summary(r.data) } : r;
     },
+    async getMovements(c: ValidatedProfileContext, id: string) {
+      if (!allow(c, ["CAJA", "ADMINISTRADOR"])) return fail("No autorizado.");
+      const r = await rpc<Record<string, unknown>[]>(
+        "rpc_obtener_movimientos_sesion_caja",
+        { p_sesion_caja_id: id },
+      );
+      return r.ok
+        ? { ok: true as const, data: (r.data ?? []).map(cashMovement) }
+        : r;
+    },
     async getPendingOrders(c: ValidatedProfileContext) {
       if (!allow(c, ["CAJA"])) return fail("No autorizado.");
       const r = await rpc<PendingRow[]>("obtener_pedidos_pendientes_pago_caja");
@@ -305,6 +330,26 @@ export function createCashierService(client: Client) {
             p_motivo: reason,
             p_idempotency_key: key,
           })
+        : Promise.resolve(fail("No autorizado."));
+    },
+    registerMovements(
+      c: ValidatedProfileContext,
+      sid: string,
+      movements: readonly NewCashMovement[],
+      key: string,
+    ) {
+      return allow(c, ["CAJA"])
+        ? rpc<Record<string, unknown>[]>("registrar_movimientos_caja", {
+            p_sesion_caja_id: sid,
+            p_movimientos: movements.map((movement) => ({
+              tipo: movement.type,
+              importe: movement.amount,
+              motivo: movement.reason,
+            })),
+            p_idempotency_key: key,
+          }).then((r) => r.ok
+            ? { ok: true as const, data: (r.data ?? []).map(cashMovement) }
+            : r)
         : Promise.resolve(fail("No autorizado."));
     },
     closeSession(
@@ -445,6 +490,16 @@ const summary = (x: Record<string, unknown>): SessionSummary => ({
   propina_efectivo: Number(x.propina_efectivo),
   entradas: Number(x.entradas),
   salidas: Number(x.salidas),
+});
+const cashMovement = (x: Record<string, unknown>): CashMovement => ({
+  id: String(x.id),
+  sessionId: String(x.sesion_caja_id),
+  type: x.tipo as CashMovement["type"],
+  amount: Number(x.importe),
+  reason: String(x.motivo),
+  actorId: String(x.actor_id),
+  actorName: String(x.actor_nombre),
+  createdAt: String(x.creado_en),
 });
 const payment = (x: Record<string, unknown>): PersistedPayment => ({
   chargeId: String(x.cobro_id),

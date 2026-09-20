@@ -5,6 +5,7 @@ import {
   type AdminDiscount,
   type Cashbox,
   type CashSession,
+  type CashMovement,
   type SessionSummary,
   type CashierPendingOrder,
   type PaymentHistory,
@@ -30,6 +31,12 @@ interface PaymentConfirmation {
   totalToReceive: number;
   currentBalance: number;
   partial: boolean;
+}
+interface MovementDraft {
+  id: string;
+  type: "ENTRADA" | "SALIDA";
+  amount: string;
+  reason: string;
 }
 const money = new Intl.NumberFormat("es-PE", {
     style: "currency",
@@ -259,6 +266,7 @@ export default function CashierPage({
     [cashboxId, setCashboxId] = useState(""),
     [session, setSession] = useState<CashSession | null>(null),
     [summary, setSummary] = useState<SessionSummary | null>(null),
+    [movements, setMovements] = useState<readonly CashMovement[]>([]),
     [history, setHistory] = useState<readonly Record<string, unknown>[]>([]),
     [orders, setOrders] = useState<readonly CashierPendingOrder[]>([]),
     [selectedId, setSelectedId] = useState<number | null>(null),
@@ -269,9 +277,8 @@ export default function CashierPage({
     [error, setError] = useState<string | null>(null),
     [attempt, setAttempt] = useState(0);
   const [initial, setInitial] = useState("0"),
-    [movement, setMovement] = useState<"ENTRADA" | "SALIDA">("ENTRADA"),
-    [movementAmount, setMovementAmount] = useState(""),
-    [movementReason, setMovementReason] = useState(""),
+    [movementDrafts, setMovementDrafts] = useState<MovementDraft[]>([]),
+    [movementNotice, setMovementNotice] = useState<string | null>(null),
     [closeReason, setCloseReason] = useState(""),
     [discountReason, setDiscountReason] = useState(""),
     [counted, setCounted] = useState(""),
@@ -344,6 +351,7 @@ export default function CashierPage({
     if (!chosen) {
       setSession(null);
       setSummary(null);
+      setMovements([]);
     }
     const [s, o] = chosen
       ? await Promise.all([
@@ -356,10 +364,18 @@ export default function CashierPage({
     else if (s) {
       setSession(s.data);
       if (s.data) {
-        const sr = await service.getSummary(context, s.data.id);
+        const [sr, mr] = await Promise.all([
+          service.getSummary(context, s.data.id),
+          service.getMovements(context, s.data.id),
+        ]);
         if (!isCurrent()) return;
         setSummary(sr.ok ? sr.data : null);
-      } else setSummary(null);
+        setMovements(mr.ok ? mr.data : []);
+        if (!mr.ok) setError(mr.error.message);
+      } else {
+        setSummary(null);
+        setMovements([]);
+      }
     }
     if (o.ok) {
       setOrders(o.data);
@@ -556,51 +572,54 @@ export default function CashierPage({
             <div className="mt-4">
               {cashPanel === "MOVEMENT" &&
               <form
-                className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4"
+                className="rounded-xl border border-stone-200 bg-white p-4"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (service)
-                    void run(() =>
-                      service.registerMovement(
+                  if (service && movementDrafts.length > 0)
+                    void run(async () => {
+                      const result = await service.registerMovements(
                         context,
                         session.id,
-                        movement,
-                        n(movementAmount),
-                        movementReason,
+                        movementDrafts.map((draft) => ({
+                          type: draft.type,
+                          amount: n(draft.amount),
+                          reason: draft.reason,
+                        })),
                         key(),
-                      ),
-                    );
+                      );
+                      if (result.ok) {
+                        setMovementDrafts([]);
+                        setMovementNotice("Movimientos registrados correctamente");
+                      }
+                      return result;
+                    });
                 }}
               >
-                <h3 className="text-lg font-bold">Registrar movimiento</h3>
-                <label className="block text-sm font-semibold text-stone-700">Tipo
-                <select
-                  className={selectClass}
-                  value={movement}
-                  onChange={(e) =>
-                    setMovement(e.target.value as typeof movement)
-                  }
-                >
-                  <option>ENTRADA</option>
-                  <option>SALIDA</option>
-                </select>
-                </label>
-                <label className="block text-sm font-semibold text-stone-700">Importe
-                <input
-                  className={fieldClass}
-                  value={movementAmount}
-                  onChange={(e) => setMovementAmount(e.target.value)}
-                  type="number"
-                />
-                </label>
-                <label className="block text-sm font-semibold text-stone-700">Motivo
-                <input
-                  className={fieldClass}
-                  value={movementReason}
-                      onChange={(e) => setMovementReason(e.target.value)}
-                />
-                </label>
-                <button className={secondaryButtonClass} disabled={busy}>Confirmar movimiento</button>
+                <h3 className="text-lg font-bold">Movimientos de caja</h3>
+                <div className="mt-3 overflow-x-auto rounded-xl border border-stone-200">
+                  <table className="w-full min-w-[42rem] table-fixed text-left text-sm">
+                    <colgroup><col className="w-[11%]" /><col className="w-[16%]" /><col className="w-[16%]" /><col className="w-[29%]" /><col className="w-[28%]" /></colgroup>
+                    <thead className="bg-stone-100 text-stone-600"><tr>
+                      <th className="px-3 py-2 font-semibold">Hora</th><th className="px-3 py-2 font-semibold">Tipo</th><th className="px-3 py-2 text-right font-semibold">Importe</th><th className="px-3 py-2 font-semibold">Motivo</th><th className="px-3 py-2 font-semibold">Registrado por</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-stone-200">
+                      {movements.map((item, index) => <tr className="bg-stone-100 text-stone-700" key={item.id}>
+                        <td className="px-3 py-2">{new Date(item.createdAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })}</td>
+                        <td className="px-3 py-2 font-semibold">{item.type}</td><td className="px-3 py-2 text-right">{money.format(item.amount)}</td><td className="px-3 py-2">{item.reason}</td>
+                        <td className="px-3 py-2"><div className="flex items-center justify-between gap-2"><span>{item.actorName}</span>{index === movements.length - 1 && movementDrafts.length === 0 && <button aria-label="Agregar movimiento" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => { setMovementNotice(null); setMovementDrafts([{ id: key(), type: "ENTRADA", amount: "", reason: "" }]); }} type="button">+</button>}</div></td>
+                      </tr>)}
+                      {movements.length === 0 && movementDrafts.length === 0 && <tr><td className="px-3 py-4 text-center text-stone-500" colSpan={5}>Sin movimientos registrados <button aria-label="Agregar primer movimiento" className="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => { setMovementNotice(null); setMovementDrafts([{ id: key(), type: "ENTRADA", amount: "", reason: "" }]); }} type="button">+</button></td></tr>}
+                      {movementDrafts.map((draft) => <tr className="bg-white" key={draft.id}>
+                        <td className="px-3 py-2 text-stone-500">—</td><td className="px-2 py-2"><select aria-label="Tipo de movimiento" className="min-h-10 w-full rounded-lg border border-stone-300 bg-white px-2" value={draft.type} onChange={(e) => setMovementDrafts((rows) => rows.map((row) => row.id === draft.id ? { ...row, type: e.target.value as MovementDraft["type"] } : row))}><option>ENTRADA</option><option>SALIDA</option></select></td>
+                        <td className="px-2 py-2"><input aria-label="Importe del movimiento" className="min-h-10 w-full rounded-lg border border-stone-300 px-2 text-right" min="0.01" step="0.01" type="number" value={draft.amount} onChange={(e) => setMovementDrafts((rows) => rows.map((row) => row.id === draft.id ? { ...row, amount: e.target.value } : row))} /></td>
+                        <td className="px-2 py-2"><input aria-label="Motivo del movimiento" className="min-h-10 w-full rounded-lg border border-stone-300 px-2" value={draft.reason} onChange={(e) => setMovementDrafts((rows) => rows.map((row) => row.id === draft.id ? { ...row, reason: e.target.value } : row))} /></td>
+                        <td className="px-3 py-2"><div className="flex items-center justify-between gap-2"><span>{context.profile.nombre}</span><span className="flex gap-1"><button aria-label="Agregar otra fila de movimiento" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-lg font-bold text-white" onClick={() => setMovementDrafts((rows) => [...rows, { id: key(), type: "ENTRADA", amount: "", reason: "" }])} type="button">+</button><button aria-label="Eliminar fila de movimiento" className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-700 text-lg font-bold text-white" onClick={() => setMovementDrafts((rows) => rows.filter((row) => row.id !== draft.id))} type="button">−</button></span></div></td>
+                      </tr>)}
+                    </tbody>
+                  </table>
+                </div>
+                {movementDrafts.length > 0 && <div className="mt-4 flex justify-end gap-2"><button className={secondaryButtonClass} disabled={busy || movementDrafts.some((draft) => !Number.isFinite(n(draft.amount)) || n(draft.amount) <= 0 || draft.reason.trim() === "")}>Guardar</button><button className={auxiliaryButtonClass} disabled={busy} onClick={() => setMovementDrafts([])} type="button">Cancelar</button></div>}
+                {movementNotice && <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-900" role="status">{movementNotice}</p>}
               </form>
               }
               {cashPanel === "CLOSE" &&
