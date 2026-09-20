@@ -235,7 +235,7 @@ test("TP62 usa automáticamente la única caja activa y no muestra selector ni c
 
 test("TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demanda", () => {
   assert.match(page, /paymentToApply = partialMode \? partialAmount : \(selected\?\.balance \?\? 0\)/);
-  assert.match(page, /`Cobrar · \$\{money\.format\(selected\.balance\)\}`/);
+  assert.match(page, /`Cobrar \$\{money\.format\(totalToReceive\)\}`/);
   assert.match(page, /partialMode && <label[^>]*>Importe a cobrar/);
   assert.match(page, /Cobrar una parte/);
   assert.match(page, /paymentLines\.map/);
@@ -287,7 +287,8 @@ test("TP62 presenta el historial como una tabla compacta por acto de cobro", () 
   assert.match(page, /chronologicalPayments\.map\(\(payment\) =>/);
   assert.match(page, /payment\.lines\.map\(\(line, index\) =>/);
   assert.match(page, /index > 0 && " \+ "/);
-  assert.match(page, /toLocaleTimeString\("es-PE", \{ hour: "2-digit", minute: "2-digit" \}\)/);
+  assert.match(page, /toLocaleTimeString\("es-PE", \{ hour: "2-digit", minute: "2-digit", hour12: false \}\)/);
+  assert.match(page, /<col className="w-\[12%\]" \/>[\s\S]*<col className="w-\[34%\]" \/>[\s\S]*<col className="w-\[18%\]" \/>/);
   assert.match(page, /max-h-72 overflow-y-auto/);
   assert.match(page, /paymentsOpen \? "Ocultar pagos" : "Ver pagos"/);
   assert.doesNotMatch(page, /Cobro \{x\.chargeId\.slice/);
@@ -303,6 +304,10 @@ test("TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la der
   assert.match(page, /compactAuxiliaryButtonClass/);
   assert.match(paymentForm, /Precuenta[\s\S]*Cobrar una parte[\s\S]*Propina[\s\S]*Más opciones/);
   assert.doesNotMatch(paymentForm, /overflow-x-(?:auto|scroll)/);
+  assert.match(page, /compactAuxiliaryButtonClass =\s*"min-h-11[^"]*text-sm/);
+  assert.match(page, /className=\{compactAuxiliaryButtonClass\} type="button" onClick=\{\(\) => setPaymentsOpen/);
+  assert.match(page, /\{paymentsOpen \? "Ocultar pagos" : "Ver pagos"\}<\/button>/);
+  assert.match(page, /className=\{compactAuxiliaryButtonClass\}[\s\S]*\{productsOpen \? "Ocultar detalle" : "Ver detalle"\}/);
 });
 
 test("TP62 usa el mismo lenguaje operativo en cobro total y parcial", () => {
@@ -319,7 +324,7 @@ test("TP62 usa el mismo lenguaje operativo en cobro total y parcial", () => {
 });
 
 test("TP62 alinea la mesa a la derecha del encabezado del pedido", () => {
-  assert.match(page, /flex flex-wrap items-baseline justify-between[\s\S]*Detalle del pedido #\{selected\.orderId\}[\s\S]*bg-emerald-100[\s\S]*\{selected\.tableName\}/);
+  assert.match(page, /flex flex-wrap items-baseline justify-between[\s\S]*<h2 className="text-xl font-bold">Detalle del pedido #\{selected\.orderId\}<\/h2>[\s\S]*bg-emerald-100[\s\S]*\{selected\.tableName\}/);
   assert.doesNotMatch(page, /Mesa \{selected\.tableCode\} · \{selected\.tableName\}/);
 });
 
@@ -359,11 +364,23 @@ test("TP62 cobro prepara una confirmación y no invoca la RPC desde el formulari
 });
 
 test("TP62 modal resume el cobro total, parcial y sus medios antes de registrar", () => {
-  for (const text of ["Mesa", "Pedido", "Importe", "Medios de pago", "Propina", "Saldo actual", "Volver"])
+  for (const text of ["Mesa", "Pedido", "Importe del pedido", "Medios de pago", "Propina", "Total a recibir", "Saldo actual", "Volver"])
     assert.match(page, new RegExp(`>${text}<`));
   assert.match(page, /Este cobro completará el pedido y liberará la mesa\./);
   assert.match(page, /Después del pago quedará un saldo de/);
-  assert.match(page, /`Confirmar cobro \$\{money\.format\(paymentConfirmation\.amount\)\}`/);
+  assert.match(page, /`Confirmar cobro \$\{money\.format\(paymentConfirmation\.totalToReceive\)\}`/);
+});
+
+test("TP62 separa venta, propina y total físico a recibir", () => {
+  assert.match(page, /saleAmount = preparedTotal/);
+  assert.match(page, /totalTip = preparedTip/);
+  assert.match(page, /totalToReceive = saleAmount \+ totalTip/);
+  assert.match(page, /Importe del pedido[\s\S]*money\.format\(saleAmount\)[\s\S]*Propina[\s\S]*money\.format\(totalTip\)[\s\S]*TOTAL A RECIBIR[\s\S]*money\.format\(totalToReceive\)/);
+  assert.match(page, /amount: saleAmount,[\s\S]*tip: totalTip,[\s\S]*totalToReceive/);
+  assert.match(page, /difference = paymentToApply - preparedTotal/);
+  assert.match(page, /currentBalance - paymentConfirmation\.amount/);
+  assert.match(page, /confirmation\.lines\.map\(\(\{ method, amount, tip \}\) => \(\{ method, amount, tip \}\)\)/);
+  assert.doesNotMatch(page, /currentBalance - paymentConfirmation\.totalToReceive/);
 });
 
 test("TP62 confirmar registra una sola vez y Volver no registra", () => {
@@ -371,6 +388,10 @@ test("TP62 confirmar registra una sola vez y Volver no registra", () => {
   assert.match(page, /disabled=\{busy\}[\s\S]*onClick=\{closePaymentConfirmation\}[\s\S]*>Volver<\/button>/);
   assert.match(page, /disabled=\{busy\}[\s\S]*service\.registerPayment\([\s\S]*confirmation\.orderId/);
   assert.match(page, /confirmation\.lines\.map/);
+  assert.match(page, /r\.data\.balance === 0[\s\S]*service\.getPayments\(context, confirmation\.orderId\)/);
+  assert.match(page, /historySnapshot = history\?\.ok \? history\.data : payments/);
+  assert.match(page, /setDocumentPaymentHistory\(historySnapshot\)[\s\S]*setDocumentMode\("PAYMENT"\)[\s\S]*closePaymentConfirmation\(\)/);
+  assert.match(page, /payments=\{documentPaymentHistory\}/);
   assert.match(page, /busy \? "Registrando cobro…"/);
 });
 

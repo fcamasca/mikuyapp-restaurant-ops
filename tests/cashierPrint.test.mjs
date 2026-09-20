@@ -62,9 +62,21 @@ test("ticket final muestra consumo completo y medios repetidos sin identificador
   assert.match(page, /money\.format\(line\.lineAmount\)/);
   assert.match(page, /!preAccount && payment && complete && <>/);
   assert.match(page, /documentPayments\.map/);
-  assert.match(page, /Cobro final/);
+  assert.match(page, /new Date\(item\.paidAt\)\.toLocaleTimeString/);
   assert.match(page, /item\.lines\.map/);
   assert.match(page, /money\.format\(item\.tip\)/);
+  assert.match(page, /ticket-payments-table mt-2 w-full table-fixed/);
+  for (const heading of ["Hora", "Medio\\(s\\)", "Importe", "Propina"])
+    assert.match(page, new RegExp(`>${heading}<`));
+  assert.match(page, /lineIndex > 0 && " \+ "/);
+  assert.match(page, /break-words px-1 py-2 align-top/);
+  assert.doesNotMatch(documentComponent, /payment-summary rounded-lg/);
+  assert.doesNotMatch(documentComponent, /ticket-payments-table[^]*?<th[^>]*>Total<\/th>/);
+  assert.doesNotMatch(documentComponent, /ticket-payments-table[^]*?overflow-x-(?:auto|scroll)/);
+  assert.match(page, /TOTAL PAGADO/);
+  assert.match(page, /PROPINA TOTAL/);
+  assert.match(page, /totalPaid = documentPayments\.reduce\(\(sum, item\) => sum \+ item\.amount, 0\)/);
+  assert.match(page, /totalTips = documentPayments\.reduce\(\(sum, item\) => sum \+ item\.tip, 0\)/);
   assert.doesNotMatch(documentComponent, />\s*Cobro \{[^}]*chargeId/);
   assert.doesNotMatch(page, /pago_detalle|subcuenta|subpedido/);
 });

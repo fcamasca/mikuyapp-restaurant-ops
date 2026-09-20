@@ -27,6 +27,7 @@ interface PaymentConfirmation {
   amount: number;
   lines: readonly PaymentMediumLine[];
   tip: number;
+  totalToReceive: number;
   currentBalance: number;
   partial: boolean;
 }
@@ -51,7 +52,7 @@ const fieldClass =
   auxiliaryButtonClass =
     "min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50",
   compactAuxiliaryButtonClass =
-    "min-h-10 whitespace-nowrap rounded-xl border border-stone-300 bg-stone-50 px-2.5 py-2 text-xs font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50",
+    "min-h-11 whitespace-nowrap rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50",
   compactPrimaryButtonClass =
     "min-h-11 whitespace-nowrap rounded-xl bg-emerald-700 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-50";
 function Lines({
@@ -115,7 +116,9 @@ function InternalDocument({
     ].filter(
     (item, index, all) =>
       all.findIndex((candidate) => candidate.chargeId === item.chargeId) === index,
-    ) : [];
+    ).sort((left, right) => new Date(left.paidAt).getTime() - new Date(right.paidAt).getTime()) : [];
+  const totalPaid = documentPayments.reduce((sum, item) => sum + item.amount, 0);
+  const totalTips = documentPayments.reduce((sum, item) => sum + item.tip, 0);
   const subtotal = payment?.subtotal ?? order.subtotal;
   const discount = payment?.discount ?? order.discount;
   const netTotal = payment?.netTotal ?? order.netTotal;
@@ -190,27 +193,42 @@ function InternalDocument({
           {!preAccount && payment && complete && <>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
             <h3 className="ticket-section-title uppercase tracking-wider">Cobros del pedido</h3>
-            <ol className="mt-2 space-y-3">
-              {documentPayments.map((item, paymentIndex) => (
-                <li className="payment-summary rounded-lg border border-stone-200 p-3" key={item.chargeId}>
-                  <div className="ticket-section-title flex justify-between gap-4">
-                    <span>{paymentIndex === documentPayments.length - 1 ? "Cobro final" : `Cobro ${paymentIndex + 1}`}</span>
-                    <span>{money.format(item.amount)}</span>
-                  </div>
-                  <ul className="mt-2 space-y-1">
-                    {item.lines.map((line, lineIndex) => (
-                      <li className="flex justify-between gap-4" key={`${line.paymentId}-${lineIndex}`}>
-                        <span className="capitalize">{line.method.toLocaleLowerCase("es-PE")}</span>
-                        <span>{money.format(line.amount)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-1 flex justify-between gap-4"><span>Propina</span><span>{money.format(item.tip)}</span></div>
-                </li>
-              ))}
-            </ol>
+            <table className="ticket-payments-table mt-2 w-full table-fixed text-left">
+              <colgroup>
+                <col className="w-[16%]" />
+                <col className="w-[42%]" />
+                <col className="w-[21%]" />
+                <col className="w-[21%]" />
+              </colgroup>
+              <thead className="border-b border-stone-300 text-stone-600">
+                <tr>
+                  <th className="py-1.5 pr-1 font-semibold" scope="col">Hora</th>
+                  <th className="px-1 py-1.5 font-semibold" scope="col">Medio(s)</th>
+                  <th className="px-1 py-1.5 text-right font-semibold" scope="col">Importe</th>
+                  <th className="py-1.5 pl-1 text-right font-semibold" scope="col">Propina</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-200">
+                {documentPayments.map((item) => (
+                  <tr key={item.chargeId}>
+                    <td className="whitespace-nowrap py-2 pr-1 align-top">{new Date(item.paidAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })}</td>
+                    <td className="break-words px-1 py-2 align-top">
+                      {item.lines.map((line, lineIndex) => (
+                        <span key={`${line.paymentId}-${lineIndex}`}>{lineIndex > 0 && " + "}<span className="capitalize">{line.method.toLocaleLowerCase("es-PE")}</span> {money.format(line.amount)}</span>
+                      ))}
+                    </td>
+                    <td className="whitespace-nowrap px-1 py-2 text-right align-top">{money.format(item.amount)}</td>
+                    <td className="whitespace-nowrap py-2 pl-1 text-right align-top">{money.format(item.tip)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <div className="ticket-total flex justify-between gap-4"><span>SALDO</span><span>{money.format(balance)}</span></div>
+            <dl className="space-y-1.5">
+              <div className="ticket-total flex justify-between gap-4"><dt>TOTAL PAGADO</dt><dd>{money.format(totalPaid)}</dd></div>
+              <div className="flex justify-between gap-4 font-semibold"><dt>PROPINA TOTAL</dt><dd>{money.format(totalTips)}</dd></div>
+              <div className="ticket-total flex justify-between gap-4"><dt>SALDO</dt><dd>{money.format(balance)}</dd></div>
+            </dl>
           </>}
           <p className="ticket-footer mt-6 text-center text-stone-500">Operado con MikuyApp</p>
         </div>
@@ -277,6 +295,7 @@ export default function CashierPage({
     [confirmationNotice, setConfirmationNotice] = useState<string | null>(null),
     [paymentFeedback, setPaymentFeedback] = useState<PersistedPayment | null>(null),
     [document, setDocument] = useState<PersistedPayment | null>(null),
+    [documentPaymentHistory, setDocumentPaymentHistory] = useState<readonly PaymentHistory[]>([]),
     [documentMode, setDocumentMode] = useState<"PRECUENTA" | "PAYMENT" | null>(null),
     [documentCreatedAt, setDocumentCreatedAt] = useState(""),
     [documentOrder, setDocumentOrder] = useState<CashierPendingOrder | null>(
@@ -430,6 +449,9 @@ export default function CashierPage({
   });
   const preparedTotal = preparedLines.reduce((sum, line) => sum + line.amount, 0);
   const preparedTip = preparedLines.reduce((sum, line) => sum + line.tip, 0);
+  const saleAmount = preparedTotal;
+  const totalTip = preparedTip;
+  const totalToReceive = saleAmount + totalTip;
   const invalidLines = preparedLines.some((line) => !Number.isFinite(line.amount) || line.amount <= 0 || !Number.isFinite(line.tip) || line.tip < 0);
   const difference = paymentToApply - preparedTotal;
   const accumulatedPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
@@ -694,7 +716,7 @@ export default function CashierPage({
             {selected ? (
               <>
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-stone-200 pb-4">
-                  <h2 className="text-2xl font-bold">Detalle del pedido #{selected.orderId}</h2>
+                  <h2 className="text-xl font-bold">Detalle del pedido #{selected.orderId}</h2>
                   <p className="rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-900">{selected.tableName}</p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600">
@@ -711,9 +733,10 @@ export default function CashierPage({
                     const confirmation: PaymentConfirmation = {
                       orderId: selected.orderId,
                       tableCode: selected.tableCode,
-                      amount: paymentToApply,
+                      amount: saleAmount,
                       lines: preparedLines,
-                      tip: preparedTip,
+                      tip: totalTip,
+                      totalToReceive,
                       currentBalance: selected.balance,
                       partial: partialMode,
                     };
@@ -758,10 +781,14 @@ export default function CashierPage({
                     <p>Distribuido<br /><b>{money.format(preparedTotal)}</b></p>
                     <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{partialMode && !hasPartialObjective ? "—" : money.format(Math.abs(difference))}</b></p>
                   </div>
-                  {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}
+                  {totalTip > 0 && <dl className="mt-3 ml-auto max-w-sm space-y-1 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                    <div className="flex justify-between gap-4"><dt>Importe del pedido</dt><dd className="font-semibold">{money.format(saleAmount)}</dd></div>
+                    <div className="flex justify-between gap-4"><dt>Propina</dt><dd className="font-semibold">{money.format(totalTip)}</dd></div>
+                    <div className="flex justify-between gap-4 font-bold text-emerald-900"><dt>TOTAL A RECIBIR</dt><dd>{money.format(totalToReceive)}</dd></div>
+                  </dl>}
                   <div className="mt-4 flex flex-wrap items-center gap-1.5 md:flex-nowrap">
                     <button className={`${compactPrimaryButtonClass} w-full sm:w-auto md:shrink-0`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
-                      {partialMode ? `Cobrar parte · ${money.format(paymentToApply)}` : `Cobrar · ${money.format(selected.balance)}`}
+                      {`Cobrar ${money.format(totalToReceive)}`}
                     </button>
                     <div className="flex min-w-0 flex-wrap gap-1.5 md:ml-auto md:flex-nowrap md:justify-end">
                       <button className={compactAuxiliaryButtonClass} type="button" onClick={() => { setDocumentOrder(selected); setDocument(null); setDocumentMode("PRECUENTA"); setDocumentCreatedAt(new Date().toISOString()); }}>Precuenta</button>
@@ -815,7 +842,7 @@ export default function CashierPage({
                 <section className="mt-5 border-t border-stone-200 pt-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-lg font-bold">{payments.length} {payments.length === 1 ? "cobro realizado" : "cobros realizados"} · {money.format(accumulatedPayments)} acumulado</h3>
-                    {payments.length > 0 && <button className={auxiliaryButtonClass} type="button" onClick={() => setPaymentsOpen((value) => !value)}>{paymentsOpen ? "Ocultar pagos" : "Ver pagos"}</button>}
+                    {payments.length > 0 && <button className={compactAuxiliaryButtonClass} type="button" onClick={() => setPaymentsOpen((value) => !value)}>{paymentsOpen ? "Ocultar pagos" : "Ver pagos"}</button>}
                   </div>
                   {payments.length === 0 ? (
                     <p className="mt-3 rounded-xl bg-stone-50 p-4 text-stone-600">Sin pagos confirmados.</p>
@@ -823,11 +850,11 @@ export default function CashierPage({
                     <div className="mt-3 max-h-72 overflow-y-auto rounded-xl border border-stone-200">
                       <table className="w-full table-fixed text-left text-xs sm:text-sm">
                         <colgroup>
-                          <col className="w-14 sm:w-16" />
-                          <col />
-                          <col className="w-[4.75rem] sm:w-24" />
-                          <col className="w-[4.75rem] sm:w-24" />
-                          <col className="w-[4.75rem] sm:w-24" />
+                          <col className="w-[12%]" />
+                          <col className="w-[34%]" />
+                          <col className="w-[18%]" />
+                          <col className="w-[18%]" />
+                          <col className="w-[18%]" />
                         </colgroup>
                         <thead className="sticky top-0 bg-stone-100 text-stone-600">
                           <tr>
@@ -841,7 +868,7 @@ export default function CashierPage({
                         <tbody className="divide-y divide-stone-200 bg-white">
                           {chronologicalPayments.map((payment) => (
                             <tr key={payment.chargeId}>
-                              <td className="px-2 py-2 align-top text-stone-600">{new Date(payment.paidAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}</td>
+                              <td className="whitespace-nowrap px-2 py-2 align-top text-stone-600">{new Date(payment.paidAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })}</td>
                               <td className="break-words px-2 py-2 align-top font-medium">
                                 {payment.lines.map((line, index) => (
                                   <span key={line.paymentId}>{index > 0 && " + "}{line.method} {money.format(line.amount)}</span>
@@ -861,7 +888,7 @@ export default function CashierPage({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="font-bold">Productos del pedido ({selected.lines.length})</h3>
                     <button
-                      className={auxiliaryButtonClass}
+                      className={compactAuxiliaryButtonClass}
                       type="button"
                       onClick={() => {
                         if (productsOpen) {
@@ -912,9 +939,10 @@ export default function CashierPage({
               <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-stone-50 p-4 text-sm">
                 <div><dt className="text-stone-600">Mesa</dt><dd className="font-bold">{paymentConfirmation.tableCode}</dd></div>
                 <div><dt className="text-stone-600">Pedido</dt><dd className="font-bold">#{paymentConfirmation.orderId}</dd></div>
-                <div><dt className="text-stone-600">Importe</dt><dd className="font-bold text-emerald-800">{money.format(paymentConfirmation.amount)}</dd></div>
+                <div><dt className="text-stone-600">Importe del pedido</dt><dd className="font-bold">{money.format(paymentConfirmation.amount)}</dd></div>
                 <div className="col-span-2"><dt className="text-stone-600">Medios de pago</dt><dd><ul className="mt-1 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white px-3">{paymentConfirmation.lines.map((line, index) => <li className="flex justify-between gap-3 py-2 font-bold" key={`${line.method}-${index}`}><span>{line.method}</span><span>{money.format(line.amount)}{line.tip > 0 ? ` · propina ${money.format(line.tip)}` : ""}</span></li>)}</ul></dd></div>
                 <div><dt className="text-stone-600">Propina</dt><dd className="font-bold">{money.format(paymentConfirmation.tip)}</dd></div>
+                <div><dt className="text-stone-600">Total a recibir</dt><dd className="font-bold text-emerald-800">{money.format(paymentConfirmation.totalToReceive)}</dd></div>
                 <div><dt className="text-stone-600">Saldo actual</dt><dd className="font-bold">{money.format(paymentConfirmation.currentBalance)}</dd></div>
               </dl>
               {paymentConfirmation.partial ? (
@@ -946,8 +974,13 @@ export default function CashierPage({
                         key(),
                       );
                       if (r.ok) {
+                        const history = r.data.balance === 0
+                          ? await service.getPayments(context, confirmation.orderId)
+                          : null;
+                        const historySnapshot = history?.ok ? history.data : payments;
                         setDocumentOrder(selected);
                         setDocument(r.data);
+                        setDocumentPaymentHistory(historySnapshot);
                         setDocumentMode("PAYMENT");
                         setDocumentCreatedAt(r.data.paidAt);
                         setPaymentFeedback(r.data);
@@ -958,7 +991,7 @@ export default function CashierPage({
                   }}
                   type="button"
                 >
-                  {busy ? "Registrando cobro…" : `Confirmar cobro ${money.format(paymentConfirmation.amount)}`}
+                  {busy ? "Registrando cobro…" : `Confirmar cobro ${money.format(paymentConfirmation.totalToReceive)}`}
                 </button>
               </div>
             </section>
@@ -968,11 +1001,12 @@ export default function CashierPage({
         <InternalDocument
           order={documentOrder}
           payment={documentMode === "PAYMENT" ? document : null}
-          payments={payments}
+          payments={documentPaymentHistory}
           localName={context.local.nombre}
           createdAt={documentCreatedAt}
           onClose={() => {
             setDocument(null);
+            setDocumentPaymentHistory([]);
             setDocumentMode(null);
             setDocumentCreatedAt("");
             setDocumentOrder(null);
