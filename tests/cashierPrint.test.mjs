@@ -77,7 +77,7 @@ test("usa identidad disponible con fallback MikuyApp y sede del contexto", () =>
 });
 test("impresión térmica conserva overlay, permite contenido largo y oculta acciones", () => {
   assert.match(page, /print-overlay/);
-  assert.match(page, /print-document flex max-h/);
+  assert.match(page, /print-document ticket-document flex max-h/);
   assert.match(page, /ticket-scroll overflow-y-auto/);
   assert.match(page, /window\.print/);
   assert.match(page, />\s*Cerrar\s*<\/button>/);
@@ -94,4 +94,37 @@ test("impresión renderiza una sola copia y elimina el layout de aplicación", (
   assert.match(css, /\.print-overlay \{[\s\S]*position: static !important[\s\S]*overflow: visible !important/);
   assert.match(css, /\.print-document \{[\s\S]*position: static !important/);
   assert.doesNotMatch(css, /\.print-document \{[\s\S]*position: absolute/);
+});
+test("los tres documentos comparten una jerarquía tipográfica térmica compacta", () => {
+  const documentComponent = page.slice(
+    page.indexOf("function InternalDocument"),
+    page.indexOf("export default function CashierPage"),
+  );
+  assert.match(documentComponent, /className="print-document ticket-document/);
+  for (const className of [
+    "ticket-brand",
+    "ticket-type",
+    "ticket-location",
+    "ticket-disclaimer",
+    "ticket-section-title",
+    "ticket-amount",
+    "ticket-total",
+    "ticket-footer",
+  ]) assert.match(documentComponent, new RegExp(className));
+  assert.doesNotMatch(documentComponent, /text-(?:sm|lg|xl|2xl)|font-black/);
+  assert.match(css, /\.ticket-document \{[\s\S]*font-size: 11px;[\s\S]*font-weight: 400/);
+  assert.match(css, /\.ticket-document \.ticket-brand \{[\s\S]*font-size: 14px;[\s\S]*font-weight: 700/);
+  assert.match(css, /\.ticket-document \.ticket-type \{[\s\S]*font-size: 12px;[\s\S]*font-weight: 700/);
+  assert.match(css, /\.ticket-document \.ticket-location \{[\s\S]*font-size: 11px;[\s\S]*font-weight: 500/);
+  assert.match(css, /\.ticket-document \.ticket-disclaimer \{[\s\S]*font-size: 11px/);
+  assert.match(css, /\.ticket-document \.ticket-section-title \{[\s\S]*font-size: 11px;[\s\S]*font-weight: 600/);
+  assert.match(css, /\.ticket-document \.ticket-total \{[\s\S]*font-size: 12px;[\s\S]*font-weight: 700/);
+  assert.match(css, /\.ticket-document \.ticket-footer \{[\s\S]*font-size: 11px;[\s\S]*font-weight: 400/);
+  assert.match(css, /\.ticket-document \.ticket-actions \{[\s\S]*font-size: 14px;[\s\S]*font-weight: 600/);
+  const typography = css.slice(css.indexOf(".ticket-document {"), css.indexOf("@media print"));
+  assert.deepEqual(
+    [...new Set([...typography.matchAll(/font-size: (\d+)px/g)].map((match) => Number(match[1])))].sort((a, b) => a - b),
+    [11, 12, 14],
+  );
+  assert.match(css, /@media print[\s\S]*\.print-document \{[\s\S]*font-size: 11px;[\s\S]*line-height: 1\.35/);
 });

@@ -192,7 +192,7 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
     "Detalle del pedido",
     "Productos del pedido",
     "Cobro",
-    "pago realizado",
+    "cobro realizado",
   ]) assert.match(page, new RegExp(text));
   assert.doesNotMatch(page, /Paso [1-4]/i);
 
@@ -265,7 +265,7 @@ test("TP62 prioriza cobro e historial, compacta el resumen y colapsa productos",
   const summary = panel.indexOf("Subtotal <b");
   const charge = panel.indexOf(">Cobro</h3>");
   const products = panel.indexOf("Productos del pedido ({selected.lines.length})");
-  const history = panel.indexOf("pago realizado");
+  const history = panel.indexOf("cobro realizado");
 
   assert.ok(header < summary && summary < charge && charge < history && history < products);
   assert.match(panel, /flex flex-wrap items-center gap-x-5[\s\S]*Subtotal <b[\s\S]*Descuento <b[\s\S]*Total neto <b[\s\S]*Pagado <b/);
@@ -277,6 +277,22 @@ test("TP62 prioriza cobro e historial, compacta el resumen y colapsa productos",
   assert.match(page, /setProductsOpen\(true\); setDivideMode\(true\)/);
   assert.doesNotMatch(page, /Selecciona productos sólo para calcular un importe sugerido/);
   assert.match(page, /grow text-base text-stone-700/);
+});
+
+test("TP62 presenta el historial como una tabla compacta por acto de cobro", () => {
+  assert.match(page, /chronologicalPayments = \[\.\.\.payments\]\.sort/);
+  assert.match(page, /<table className="w-full table-fixed/);
+  for (const heading of ["Hora", "Medio\\(s\\)", "Importe", "Propina", "Saldo"])
+    assert.match(page, new RegExp(`>${heading}<`));
+  assert.match(page, /chronologicalPayments\.map\(\(payment\) =>/);
+  assert.match(page, /payment\.lines\.map\(\(line, index\) =>/);
+  assert.match(page, /index > 0 && " \+ "/);
+  assert.match(page, /toLocaleTimeString\("es-PE", \{ hour: "2-digit", minute: "2-digit" \}\)/);
+  assert.match(page, /max-h-72 overflow-y-auto/);
+  assert.match(page, /paymentsOpen \? "Ocultar pagos" : "Ver pagos"/);
+  assert.doesNotMatch(page, /Cobro \{x\.chargeId\.slice/);
+  assert.doesNotMatch(page, /Registrado por \{x\.actorName\}/);
+  assert.doesNotMatch(page, />\{x\.chargeType\}<\/span>/);
 });
 
 test("TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la derecha", () => {

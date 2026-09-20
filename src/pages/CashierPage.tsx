@@ -124,31 +124,31 @@ function InternalDocument({
   const title = preAccount ? "PRECUENTA" : complete ? "TICKET INTERNO" : "RECIBO INTERNO";
   return (
     <div className="print-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <article className="print-document flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <article className="print-document ticket-document flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="ticket-scroll overflow-y-auto p-6">
           <header className="text-center">
-            <h2 className="text-2xl font-black tracking-wide">MikuyApp</h2>
-            {localName.trim() && <p className="mt-1 font-semibold text-stone-700">{localName}</p>}
-            <p className="mt-5 text-xl font-black tracking-widest">{title}</p>
-            <p className="mt-1 text-sm font-bold text-rose-700">No válido como comprobante fiscal</p>
+            <h2 className="ticket-brand tracking-wide">MikuyApp</h2>
+            {localName.trim() && <p className="ticket-location mt-1 text-stone-700">{localName}</p>}
+            <p className="ticket-type mt-5 tracking-widest">{title}</p>
+            <p className="ticket-disclaimer mt-1 text-rose-700">No válido como comprobante fiscal</p>
           </header>
           <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-          <div className="flex justify-between gap-4 font-semibold">
+          <div className="flex justify-between gap-4 font-medium">
             <span>Pedido #{order.orderId}</span>
             <span>Mesa {order.tableCode}</span>
           </div>
-          <p className="mt-1 text-sm text-stone-600">{new Date(payment?.paidAt ?? createdAt).toLocaleString("es-PE", { timeZone: "America/Lima" })}</p>
+          <p className="mt-1 text-stone-600">{new Date(payment?.paidAt ?? createdAt).toLocaleString("es-PE", { timeZone: "America/Lima" })}</p>
 
           {(preAccount || complete) && <>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <div className="grid grid-cols-[3rem_1fr_auto] gap-2 border-b border-stone-300 pb-2 text-xs font-bold uppercase text-stone-600">
+            <div className="ticket-section-title grid grid-cols-[3rem_1fr_auto] gap-2 border-b border-stone-300 pb-2 uppercase text-stone-600">
               <span>Cant.</span><span>Producto</span><span>Importe</span>
             </div>
             <ul className="consumption-list divide-y divide-stone-200">
               {order.lines.map((line) => <li className="consumption-item grid grid-cols-[3rem_1fr_auto] gap-2 py-2" key={line.detailId}>
                 <span className="quantity-unit">{line.quantity}</span>
                 <span className="product-name">{line.productName}</span>
-                <b className="line-amount">{money.format(line.lineAmount)}</b>
+                <span className="line-amount ticket-amount">{money.format(line.lineAmount)}</span>
               </li>)}
             </ul>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
@@ -156,44 +156,44 @@ function InternalDocument({
               <div className="flex justify-between gap-4"><dt>Subtotal</dt><dd>{money.format(subtotal)}</dd></div>
               <div className="flex justify-between gap-4"><dt>Descuento</dt><dd>{money.format(discount)}</dd></div>
               {preAccount && order.paid > 0 && <div className="flex justify-between gap-4"><dt>Pagado</dt><dd>{money.format(order.paid)}</dd></div>}
-              <div className="flex justify-between gap-4 text-lg font-black"><dt>{preAccount ? "TOTAL A PAGAR" : "TOTAL"}</dt><dd>{money.format(preAccount ? order.balance : netTotal)}</dd></div>
+              <div className="ticket-total flex justify-between gap-4"><dt>{preAccount ? "TOTAL A PAGAR" : "TOTAL"}</dt><dd>{money.format(preAccount ? order.balance : netTotal)}</dd></div>
             </dl>
           </>}
 
           {!preAccount && payment && !complete && <>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <h3 className="text-sm font-black uppercase tracking-wider">Resumen del pedido</h3>
+            <h3 className="ticket-section-title uppercase tracking-wider">Resumen del pedido</h3>
             <dl className="mt-2 space-y-1.5">
               <div className="flex justify-between gap-4"><dt>Subtotal</dt><dd>{money.format(subtotal)}</dd></div>
               <div className="flex justify-between gap-4"><dt>Descuento</dt><dd>{money.format(discount)}</dd></div>
-              <div className="flex justify-between gap-4 font-bold"><dt>Total del pedido</dt><dd>{money.format(netTotal)}</dd></div>
+              <div className="flex justify-between gap-4 font-semibold"><dt>Total del pedido</dt><dd>{money.format(netTotal)}</dd></div>
               <div className="flex justify-between gap-4"><dt>Pagado anteriormente</dt><dd>{money.format(paidPreviously)}</dd></div>
             </dl>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <h3 className="text-sm font-black uppercase tracking-wider">Este cobro</h3>
+            <h3 className="ticket-section-title uppercase tracking-wider">Este cobro</h3>
             <ul className="mt-2 space-y-1.5">
               {payment.lines.map((line, index) => (
                 <li className="flex justify-between gap-4" key={`${line.paymentId}-${index}`}>
                   <span className="capitalize">{line.method.toLocaleLowerCase("es-PE")}</span>
-                  <b>{money.format(line.amount)}</b>
+                  <span className="ticket-amount">{money.format(line.amount)}</span>
                 </li>
               ))}
             </ul>
             <dl className="mt-2 space-y-1.5">
               <div className="flex justify-between gap-4"><dt>Propina</dt><dd>{money.format(payment.tip)}</dd></div>
-              <div className="flex justify-between gap-4 text-lg font-black"><dt>IMPORTE COBRADO</dt><dd>{money.format(payment.amount)}</dd></div>
+              <div className="ticket-total flex justify-between gap-4"><dt>IMPORTE COBRADO</dt><dd>{money.format(payment.amount)}</dd></div>
             </dl>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <div className="flex justify-between gap-4 text-lg font-black"><span>SALDO PENDIENTE</span><span>{money.format(balance)}</span></div>
+            <div className="ticket-total flex justify-between gap-4"><span>SALDO PENDIENTE</span><span>{money.format(balance)}</span></div>
           </>}
 
           {!preAccount && payment && complete && <>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <h3 className="text-sm font-black uppercase tracking-wider">Cobros del pedido</h3>
+            <h3 className="ticket-section-title uppercase tracking-wider">Cobros del pedido</h3>
             <ol className="mt-2 space-y-3">
               {documentPayments.map((item, paymentIndex) => (
                 <li className="payment-summary rounded-lg border border-stone-200 p-3" key={item.chargeId}>
-                  <div className="flex justify-between gap-4 font-bold">
+                  <div className="ticket-section-title flex justify-between gap-4">
                     <span>{paymentIndex === documentPayments.length - 1 ? "Cobro final" : `Cobro ${paymentIndex + 1}`}</span>
                     <span>{money.format(item.amount)}</span>
                   </div>
@@ -205,16 +205,16 @@ function InternalDocument({
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-1 flex justify-between gap-4 text-sm"><span>Propina</span><span>{money.format(item.tip)}</span></div>
+                  <div className="mt-1 flex justify-between gap-4"><span>Propina</span><span>{money.format(item.tip)}</span></div>
                 </li>
               ))}
             </ol>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <div className="flex justify-between gap-4 text-lg font-black"><span>SALDO</span><span>{money.format(balance)}</span></div>
+            <div className="ticket-total flex justify-between gap-4"><span>SALDO</span><span>{money.format(balance)}</span></div>
           </>}
-          <p className="mt-6 text-center text-xs text-stone-500">Operado con MikuyApp</p>
+          <p className="ticket-footer mt-6 text-center text-stone-500">Operado con MikuyApp</p>
         </div>
-        <div className="no-print flex shrink-0 gap-3 border-t border-stone-200 bg-white p-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+        <div className="ticket-actions no-print flex shrink-0 gap-3 border-t border-stone-200 bg-white p-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
           <button className={`${auxiliaryButtonClass} flex-1`} onClick={onClose} type="button">
             Cerrar
           </button>
@@ -433,6 +433,9 @@ export default function CashierPage({
   const invalidLines = preparedLines.some((line) => !Number.isFinite(line.amount) || line.amount <= 0 || !Number.isFinite(line.tip) || line.tip < 0);
   const difference = paymentToApply - preparedTotal;
   const accumulatedPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const chronologicalPayments = [...payments].sort(
+    (left, right) => new Date(left.paidAt).getTime() - new Date(right.paidAt).getTime(),
+  );
   return (
     <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
       <div className="mx-auto max-w-7xl">
@@ -811,28 +814,47 @@ export default function CashierPage({
                 </form>}
                 <section className="mt-5 border-t border-stone-200 pt-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-lg font-bold">{payments.length} {payments.length === 1 ? "pago realizado" : "pagos realizados"} · {money.format(accumulatedPayments)} acumulado</h3>
+                    <h3 className="text-lg font-bold">{payments.length} {payments.length === 1 ? "cobro realizado" : "cobros realizados"} · {money.format(accumulatedPayments)} acumulado</h3>
                     {payments.length > 0 && <button className={auxiliaryButtonClass} type="button" onClick={() => setPaymentsOpen((value) => !value)}>{paymentsOpen ? "Ocultar pagos" : "Ver pagos"}</button>}
                   </div>
                   {payments.length === 0 ? (
                     <p className="mt-3 rounded-xl bg-stone-50 p-4 text-stone-600">Sin pagos confirmados.</p>
                   ) : paymentsOpen && (
-                    <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-                      {payments.map((x) => (
-                        <li className="rounded-xl border border-stone-200 bg-stone-50 p-3" key={x.chargeId}>
-                          <div className="flex items-start justify-between gap-3"><b>Cobro {x.chargeId.slice(0, 8)}</b><span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-stone-700">{x.chargeType}</span></div>
-                          <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
-                            <div><dt className="text-stone-500">Importe</dt><dd className="font-bold">{money.format(x.amount)}</dd></div>
-                            <div><dt className="text-stone-500">Propina</dt><dd className="font-bold">{money.format(x.tip)}</dd></div>
-                            <div><dt className="text-stone-500">Saldo</dt><dd className="font-bold">{money.format(x.balance)}</dd></div>
-                          </dl>
-                          <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white px-3">
-                            {x.lines.map((line) => <li className="flex items-center justify-between gap-3 py-2 text-sm" key={line.paymentId}><span>{line.method}</span><span className="font-semibold">{money.format(line.amount)} · propina {money.format(line.tip)}</span></li>)}
-                          </ul>
-                          <p className="mt-2 text-xs text-stone-500">Registrado por {x.actorName} · {new Date(x.paidAt).toLocaleString("es-PE")}</p>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-3 max-h-72 overflow-y-auto rounded-xl border border-stone-200">
+                      <table className="w-full table-fixed text-left text-xs sm:text-sm">
+                        <colgroup>
+                          <col className="w-14 sm:w-16" />
+                          <col />
+                          <col className="w-[4.75rem] sm:w-24" />
+                          <col className="w-[4.75rem] sm:w-24" />
+                          <col className="w-[4.75rem] sm:w-24" />
+                        </colgroup>
+                        <thead className="sticky top-0 bg-stone-100 text-stone-600">
+                          <tr>
+                            <th className="px-2 py-2 font-semibold" scope="col">Hora</th>
+                            <th className="px-2 py-2 font-semibold" scope="col">Medio(s)</th>
+                            <th className="px-2 py-2 text-right font-semibold" scope="col">Importe</th>
+                            <th className="px-2 py-2 text-right font-semibold" scope="col">Propina</th>
+                            <th className="px-2 py-2 text-right font-semibold" scope="col">Saldo</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-200 bg-white">
+                          {chronologicalPayments.map((payment) => (
+                            <tr key={payment.chargeId}>
+                              <td className="px-2 py-2 align-top text-stone-600">{new Date(payment.paidAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}</td>
+                              <td className="break-words px-2 py-2 align-top font-medium">
+                                {payment.lines.map((line, index) => (
+                                  <span key={line.paymentId}>{index > 0 && " + "}{line.method} {money.format(line.amount)}</span>
+                                ))}
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-2 text-right align-top font-semibold">{money.format(payment.amount)}</td>
+                              <td className="whitespace-nowrap px-2 py-2 text-right align-top">{money.format(payment.tip)}</td>
+                              <td className="whitespace-nowrap px-2 py-2 text-right align-top font-semibold">{money.format(payment.balance)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </section>
                 <section className="mt-5 border-t border-stone-200 pt-4">
