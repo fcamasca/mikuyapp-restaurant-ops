@@ -31,8 +31,25 @@ test("precuenta reutiliza el documento con snapshot vigente y sin mutaciones", (
   assert.match(page, /TOTAL A PAGAR/);
   assert.match(page, /money\.format\(preAccount \? order\.balance : netTotal\)/);
   assert.match(page, /preAccount && order\.paid > 0[\s\S]*Pagado/);
-  assert.match(page, /!preAccount && payment && <>[\s\S]*Formas de pago/);
+  assert.match(page, /!preAccount && payment && !complete && <>[\s\S]*Este cobro/);
   assert.match(page, /setDocumentMode\(null\)/);
+});
+test("recibo parcial muestra resumen y exclusivamente el acto vigente", () => {
+  assert.match(page, /paidPreviously = payment \? Math\.max\(0, payment\.paid - payment\.amount\) : order\.paid/);
+  assert.match(page, /!preAccount && payment && !complete && <>/);
+  for (const text of [
+    "Resumen del pedido",
+    "Total del pedido",
+    "Pagado anteriormente",
+    "Este cobro",
+    "IMPORTE COBRADO",
+    "SALDO PENDIENTE",
+  ]) assert.match(page, new RegExp(text));
+  assert.match(page, /payment\.lines\.map/);
+  assert.match(page, /money\.format\(payment\.tip\)/);
+  assert.match(page, /money\.format\(payment\.amount\)/);
+  assert.match(page, /money\.format\(balance\)/);
+  assert.doesNotMatch(page, /!preAccount && payment && !complete[\s\S]*order\.lines\.map/);
 });
 test("ticket final muestra consumo completo y medios repetidos sin identificadores técnicos visibles", () => {
   const documentComponent = page.slice(
@@ -43,7 +60,11 @@ test("ticket final muestra consumo completo y medios repetidos sin identificador
   assert.match(page, /line\.quantity/);
   assert.match(page, /line\.productName/);
   assert.match(page, /money\.format\(line\.lineAmount\)/);
-  assert.match(page, /displayedPayments\.flatMap\(\(item\) => item\.lines\)\.map/);
+  assert.match(page, /!preAccount && payment && complete && <>/);
+  assert.match(page, /documentPayments\.map/);
+  assert.match(page, /Cobro final/);
+  assert.match(page, /item\.lines\.map/);
+  assert.match(page, /money\.format\(item\.tip\)/);
   assert.doesNotMatch(documentComponent, />\s*Cobro \{[^}]*chargeId/);
   assert.doesNotMatch(page, /pago_detalle|subcuenta|subpedido/);
 });
@@ -65,4 +86,12 @@ test("impresión térmica conserva overlay, permite contenido largo y oculta acc
   assert.match(css, /size: 80mm auto/);
   assert.match(css, /\.ticket-scroll/);
   assert.match(css, /\.no-print/);
+});
+test("impresión renderiza una sola copia y elimina el layout de aplicación", () => {
+  assert.equal((page.match(/<InternalDocument/g) ?? []).length, 1);
+  assert.equal((page.match(/className="print-document/g) ?? []).length, 1);
+  assert.match(css, /#root > main > :not\(\.print-overlay\)[\s\S]*display: none !important/);
+  assert.match(css, /\.print-overlay \{[\s\S]*position: static !important[\s\S]*overflow: visible !important/);
+  assert.match(css, /\.print-document \{[\s\S]*position: static !important/);
+  assert.doesNotMatch(css, /\.print-document \{[\s\S]*position: absolute/);
 });

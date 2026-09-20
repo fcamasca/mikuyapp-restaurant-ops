@@ -206,6 +206,23 @@ test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () =
   assert.doesNotMatch(page, /overflow-x-(?:auto|scroll)/);
 });
 
+test("TP62 permite ocultar y mostrar la lista de pedidos sin perder el detalle", () => {
+  assert.match(page, /\[ordersPanelOpen, setOrdersPanelOpen\] = useState\(true\)/);
+  assert.match(page, /aria-expanded=\{ordersPanelOpen\}/);
+  assert.match(page, /aria-label=\{ordersPanelOpen \? "Ocultar lista de pedidos pendientes" : "Mostrar lista de pedidos pendientes"\}/);
+  assert.match(page, /Ocultar lista de pedidos pendientes/);
+  assert.match(page, /Mostrar lista de pedidos pendientes/);
+  assert.match(page, /ordersPanelOpen \? "lg:grid-cols-\[22rem_minmax\(0,1fr\)\]" : "grid-cols-\[3\.5rem_minmax\(0,1fr\)\]"/);
+  assert.match(page, /ordersPanelOpen \? "p-4" : "p-1\.5"/);
+  assert.match(page, /ordersPanelOpen && <h2[^>]*>Pedidos pendientes<\/h2>/);
+  assert.match(page, /<svg aria-hidden="true"/);
+  assert.match(page, /!ordersPanelOpen && <div[^>]*overflow-x-hidden overflow-y-auto/);
+  assert.match(page, /\{order\.tableCode\}/);
+  assert.match(page, /selectedId === order\.orderId \? "border-emerald-700 bg-emerald-700 text-white/);
+  assert.match(page, /title=\{`\$\{order\.tableName\} · Pedido #\$\{order\.orderId\} · Saldo \$\{money\.format\(order\.balance\)\}`\}/);
+  assert.match(page, /aria-label=\{`Abrir \$\{order\.tableName\}, pedido \$\{order\.orderId\}, saldo \$\{money\.format\(order\.balance\)\}`\}/);
+});
+
 test("TP62 usa automáticamente la única caja activa y no muestra selector ni cajero duplicado", () => {
   assert.match(page, /boxes\.data\.length === 1 \? boxes\.data\[0\]\.id : ""/);
   assert.match(page, /cashboxes\.length > 1/);
@@ -265,7 +282,9 @@ test("TP62 prioriza cobro e historial, compacta el resumen y colapsa productos",
 test("TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la derecha", () => {
   const paymentForm = page.match(/<form\s+className="mt-5 rounded-xl border-2[\s\S]*?<\/form>/)?.[0] ?? "";
   assert.match(paymentForm, /md:flex-nowrap/);
-  assert.match(paymentForm, /md:ml-auto md:flex-nowrap md:justify-end/);
+  assert.match(paymentForm, /min-w-0 flex-wrap gap-1\.5 md:ml-auto md:flex-nowrap md:justify-end/);
+  assert.match(page, /compactPrimaryButtonClass/);
+  assert.match(page, /compactAuxiliaryButtonClass/);
   assert.match(paymentForm, /Precuenta[\s\S]*Cobrar una parte[\s\S]*Propina[\s\S]*Más opciones/);
   assert.doesNotMatch(paymentForm, /overflow-x-(?:auto|scroll)/);
 });

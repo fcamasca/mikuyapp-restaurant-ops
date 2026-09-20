@@ -7,16 +7,43 @@
   }
 
   html,
-  body {
+  body,
+  #root,
+  #root > main {
     width: 80mm;
+    min-height: 0 !important;
+    height: auto !important;
     margin: 0;
     padding: 0;
+    overflow: visible !important;
     background: #fff !important;
     color: #000 !important;
   }
 
+  #root > main > :not(.print-overlay) {
+    display: none !important;
+  }
+
   body * {
     visibility: hidden !important;
+  }
+
+  .print-overlay,
+  .print-overlay * {
+    visibility: visible !important;
+  }
+
+  .print-overlay {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    box-sizing: border-box;
+    width: 72mm !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
   }
 
   .print-document,
@@ -25,9 +52,7 @@
   }
 
   .print-document {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: static !important;
     box-sizing: border-box;
     width: 72mm;
     max-width: 72mm;

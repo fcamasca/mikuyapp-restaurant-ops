@@ -51,7 +51,9 @@ const fieldClass =
   auxiliaryButtonClass =
     "min-h-11 rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50",
   compactAuxiliaryButtonClass =
-    "min-h-10 whitespace-nowrap rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50";
+    "min-h-10 whitespace-nowrap rounded-xl border border-stone-300 bg-stone-50 px-2.5 py-2 text-xs font-semibold text-stone-800 transition hover:bg-stone-100 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:opacity-50",
+  compactPrimaryButtonClass =
+    "min-h-11 whitespace-nowrap rounded-xl bg-emerald-700 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-50";
 function Lines({
   order,
   select,
@@ -114,12 +116,11 @@ function InternalDocument({
     (item, index, all) =>
       all.findIndex((candidate) => candidate.chargeId === item.chargeId) === index,
     ) : [];
-  const displayedPayments = complete ? documentPayments : documentPayments.slice(-1);
-  const displayedTip = displayedPayments.reduce((total, item) => total + item.tip, 0);
   const subtotal = payment?.subtotal ?? order.subtotal;
   const discount = payment?.discount ?? order.discount;
   const netTotal = payment?.netTotal ?? order.netTotal;
   const balance = payment?.balance ?? order.balance;
+  const paidPreviously = payment ? Math.max(0, payment.paid - payment.amount) : order.paid;
   const title = preAccount ? "PRECUENTA" : complete ? "TICKET INTERNO" : "RECIBO INTERNO";
   return (
     <div className="print-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -159,23 +160,57 @@ function InternalDocument({
             </dl>
           </>}
 
-          {!preAccount && payment && <>
+          {!preAccount && payment && !complete && <>
             <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <h3 className="text-sm font-black uppercase tracking-wider">Formas de pago</h3>
+            <h3 className="text-sm font-black uppercase tracking-wider">Resumen del pedido</h3>
+            <dl className="mt-2 space-y-1.5">
+              <div className="flex justify-between gap-4"><dt>Subtotal</dt><dd>{money.format(subtotal)}</dd></div>
+              <div className="flex justify-between gap-4"><dt>Descuento</dt><dd>{money.format(discount)}</dd></div>
+              <div className="flex justify-between gap-4 font-bold"><dt>Total del pedido</dt><dd>{money.format(netTotal)}</dd></div>
+              <div className="flex justify-between gap-4"><dt>Pagado anteriormente</dt><dd>{money.format(paidPreviously)}</dd></div>
+            </dl>
+            <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+            <h3 className="text-sm font-black uppercase tracking-wider">Este cobro</h3>
             <ul className="mt-2 space-y-1.5">
-              {displayedPayments.flatMap((item) => item.lines).map((line, index) => (
+              {payment.lines.map((line, index) => (
                 <li className="flex justify-between gap-4" key={`${line.paymentId}-${index}`}>
                   <span className="capitalize">{line.method.toLocaleLowerCase("es-PE")}</span>
                   <b>{money.format(line.amount)}</b>
                 </li>
               ))}
             </ul>
-            <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
-            <dl className="space-y-1.5">
-              {!complete && <div className="flex justify-between gap-4 text-lg font-black"><dt>IMPORTE COBRADO</dt><dd>{money.format(payment.amount)}</dd></div>}
-              <div className="flex justify-between gap-4"><dt>Propina</dt><dd>{money.format(displayedTip)}</dd></div>
-              <div className="flex justify-between gap-4 font-black"><dt>{complete ? "SALDO" : "SALDO PENDIENTE"}</dt><dd>{money.format(balance)}</dd></div>
+            <dl className="mt-2 space-y-1.5">
+              <div className="flex justify-between gap-4"><dt>Propina</dt><dd>{money.format(payment.tip)}</dd></div>
+              <div className="flex justify-between gap-4 text-lg font-black"><dt>IMPORTE COBRADO</dt><dd>{money.format(payment.amount)}</dd></div>
             </dl>
+            <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+            <div className="flex justify-between gap-4 text-lg font-black"><span>SALDO PENDIENTE</span><span>{money.format(balance)}</span></div>
+          </>}
+
+          {!preAccount && payment && complete && <>
+            <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+            <h3 className="text-sm font-black uppercase tracking-wider">Cobros del pedido</h3>
+            <ol className="mt-2 space-y-3">
+              {documentPayments.map((item, paymentIndex) => (
+                <li className="payment-summary rounded-lg border border-stone-200 p-3" key={item.chargeId}>
+                  <div className="flex justify-between gap-4 font-bold">
+                    <span>{paymentIndex === documentPayments.length - 1 ? "Cobro final" : `Cobro ${paymentIndex + 1}`}</span>
+                    <span>{money.format(item.amount)}</span>
+                  </div>
+                  <ul className="mt-2 space-y-1">
+                    {item.lines.map((line, lineIndex) => (
+                      <li className="flex justify-between gap-4" key={`${line.paymentId}-${lineIndex}`}>
+                        <span className="capitalize">{line.method.toLocaleLowerCase("es-PE")}</span>
+                        <span>{money.format(line.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-1 flex justify-between gap-4 text-sm"><span>Propina</span><span>{money.format(item.tip)}</span></div>
+                </li>
+              ))}
+            </ol>
+            <div className="ticket-rule my-4 border-t border-dashed border-stone-400" />
+            <div className="flex justify-between gap-4 text-lg font-black"><span>SALDO</span><span>{money.format(balance)}</span></div>
           </>}
           <p className="mt-6 text-center text-xs text-stone-500">Operado con MikuyApp</p>
         </div>
@@ -233,6 +268,7 @@ export default function CashierPage({
     [tipMode, setTipMode] = useState(false),
     [divideMode, setDivideMode] = useState(false),
     [productsOpen, setProductsOpen] = useState(false),
+    [ordersPanelOpen, setOrdersPanelOpen] = useState(true),
     [discountMode, setDiscountMode] = useState(false),
     [moreOptions, setMoreOptions] = useState(false),
     [paymentsOpen, setPaymentsOpen] = useState(false),
@@ -590,9 +626,26 @@ export default function CashierPage({
           <b>Cobro registrado: {money.format(paymentFeedback.amount)} · {paymentFeedback.lines.length} {paymentFeedback.lines.length === 1 ? "medio" : "medios"}</b>
           <p>Saldo restante: {money.format(paymentFeedback.balance)} · Pedido {paymentFeedback.orderStatus === "PAGADO" ? "PAGADO" : "pendiente de completar"}.</p>
         </div>}
-        <div className="mt-3 grid min-w-0 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
-          <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-xl font-bold">Pedidos pendientes</h2>
+        <div className={`mt-3 grid min-w-0 gap-4 ${ordersPanelOpen ? "lg:grid-cols-[22rem_minmax(0,1fr)]" : "grid-cols-[3.5rem_minmax(0,1fr)]"}`}>
+          <section className={`min-w-0 rounded-2xl border border-stone-200 bg-white shadow-sm ${ordersPanelOpen ? "p-4" : "p-1.5"}`}>
+            <div className={`flex items-center ${ordersPanelOpen ? "justify-between gap-3" : "justify-center"}`}>
+              {ordersPanelOpen && <h2 className="text-xl font-bold">Pedidos pendientes</h2>}
+              <button
+                aria-expanded={ordersPanelOpen}
+                aria-label={ordersPanelOpen ? "Ocultar lista de pedidos pendientes" : "Mostrar lista de pedidos pendientes"}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 focus:outline-none focus:ring-4 focus:ring-stone-200"
+                onClick={() => setOrdersPanelOpen((value) => !value)}
+                title={ordersPanelOpen ? "Ocultar lista de pedidos pendientes" : "Mostrar lista de pedidos pendientes"}
+                type="button"
+              >
+                <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <rect height="16" rx="2" stroke="currentColor" strokeWidth="1.8" width="18" x="3" y="4" />
+                  <path d="M9 4v16" stroke="currentColor" strokeWidth="1.8" />
+                  <path d={ordersPanelOpen ? "m6.5 10-2 2 2 2" : "m5.5 10 2 2-2 2"} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+                </svg>
+              </button>
+            </div>
+            {ordersPanelOpen && <>
             {loading ? (
               <p>Cargando pedidos pendientes…</p>
             ) : orders.length === 0 ? (
@@ -614,6 +667,25 @@ export default function CashierPage({
                 </button>
               ))
             )}
+            </>}
+            {!ordersPanelOpen && <div className="mt-2 max-h-[calc(100vh-16rem)] space-y-2 overflow-x-hidden overflow-y-auto border-t border-stone-200 pt-2">
+              {!loading && orders.map((order) => (
+                <button
+                  aria-label={`Abrir ${order.tableName}, pedido ${order.orderId}, saldo ${money.format(order.balance)}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-xs font-black transition focus:outline-none focus:ring-4 focus:ring-emerald-100 ${selectedId === order.orderId ? "border-emerald-700 bg-emerald-700 text-white shadow-sm" : "border-stone-300 bg-white text-stone-700 hover:border-emerald-500 hover:bg-emerald-50"}`}
+                  key={order.orderId}
+                  onClick={() => {
+                    clearPaymentOptions();
+                    setPaymentFeedback(null);
+                    setSelectedId(order.orderId);
+                  }}
+                  title={`${order.tableName} · Pedido #${order.orderId} · Saldo ${money.format(order.balance)}`}
+                  type="button"
+                >
+                  {order.tableCode}
+                </button>
+              ))}
+            </div>}
           </section>
           <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
             {selected ? (
@@ -684,11 +756,11 @@ export default function CashierPage({
                     <p>{difference >= 0 ? "Falta" : "Exceso"}<br /><b className={difference === 0 ? "text-emerald-700" : "text-rose-700"}>{partialMode && !hasPartialObjective ? "—" : money.format(Math.abs(difference))}</b></p>
                   </div>
                   {tipMode && <p className="mt-2 text-sm">Propina total: <b>{money.format(preparedTip)}</b></p>}
-                  <div className="mt-4 flex flex-wrap items-center gap-2 md:flex-nowrap">
-                    <button className={`${primaryButtonClass} w-full sm:w-auto md:shrink-0`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
+                  <div className="mt-4 flex flex-wrap items-center gap-1.5 md:flex-nowrap">
+                    <button className={`${compactPrimaryButtonClass} w-full sm:w-auto md:shrink-0`} aria-busy={busy} disabled={busy || !session || selected.balance <= 0 || invalidLines || difference !== 0 || (partialMode && invalidPartial)}>
                       {partialMode ? `Cobrar parte · ${money.format(paymentToApply)}` : `Cobrar · ${money.format(selected.balance)}`}
                     </button>
-                    <div className="flex flex-wrap gap-2 md:ml-auto md:flex-nowrap md:justify-end">
+                    <div className="flex min-w-0 flex-wrap gap-1.5 md:ml-auto md:flex-nowrap md:justify-end">
                       <button className={compactAuxiliaryButtonClass} type="button" onClick={() => { setDocumentOrder(selected); setDocument(null); setDocumentMode("PRECUENTA"); setDocumentCreatedAt(new Date().toISOString()); }}>Precuenta</button>
                       <button className={compactAuxiliaryButtonClass} type="button" onClick={() => { setPartialMode((value) => !value); setPaymentAmount(""); }}>{partialMode ? "Cobro total" : "Cobrar una parte"}</button>
                       <button className={compactAuxiliaryButtonClass} type="button" onClick={() => { setTipMode((value) => !value); setPaymentLines((old) => old.map((line) => ({ ...line, tip: "0" }))); }}>Propina</button>
