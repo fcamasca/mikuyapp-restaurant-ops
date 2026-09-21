@@ -107,17 +107,17 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP56 | R21 | Reporte de sesión con cobro multi-medio y todos los conceptos. | Apertura, cada medio, entradas/salidas, esperado, diferencia, descuentos, anulaciones, propinas y parciales concilian; venta no se duplica por agrupación. |
 | E1-TP57 | R21 | Resumen diario con cobros multi-medio y parciales. | Cada medio suma su parte, cada acto conserva identidad y el pedido se cuenta una sola vez al completar. |
 | E1-TP58 | R21 | Fecha Lima, dos locales y exportación. | Corte `America/Lima`, aislamiento y CSV coherente. |
-| E1-TP59 | R22–R24 | Estados UI de Caja y Administración: sin caja abierta, vacíos, loading, error/reintento, grilla sin históricos, bandeja sin avisos, Inicio sin actividad y grupos del flujo sin pedidos. | Caja conserva estados inequívocos y grilla responsive. Inicio muestra `Todo en orden`, caja cerrada sin desaparecer, KPI/medios en cero sin `NaN` y tarjetas del flujo con cero/estado vacío sin tiempos ficticios; la campana conserva contador, lista reciente y prioridad normal/alerta. |
-| E1-TP60 | R22–R24 | Interacciones UI: confirmación única, edición de movimientos, lectura de notificaciones, navegación ADMIN, atención accionable y consulta del flujo actual. | Cobro y lote conservan protecciones. La bandeja permite lectura individual/masiva sólo propia. Sidebar/drawer presenta los grupos aprobados; Pendientes contiene sólo descuentos; cierres con diferencia no leídos aparecen en Inicio sin aprobación. `Ver pedidos` abre/cambia/cierra un detalle de sólo consulta, ordenado por mayor espera, sin acciones de Cocina/Mozo. |
-| E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build, dashboard ADMIN y verificaciones de seguridad/concurrencia previstas en las tareas. | Además de los invariantes financieros existentes, KPI y ventas por medio concilian para el local/corte Lima. La nueva lectura clasifica `ENVIADO`, `RECIBIDO_COCINA`/`EN_PREPARACION` y `LISTO`; excluye `ENTREGADO`/`PAGADO`/`ANULADO`; calcula con hora servidor mayor/promedio y conserva el inicio del grupo durante `RECIBIDO_COCINA → EN_PREPARACION`; aísla locales, no amplía SELECT directo ni persiste métricas. Caja/Ventas no habilitan cobro ADMIN y navegación/configuración no regresan. |
+| E1-TP59 | R22–R24 | Estados UI de Caja y Administración: sin caja abierta, vacíos, loading, error/reintento, grilla sin históricos, bandeja sin avisos, Inicio sin actividad, grupos del flujo sin pedidos y `Operación → Pedidos` vacío/error. | Caja conserva estados inequívocos y grilla responsive. Inicio muestra `Todo en orden`, caja cerrada sin desaparecer, KPI/medios en cero sin `NaN` y tarjetas del flujo con cero/estado vacío sin tiempos ficticios; la campana conserva contador, lista reciente y prioridad normal/alerta. Pedidos ADMIN diferencia loading, vacío, error/reintento, anulable y bloqueado por pago. |
+| E1-TP60 | R22–R24 | Interacciones UI: confirmación única, edición de movimientos, lectura de notificaciones, navegación ADMIN, atención accionable, consulta del flujo actual y anulación directa desde `Operación → Pedidos`. | Cobro y lote conservan protecciones. La bandeja permite lectura individual/masiva sólo propia. Sidebar/drawer presenta `Pedidos` antes de `Pendientes por aprobar`; Pendientes contiene sólo descuentos; cierres con diferencia no leídos aparecen en Inicio sin aprobación. `Ver pedidos` del flujo abre/cambia/cierra detalle de sólo consulta y nunca ofrece acciones. La pantalla Pedidos exige motivo, confirma una sola vez, advierte en `EN_PREPARACION`/`LISTO`/`ENTREGADO`, bloquea doble envío y refresca el resultado autoritativo. |
+| E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build, dashboard ADMIN y verificaciones de seguridad/concurrencia previstas en las tareas. | Además de los invariantes financieros existentes, KPI y ventas por medio concilian para el local/corte Lima. La lectura de flujo clasifica y calcula tiempos sin persistir métricas. `rpc_obtener_pedidos_operacion_admin()` conserva aislamiento local y mínimo privilegio; `anular_pedido_supervisado` mantiene matriz, bloqueo por cualquier pago, atomicidad de pedido/mesa/historial/auditoría e idempotencia. Caja/Ventas no habilitan cobro ADMIN y navegación/configuración no regresan. |
 
 ## 3. Pruebas humanas
 
 | ID | Escenario | Evidencia requerida |
 |---|---|---|
-| E1-TP62 | Jornada de Caja en PC y revisión de Inicio ADMIN: abrir, cobros, propina, movimientos, cierre con/sin diferencia; avisos, KPI, atención, flujo actual de pedidos, ventas por medio y caja del local actual. | Capturas/registro; el flujo de Caja conserva sus reglas. En Inicio se respeta `KPI → atención → flujo → ventas por medio → caja`; KPI concilian; los tres grupos muestran cantidad, mayor/promedio, mesas y detalle coherentes; descuentos permiten decisión, cierres consulta sin aprobación y el flujo no ofrece acciones operativas. Caja abierta/cerrada, vacíos y campana son comprensibles. TP62 permanece abierto. |
-| E1-TP63 | Descuento solicitado por `CAJA` y autorizado por `ADMINISTRADOR`; anulación ejecutada directamente por `ADMINISTRADOR`, incluidos rechazos. | Descuento conserva solicitante/autorizador; anulación conserva únicamente actor administrador, motivo, fecha/hora y efectos en pedido/mesa/reportes. |
-| E1-TP64 | Responsive aplicable: Caja PC principal, tablet como contingencia, Inicio ADMIN en desktop/tablet/móvil y regresión de mozo/cocina. | Caja conserva acciones críticas. Inicio usa sidebar en desktop y drawer/hamburguesa accesible; tarjetas y detalle del flujo hacen wrap sin scroll horizontal; jerarquía, foco, estados, barras e importes permanecen legibles. No aparecen históricos/analítica E8 ni capacidades multilocal; mozo/cocina no regresan. |
+| E1-TP62 | **APROBADO HUMANAMENTE.** Jornada de Caja en PC y revisión de Inicio ADMIN: abrir, cobros, propina, movimientos, cierre con/sin diferencia; avisos, KPI, atención, flujo actual de pedidos, ventas por medio y caja del local actual. | Capturas/registro aprobados; el flujo de Caja conserva sus reglas. En Inicio se respeta `KPI → atención → flujo → ventas por medio → caja`; KPI concilian; los tres grupos muestran cantidad, mayor/promedio, mesas y detalle coherentes; descuentos permiten decisión, cierres consulta sin aprobación y el flujo no ofrece acciones operativas. Caja abierta/cerrada, vacíos y campana son comprensibles. |
+| E1-TP63 | **EN EJECUCIÓN.** Descuento solicitado por `CAJA` y autorizado/rechazado por `ADMINISTRADOR`; anulación directa desde `Operación → Pedidos`. | Descuento conserva solicitante/autorizador. ADMIN sólo ve pedidos de su local; motivo y confirmación son obligatorios; `EN_PREPARACION`/`LISTO`/`ENTREGADO` advierten impacto. Cada estado anulable sin pagos termina `ANULADO` con mesa consistente, actor/fecha/hora/historial/auditoría; pago parcial/completo y estados terminales muestran bloqueo sin acción ni efectos parciales. Pendientes continúa limitado a descuentos. |
+| E1-TP64 | **PENDIENTE.** Responsive aplicable: Caja PC principal, tablet como contingencia, Inicio y `Operación → Pedidos` ADMIN en desktop/tablet/móvil, y regresión de mozo/cocina. | Caja conserva acciones críticas. ADMIN usa sidebar en desktop y drawer/hamburguesa accesible; la grilla de pedidos adapta columnas/filas sin scroll horizontal ni ocultar estado/acción; tarjetas y detalle del flujo hacen wrap y siguen sin acciones. No aparecen históricos/analítica E8 ni capacidades multilocal; mozo/cocina no regresan. |
 
 ## 4. Datos y concurrencia
 
@@ -130,7 +130,7 @@ La evidencia original de T08 valida los aspectos estructurales/legacy entonces a
 ## 5. Criterio de aprobación
 
 - DF-01–DF-04 y DF-06–DF-10 aprobadas y reflejadas en el spec; EC-06–EC-08 conservadas como decisiones cerradas.
-- TP01–TP61 automatizadas/técnicas vigentes deberán revalidarse en los aspectos ampliados por T16; TP62–TP64 continúan como validación humana e incluyen el Inicio ADMIN aprobado.
+- TP01–TP61 automatizadas/técnicas vigentes deberán revalidarse en los aspectos ampliados por T16/T17; TP62 está aprobado humanamente, TP63 está en ejecución y TP64 permanece pendiente.
 - Cero sobrepago, doble apertura/cierre/cobro, cobro multi-medio parcial, acceso cruzado o auditoría faltante; idempotencia por acto y atomicidad de todas sus líneas.
 - Regresión vigente completa, migraciones local/DEV alineadas y defectos no bloqueantes clasificados.
 - Ninguna aceptación se crea hasta aprobación explícita del usuario.
@@ -142,14 +142,14 @@ La evidencia original de T08 valida los aspectos estructurales/legacy entonces a
 | R01–R03 | D02–D03, D13 | T03–T04 | TP01–TP08 |
 | R04–R08 | D04–D05, D11–D13 | T04–T05, T12 | TP09–TP18, TP56 |
 | R09–R10 | D06, D13 | T06 | TP19–TP25 |
-| R11–R12 | D07, D13 | T07 | TP26–TP30 |
+| R11–R12 | D07, D13, D16 | T07, T17 | TP26–TP30, TP59–TP64 aplicables |
 | R13–R16 | D08, D13 | T08–T10 | TP31–TP44 |
 | R17–R18 | D09 | T08–T10 | TP45–TP48 |
 | R19–R20 | D10 | T11 | TP49–TP55 |
 | R21 | D11 | T12 | TP56–TP58 |
 | R22 | D12 | T10, T13–T14 | TP59–TP64 |
 | R23 | D02–D05, D10–D13 | T15 | TP02, TP06, TP10, TP17–TP18, TP51–TP52, TP55, TP59–TP60, TP62 |
-| R24 | D11, D16 | T16 | TP59–TP64 aplicables |
+| R24 | D11, D16 | T16–T17 | TP59–TP64 aplicables |
 
 ## 7. Evidencia incremental de E1-T04
 
