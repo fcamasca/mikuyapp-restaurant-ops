@@ -230,8 +230,12 @@ test("administración queda en shell admin sin capacidad de cobro", () => {
   assert.match(admin, /No hay descuentos pendientes de aprobación/);
   assert.match(admin, /formatDiscount\(d\)/);
   assert.match(admin, /Motivo del rechazo/);
-  assert.match(admin, /window\.confirm\(`¿Rechazar el descuento/);
-  assert.match(admin, /window\.confirm\(`¿Autorizar el descuento/);
+  assert.match(admin, /Confirmación requerida/);
+  assert.match(admin, /aria-labelledby="discount-confirmation-title"/);
+  assert.match(admin, /Esta decisión es definitiva y no puede revertirse en E1/);
+  assert.match(admin, /Descuento autorizado correctamente/);
+  assert.match(admin, /Solicitud de descuento rechazada/);
+  assert.doesNotMatch(admin, /window\.confirm\(`¿(?:Rechazar|Autorizar) el descuento/);
   assert.match(admin, /bg-emerald-800/);
   assert.match(admin, /border-rose-300/);
 });

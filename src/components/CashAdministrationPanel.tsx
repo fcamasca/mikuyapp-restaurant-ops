@@ -15,6 +15,10 @@ const formatDiscount = (discount: AdminDiscount) =>
   discount.tipo === "IMPORTE"
     ? money.format(discount.valor_solicitado)
     : `${discount.valor_solicitado}%`;
+type DiscountDecision = {
+  discount: AdminDiscount;
+  decision: "AUTORIZAR" | "RECHAZAR";
+};
 export default function CashAdministrationPanel({
   context,
   discountsOnly = false,
@@ -33,7 +37,9 @@ export default function CashAdministrationPanel({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     [reason, setReason] = useState(""),
-    [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+    [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({}),
+    [confirmation, setConfirmation] = useState<DiscountDecision | null>(null),
+    [feedback, setFeedback] = useState<string | null>(null);
   const lock = useRef(false);
   const load = useCallback(async () => {
     if (!service) return;
@@ -60,11 +66,13 @@ export default function CashAdministrationPanel({
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
+    setError(null);
     const r = await f();
     if (!r.ok) setError(r.error?.message ?? "Error servidor");
     await load();
     setBusy(false);
     lock.current = false;
+    return r.ok;
   };
   return (
     <section className="mt-6 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
@@ -80,6 +88,7 @@ export default function CashAdministrationPanel({
           {error} <button onClick={() => void load()}>Reintentar</button>
         </p>
       )}
+      {feedback && <p className="mt-3 rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-900" role="status">{feedback}</p>}
       {loading ? (
         <p aria-busy="true">Cargando operación…</p>
       ) : (
@@ -110,38 +119,14 @@ export default function CashAdministrationPanel({
                     <button
                       className="min-h-11 rounded-xl border border-rose-300 bg-white px-5 text-sm font-bold text-rose-800 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={busy || !(rejectionReasons[d.id] ?? "").trim()}
-                      onClick={() =>
-                        service &&
-                        window.confirm(`¿Rechazar el descuento del pedido #${d.pedido_id}?`) &&
-                        void run(() =>
-                          service.decideDiscount(
-                            context,
-                            d.pedido_id,
-                            "RECHAZAR",
-                            rejectionReasons[d.id],
-                            crypto.randomUUID(),
-                          ),
-                        )
-                      }
+                      onClick={() => { setFeedback(null); setConfirmation({ discount: d, decision: "RECHAZAR" }); }}
                     >
                       Rechazar
                     </button>
                     <button
                       className="min-h-11 rounded-xl bg-emerald-800 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={busy}
-                      onClick={() =>
-                        service &&
-                        window.confirm(`¿Autorizar el descuento del pedido #${d.pedido_id}?`) &&
-                        void run(() =>
-                          service.decideDiscount(
-                            context,
-                            d.pedido_id,
-                            "AUTORIZAR",
-                            null,
-                            crypto.randomUUID(),
-                          ),
-                        )
-                      }
+                      onClick={() => { setFeedback(null); setConfirmation({ discount: d, decision: "AUTORIZAR" }); }}
                     >
                       Autorizar
                     </button>
@@ -201,6 +186,36 @@ export default function CashAdministrationPanel({
             })}
           </div></>}
         </>
+      )}
+      {confirmation && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4" role="presentation">
+          <section aria-labelledby="discount-confirmation-title" aria-modal="true" className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" role="dialog">
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Confirmación requerida</p>
+            <h2 className="mt-1 text-2xl font-bold" id="discount-confirmation-title">{confirmation.decision === "AUTORIZAR" ? "Autorizar descuento" : "Rechazar descuento"}</h2>
+            <dl className="mt-4 grid gap-3 rounded-xl bg-stone-50 p-4 text-sm sm:grid-cols-[9rem_minmax(0,1fr)]">
+              <dt className="text-stone-600">Pedido</dt><dd className="font-bold">#{confirmation.discount.pedido_id}</dd>
+              <dt className="text-stone-600">Valor solicitado</dt><dd className="font-bold">{formatDiscount(confirmation.discount)}</dd>
+              <dt className="text-stone-600">Motivo</dt><dd className="break-words">{confirmation.discount.motivo}</dd>
+              {confirmation.decision === "RECHAZAR" && <><dt className="text-stone-600">Motivo del rechazo</dt><dd className="break-words font-semibold">{rejectionReasons[confirmation.discount.id]}</dd></>}
+            </dl>
+            <p className={`mt-4 rounded-xl border p-3 font-semibold ${confirmation.decision === "AUTORIZAR" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-rose-200 bg-rose-50 text-rose-950"}`}>Esta decisión es definitiva y no puede revertirse.</p>
+            {error && <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-800" role="alert">{error}</p>}
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button className="min-h-11 rounded-xl border border-stone-300 bg-white px-5 text-sm font-semibold" disabled={busy} onClick={() => { setConfirmation(null); setError(null); }} type="button">Volver</button>
+              <button aria-busy={busy} className={`min-h-11 rounded-xl px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 ${confirmation.decision === "AUTORIZAR" ? "bg-emerald-800 hover:bg-emerald-900" : "bg-rose-700 hover:bg-rose-800"}`} disabled={busy} onClick={() => {
+                if (!service) return;
+                const current = confirmation;
+                void (async () => {
+                  const succeeded = await run(() => service.decideDiscount(context, current.discount.pedido_id, current.decision, current.decision === "RECHAZAR" ? rejectionReasons[current.discount.id] : null, crypto.randomUUID()));
+                  if (succeeded) {
+                    setConfirmation(null);
+                    setFeedback(current.decision === "AUTORIZAR" ? "Descuento autorizado correctamente." : "Solicitud de descuento rechazada.");
+                  }
+                })();
+              }} type="button">{busy ? "Procesando…" : confirmation.decision === "AUTORIZAR" ? "Autorizar descuento" : "Rechazar descuento"}</button>
+            </div>
+          </section>
+        </div>
       )}
     </section>
   );
