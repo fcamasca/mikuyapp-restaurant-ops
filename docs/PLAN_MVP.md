@@ -566,6 +566,7 @@ El MVP se considerará terminado si:
 - Descuentos autorizados.
 - Anulaciones supervisadas.
 - División de cuentas y propinas.
+- Inicio ADMIN incorpora como adelanto acotado un snapshot operacional en vivo de pedidos actualmente abiertos: por recibir, en preparación y listos para entregar, con conteo, espera actual y detalle del local. Se calcula al consultar con timestamps existentes, no persiste métricas y no incluye históricos ni analítica.
 - Auditoría.
 
 ### Evolución 2 — Inventario (40–60 horas)
@@ -620,6 +621,8 @@ El MVP se considerará terminado si:
 - El momento exacto de impresión, deduplicación, reimpresión y mecanismo técnico se definirán en el Spec Mode de Evolución 7.
 
 ### Evolución 8 — Métricas operativas y analítica
+
+- E1 adelanta exclusivamente el snapshot operacional actual no persistido de pedidos abiertos. E8 conserva la medición histórica, tendencias, comparaciones entre periodos/locales, productividad, SLA, rankings, análisis de cuellos de botella y demás capacidades analíticas.
 
 - Medición del tiempo entre cambios de estado.
 - Tiempo hasta recepción en cocina.
