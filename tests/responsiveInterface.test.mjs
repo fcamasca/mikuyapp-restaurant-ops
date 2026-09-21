@@ -54,7 +54,7 @@ test('TP-24: login mantiene controles táctiles y estados accesibles en móvil',
 
 test('TP-13 y TP-29: la administración fluye sin anchos mínimos rígidos', () => {
   assert.match(admin, /overflow-x-hidden/)
-  assert.match(admin, /grid min-w-0 gap-6 lg:grid-cols-\[minmax\(0,22rem\)_minmax\(0,1fr\)\]/)
+  assert.match(admin, /grid min-w-0 (?:scroll-mt-24 )?gap-6 lg:grid-cols-\[minmax\(0,22rem\)_minmax\(0,1fr\)\]/)
   assert.match(admin, /min-h-12 w-full min-w-0[^'\n]*text-base/)
   assert.match(admin, /grid gap-2 sm:flex sm:flex-wrap/)
   assert.match(admin, /min-h-11 w-full[^\n]*sm:w-auto/)

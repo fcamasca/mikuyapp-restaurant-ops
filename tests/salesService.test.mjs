@@ -31,5 +31,5 @@ test('H6-T02: administrador y caja tienen navegación visible de ida y retorno',
   assert.match(adminPage, /onClick=\{onNavigateToSales\}[\s\S]*?Resumen diario/)
   assert.match(cashierPage, /onClick=\{onNavigateToSales\}[\s\S]*?Resumen diario/)
   assert.match(app, /onBack=\{\(\) => navigate\(getRoleDestination\(role\)\)\}/)
-  assert.match(salesPage, /context\.role\.codigo === 'CAJA' \? 'Volver a cobros pendientes' : 'Volver al catálogo'/)
+  assert.match(salesPage, /context\.role\.codigo === 'CAJA' \? 'Volver a cobros pendientes' : 'Volver a Inicio'/)
 })

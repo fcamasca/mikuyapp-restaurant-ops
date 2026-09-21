@@ -13,7 +13,7 @@ function resolve(pathname, overrides = {}) {
 }
 
 test('redirige usuarios anónimos desde todas las rutas protegidas a login', () => {
-  for (const pathname of ['/tecnica', '/admin/catalogo', '/cocina', '/caja', '/mozo/mesas', '/403']) {
+  for (const pathname of ['/tecnica', '/admin/inicio', '/admin/pendientes', '/admin/caja', '/admin/ventas', '/admin/carta', '/admin/mesas', '/cocina', '/caja', '/mozo/mesas', '/403']) {
     assert.deepEqual(
       resolve(pathname, { authenticationStatus: 'unauthenticated', contextStatus: 'idle', role: null }),
       { status: 'redirect', pathname: '/login' },
@@ -44,7 +44,7 @@ test('mantiene carga sin exponer contenido mientras se valida el contexto', () =
 
 test('redirige cada rol a su destino inicial autorizado', () => {
   const destinations = {
-    ADMINISTRADOR: '/admin/catalogo',
+    ADMINISTRADOR: '/admin/inicio',
     MOZO: '/mozo/mesas',
     COCINA: '/cocina',
     CAJA: '/caja',
@@ -85,6 +85,10 @@ test('envía a 403 cuando un rol abre directamente una ruta ajena', () => {
     status: 'redirect',
     pathname: '/403',
   })
+  for (const pathname of ['/admin/inicio', '/admin/pendientes', '/admin/caja', '/admin/ventas', '/admin/carta', '/admin/mesas', '/admin/usuarios']) {
+    assert.deepEqual(resolve(pathname, { role: 'ADMINISTRADOR' }), { status: 'allowed', pathname })
+    assert.deepEqual(resolve(pathname, { role: 'CAJA' }), { status: 'redirect', pathname: '/403' })
+  }
 })
 
 test('permite acceso a técnica a los cuatro roles autorizados', () => {
@@ -96,7 +100,7 @@ test('permite acceso a técnica a los cuatro roles autorizados', () => {
 test('redirige un usuario autenticado que abre login a su destino por rol', () => {
   assert.deepEqual(resolve('/login', { role: 'ADMINISTRADOR' }), {
     status: 'redirect',
-    pathname: '/admin/catalogo',
+    pathname: '/admin/inicio',
   })
   assert.deepEqual(resolve('/login', { role: 'MOZO' }), {
     status: 'redirect',
@@ -132,12 +136,18 @@ test('rechaza rutas de retorno externas o ambiguas', () => {
 })
 
 test('permite únicamente la ruta operativa correspondiente a cada rol', () => {
-  assert.deepEqual(resolve('/admin/catalogo', { role: 'ADMINISTRADOR' }), {
+  assert.deepEqual(resolve('/admin/inicio', { role: 'ADMINISTRADOR' }), {
     status: 'allowed',
-    pathname: '/admin/catalogo',
+    pathname: '/admin/inicio',
   })
   assert.deepEqual(resolve('/mozo/mesas', { role: 'MOZO' }), {
     status: 'allowed',
     pathname: '/mozo/mesas',
   })
+})
+
+test('conserva la ruta administrativa legacy sin conceder operación de caja', () => {
+  assert.deepEqual(resolve('/admin/catalogo'), { status: 'allowed', pathname: '/admin/catalogo' })
+  assert.deepEqual(resolve('/ventas'), { status: 'redirect', pathname: '/admin/ventas' })
+  assert.deepEqual(resolve('/caja'), { status: 'redirect', pathname: '/403' })
 })

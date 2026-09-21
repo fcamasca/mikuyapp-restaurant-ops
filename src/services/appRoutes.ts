@@ -6,6 +6,13 @@ export type ApplicationRoute =
   | '/login'
   | '/tecnica'
   | '/admin/catalogo'
+  | '/admin/inicio'
+  | '/admin/pendientes'
+  | '/admin/caja'
+  | '/admin/ventas'
+  | '/admin/carta'
+  | '/admin/mesas'
+  | '/admin/usuarios'
   | '/ventas'
   | '/cocina'
   | '/caja'
@@ -31,6 +38,13 @@ const knownRoutes = new Set<ApplicationRoute>([
   '/login',
   '/tecnica',
   '/admin/catalogo',
+  '/admin/inicio',
+  '/admin/pendientes',
+  '/admin/caja',
+  '/admin/ventas',
+  '/admin/carta',
+  '/admin/mesas',
+  '/admin/usuarios',
   '/ventas',
   '/cocina',
   '/caja',
@@ -48,7 +62,7 @@ export function getWaiterOrderId(pathname: string): number | null {
 export function getRoleDestination(role: RoleCode): ApplicationRoute {
   switch (role) {
     case 'ADMINISTRADOR':
-      return '/admin/catalogo'
+      return '/admin/inicio'
     case 'MOZO':
       return '/mozo/mesas'
     case 'COCINA':
@@ -104,9 +118,10 @@ export function resolveApplicationRoute(input: RouteAuthorizationInput): RouteAu
     return { status: 'redirect', pathname: '/403' }
   }
 
-  if (pathname === '/admin/catalogo' && role !== 'ADMINISTRADOR') {
+  if ((pathname === '/admin/catalogo' || pathname.startsWith('/admin/')) && role !== 'ADMINISTRADOR') {
     return { status: 'redirect', pathname: '/403' }
   }
+  if (pathname === '/ventas' && role === 'ADMINISTRADOR') return { status: 'redirect', pathname: '/admin/ventas' }
   if (pathname === '/ventas' && !['ADMINISTRADOR', 'CAJA'].includes(role)) return { status: 'redirect', pathname: '/403' }
 
   if ((pathname === '/mozo/mesas' || waiterOrderId !== null) && role !== 'MOZO') {

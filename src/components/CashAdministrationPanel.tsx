@@ -13,8 +13,10 @@ const warning = new Set(["EN_PREPARACION", "LISTO", "ENTREGADO"]),
   });
 export default function CashAdministrationPanel({
   context,
+  discountsOnly = false,
 }: {
   context: ValidatedProfileContext;
+  discountsOnly?: boolean;
 }) {
   const cr = useMemo(() => getSupabaseClient(), []),
     service = useMemo(
@@ -32,7 +34,7 @@ export default function CashAdministrationPanel({
     if (!service) return;
     setLoading(true);
     const [o, d] = await Promise.all([
-      service.getOrders(context),
+      discountsOnly ? Promise.resolve({ ok: true as const, data: [] as readonly AdminOrder[] }) : service.getOrders(context),
       service.getDiscounts(context),
     ]);
     if (o.ok) setOrders(o.data);
@@ -40,7 +42,7 @@ export default function CashAdministrationPanel({
     if (d.ok) setDiscounts(d.data);
     else setError(d.error.message);
     setLoading(false);
-  }, [context, service]);
+  }, [context, discountsOnly, service]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -58,9 +60,9 @@ export default function CashAdministrationPanel({
   };
   return (
     <section className="mt-6 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
-      <h2 className="text-xl font-bold">Operación financiera administrativa</h2>
+      <h2 className="text-xl font-bold">Solicitudes de descuento</h2>
       <p className="text-sm text-stone-600">
-        Autoriza descuentos o anula pedidos. Esta vista no permite cobrar.
+        Autoriza o rechaza solicitudes del local. Esta vista no permite cobrar.
       </p>
       {error && (
         <p role="alert" className="mt-3 text-rose-800">
@@ -71,7 +73,6 @@ export default function CashAdministrationPanel({
         <p aria-busy="true">Cargando operación…</p>
       ) : (
         <>
-          <h3 className="mt-5 font-bold">Solicitudes de descuento</h3>
           {discounts.length === 0 ? (
             <p>Sin solicitudes.</p>
           ) : (
@@ -123,7 +124,7 @@ export default function CashAdministrationPanel({
               </div>
             ))
           )}
-          <h3 className="mt-5 font-bold">Pedidos del local</h3>
+          {!discountsOnly && <><h3 className="mt-5 font-bold">Pedidos del local</h3>
           <input
             aria-label="Motivo administrativo"
             placeholder="Motivo obligatorio"
@@ -170,7 +171,7 @@ export default function CashAdministrationPanel({
                 </article>
               );
             })}
-          </div>
+          </div></>}
         </>
       )}
     </section>

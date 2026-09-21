@@ -22,6 +22,8 @@ interface CategoryAdministrationPageProps {
   readonly onNavigateToSales: () => void;
   readonly onSignOut: () => void;
   readonly onNavigateToTechnical: () => void;
+  readonly embedded?: boolean;
+  readonly focus?: "carta" | "mesas";
 }
 
 interface CategoryFormState {
@@ -80,6 +82,8 @@ export default function CategoryAdministrationPage({
   onNavigateToSales,
   onSignOut,
   onNavigateToTechnical,
+  embedded = false,
+  focus = "carta",
 }: CategoryAdministrationPageProps) {
   const clientResult = useMemo(() => getSupabaseClient(), []);
   const service = useMemo(
@@ -108,6 +112,11 @@ export default function CategoryAdministrationPage({
   const [productError, setProductError] = useState<string | null>(null);
   const [tableMessage, setTableMessage] = useState<string | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!embedded) return;
+    document.getElementById(`admin-${focus}`)?.scrollIntoView({ block: "start" });
+  }, [embedded, focus]);
   const [catalogAttempt, setCatalogAttempt] = useState(0);
   const [tablesAttempt, setTablesAttempt] = useState(0);
   const categoryMutationPending = useRef(false);
@@ -525,7 +534,7 @@ export default function CategoryAdministrationPage({
   return (
     <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 sm:py-8 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <header className="flex min-w-0 flex-col gap-5 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        {!embedded && <header className="flex min-w-0 flex-col gap-5 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
               MikuyApp · Administración
@@ -560,11 +569,12 @@ export default function CategoryAdministrationPage({
               onSignOut={onSignOut}
             />
           </div>
-        </header>
+        </header>}
 
-        <CashAdministrationPanel context={context} />
+        {!embedded && <CashAdministrationPanel context={context} />}
+        {embedded && <header className="mb-6"><p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">Configuración</p><h1 className="mt-1 text-2xl font-bold sm:text-3xl">{focus === "mesas" ? "Mesas" : "Carta"}</h1><p className="mt-2 text-sm text-stone-600">{focus === "mesas" ? "Configura las mesas de tu local." : "Gestiona categorías y productos de tu carta."}</p></header>}
 
-        <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <section className="mt-6 grid min-w-0 scroll-mt-24 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" id="admin-carta">
           <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
               {editingCategoryId ? "Editar categoría" : "Nueva categoría"}
@@ -795,7 +805,7 @@ export default function CategoryAdministrationPage({
           </article>
         </section>
 
-        <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <section className="mt-6 grid min-w-0 scroll-mt-24 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
               {editingProductId ? "Editar producto" : "Nuevo producto"}
@@ -1067,7 +1077,7 @@ export default function CategoryAdministrationPage({
           </article>
         </section>
 
-        <section className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <section className="mt-6 grid min-w-0 scroll-mt-24 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" id="admin-mesas">
           <article className="min-w-0 self-start rounded-3xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-xl font-semibold">
               {editingTableId ? "Editar mesa" : "Nueva mesa"}

@@ -9,6 +9,9 @@ import VerificationPage from './pages/VerificationPage'
 import WaiterOrderPage from './pages/WaiterOrderPage'
 import WaiterTablesPage from './pages/WaiterTablesPage'
 import SalesPage from './pages/SalesPage'
+import AdminHomePage from './pages/AdminHomePage'
+import AdminPendingPage from './pages/AdminPendingPage'
+import AdminShell from './components/AdminShell'
 import { getRoleDestination, getWaiterOrderId, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
 
 function LoadingScreen({ context = false }: { readonly context?: boolean }) {
@@ -109,19 +112,21 @@ function ApplicationRouter() {
   }
 
   if (resolution.pathname === '/admin/catalogo') {
+    if (!profileContext.context) return <LoadingScreen context />
+    return <CategoryAdministrationPage context={profileContext.context} isSigningOut={isSigningOut} onNavigateToSales={() => navigate('/admin/ventas')} onNavigateToTechnical={() => navigate('/tecnica')} onSignOut={() => { void signOut() }} />
+  }
+  if (resolution.pathname.startsWith('/admin/')) {
     if (!profileContext.context) {
       return <LoadingScreen context />
     }
-
-    return (
-      <CategoryAdministrationPage
-        context={profileContext.context}
-        isSigningOut={isSigningOut}
-        onNavigateToSales={() => navigate('/ventas')}
-        onNavigateToTechnical={() => navigate('/tecnica')}
-        onSignOut={() => { void signOut() }}
-      />
-    )
+    let content;
+    if (resolution.pathname === '/admin/inicio') content = <AdminHomePage context={profileContext.context} onCash={() => navigate('/admin/caja')} onPending={() => navigate('/admin/pendientes')} />
+    else if (resolution.pathname === '/admin/pendientes') content = <AdminPendingPage context={profileContext.context} />
+    else if (resolution.pathname === '/admin/caja') content = <SalesPage context={profileContext.context} embedded mode="cash" isSigningOut={isSigningOut} onBack={() => navigate('/admin/inicio')} onSignOut={() => { void signOut() }} />
+    else if (resolution.pathname === '/admin/ventas') content = <SalesPage context={profileContext.context} embedded mode="sales" isSigningOut={isSigningOut} onBack={() => navigate('/admin/inicio')} onSignOut={() => { void signOut() }} />
+    else if (resolution.pathname === '/admin/carta' || resolution.pathname === '/admin/mesas') content = <CategoryAdministrationPage context={profileContext.context} embedded focus={resolution.pathname === '/admin/mesas' ? 'mesas' : 'carta'} isSigningOut={isSigningOut} onNavigateToSales={() => navigate('/admin/ventas')} onNavigateToTechnical={() => navigate('/tecnica')} onSignOut={() => { void signOut() }} />
+    else content = <main className="mx-auto max-w-5xl px-3 py-6 sm:px-6"><p className="text-sm font-semibold uppercase tracking-widest text-emerald-700">Configuración</p><h1 className="mt-1 text-3xl font-bold">Usuarios</h1><p className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 text-stone-600">La gestión de usuarios no existe todavía en el repositorio. T16 conserva su ubicación en la navegación sin inventar permisos ni operaciones.</p></main>;
+    return <AdminShell active={resolution.pathname} context={profileContext.context} isSigningOut={isSigningOut} onNavigate={navigate} onSignOut={() => { void signOut() }}>{content}</AdminShell>
   }
   if (resolution.pathname === '/ventas') {
     if (!profileContext.context) return <LoadingScreen context />
