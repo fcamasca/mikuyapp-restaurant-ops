@@ -6,6 +6,7 @@ const home = readFileSync(new URL("../src/pages/AdminHomePage.tsx", import.meta.
 const shell = readFileSync(new URL("../src/components/AdminShell.tsx", import.meta.url), "utf8");
 const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 const pending = readFileSync(new URL("../src/pages/AdminPendingPage.tsx", import.meta.url), "utf8");
+const orders = readFileSync(new URL("../src/pages/AdminOrdersPage.tsx", import.meta.url), "utf8");
 
 test("E1-TP59: Inicio conserva KPI, vacíos, caja cerrada y medios en cero", () => {
   for (const label of ["Ventas netas", "Pedidos pagados", "Ticket promedio", "Descuentos autorizados", "Requiere tu atención", "Operación de caja", "Ventas por medio", "Todo en orden", "No existe una sesión activa."]) assert.match(home, new RegExp(label));
@@ -44,7 +45,9 @@ test("E1-TP60: atención diferencia decisiones de descuentos y consulta de cierr
 });
 
 test("E1-TP60/64: navegación usa sidebar desktop y drawer accesible en anchos menores", () => {
-  for (const label of ["Inicio", "OPERACIÓN", "Pendientes por aprobar", "REPORTES", "Caja", "Ventas", "CONFIGURACIÓN", "Carta", "Mesas", "Usuarios"]) assert.match(shell, new RegExp(label));
+  for (const label of ["Inicio", "OPERACIÓN", "Pedidos", "Pendientes por aprobar", "REPORTES", "Caja", "Ventas", "CONFIGURACIÓN", "Carta", "Mesas", "Usuarios"]) assert.match(shell, new RegExp(label));
+  assert.ok(shell.indexOf('label: "Pedidos"') < shell.indexOf('label: "Pendientes por aprobar"'));
+  assert.match(shell, /route: "\/admin\/pedidos"/);
   assert.match(shell, /hidden[^"\n]*lg:block/);
   assert.match(shell, /lg:hidden/);
   assert.match(shell, /aria-label="Abrir menú de Administración"/);
@@ -59,6 +62,28 @@ test("E1-TP60/64: navegación usa sidebar desktop y drawer accesible en anchos m
   assert.match(shell, /border-emerald-700 bg-emerald-100/);
   assert.match(app, /mode="cash"/);
   assert.match(app, /mode="sales"/);
+  assert.match(app, /resolution\.pathname === '\/admin\/pedidos'/);
+  assert.match(app, /<AdminOrdersPage context=\{profileContext\.context\}/);
+});
+
+test("E1-TP59/60/63/64: Pedidos ADMIN conserva lectura, anulación y responsive aprobados", () => {
+  assert.match(orders, /service\.getOrders\(context\)/);
+  assert.match(orders, /service\.annul\(context, order\.orderId, reason\.trim\(\), idempotencyKey\.current/);
+  assert.match(orders, /const cancellableStates = new Set\(\["ABIERTO", "ENVIADO", "RECIBIDO_COCINA", "EN_PREPARACION", "LISTO", "ENTREGADO"\]\)/);
+  assert.match(orders, /return !order\.hasPayments && cancellableStates\.has\(order\.orderStatus\)/);
+  assert.match(orders, /operationalWarningStates = new Set\(\["EN_PREPARACION", "LISTO", "ENTREGADO"\]\)/);
+  assert.match(orders, /Motivo de anulación/);
+  assert.match(orders, /disabled=\{busy \|\| !reason\.trim\(\)\}/);
+  assert.match(orders, /requestLock\.current/);
+  assert.match(orders, /await load\(false\)/);
+  assert.match(orders, /Cargando pedidos/);
+  assert.match(orders, /No hay pedidos actuales en el local/);
+  assert.match(orders, /Reintentar/);
+  assert.match(orders, /\['Mesa', 'Pedido', 'Estado', 'Pago', 'Acción'\]/);
+  assert.match(orders, /hidden grid-cols/);
+  assert.match(orders, /grid grid-cols-2/);
+  assert.doesNotMatch(orders, /overflow-x-auto|overflow-x-scroll/);
+  assert.doesNotMatch(orders, /cobrar|Actualizar estado|Marcar listo/i);
 });
 
 test("E1-T16: Usuarios permanece visible pero deshabilitado al no existir contrato", () => {

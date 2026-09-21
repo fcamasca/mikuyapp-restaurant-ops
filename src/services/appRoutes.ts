@@ -7,6 +7,7 @@ export type ApplicationRoute =
   | '/tecnica'
   | '/admin/catalogo'
   | '/admin/inicio'
+  | '/admin/pedidos'
   | '/admin/pendientes'
   | '/admin/caja'
   | '/admin/ventas'
@@ -39,6 +40,7 @@ const knownRoutes = new Set<ApplicationRoute>([
   '/tecnica',
   '/admin/catalogo',
   '/admin/inicio',
+  '/admin/pedidos',
   '/admin/pendientes',
   '/admin/caja',
   '/admin/ventas',

@@ -15,7 +15,7 @@ interface AdminShellProps {
 
 const groups: ReadonlyArray<{ label: string; items: ReadonlyArray<{ icon: string; label: string; route?: ApplicationRoute }> }> = [
   { label: "", items: [{ icon: "⌂", label: "Inicio", route: "/admin/inicio" }] },
-  { label: "OPERACIÓN", items: [{ icon: "!", label: "Pendientes por aprobar", route: "/admin/pendientes" }] },
+  { label: "OPERACIÓN", items: [{ icon: "▤", label: "Pedidos", route: "/admin/pedidos" }, { icon: "!", label: "Pendientes por aprobar", route: "/admin/pendientes" }] },
   { label: "REPORTES", items: [{ icon: "$", label: "Caja", route: "/admin/caja" }, { icon: "↗", label: "Ventas", route: "/admin/ventas" }] },
   { label: "CONFIGURACIÓN", items: [{ icon: "≡", label: "Carta", route: "/admin/carta" }, { icon: "▦", label: "Mesas", route: "/admin/mesas" }, { icon: "○", label: "Usuarios" }] },
 ];
