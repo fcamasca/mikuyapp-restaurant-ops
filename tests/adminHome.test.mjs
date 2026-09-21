@@ -13,8 +13,22 @@ test("E1-TP59: Inicio conserva KPI, vacíos, caja cerrada y medios en cero", () 
   assert.match(home, /daily\.completedOrders > 0 \? daily\.totalSold \/ daily\.completedOrders : 0/);
   assert.match(home, /sales\.getDailyCashSummary\(context\)/);
   assert.match(home, /sales\.getSessionReports\(context\)/);
+  assert.match(home, /sales\.getCurrentOrderFlow\(context\)/);
   assert.match(home, /amount \/ maxMethod \* 100/);
   assert.match(home, /rounded-full bg-emerald-700/);
+  assert.match(home, /Flujo actual de pedidos/);
+  assert.match(home, /POR_RECIBIR: "Pendiente de Cocina"/);
+  assert.match(home, /EN_PREPARACION: "Trabajo en Cocina"/);
+  assert.match(home, /LISTOS_PARA_ENTREGAR: "Pendiente de Mozo"/);
+  assert.match(home, /Mayor espera/);
+  assert.match(home, /Promedio/);
+  assert.match(home, /Ver pedidos/);
+  assert.match(home, /role="table"/);
+  assert.match(home, /setSelectedFlow\(null\)/);
+  assert.doesNotMatch(home, /Actualizar estado|Recibir pedido|Marcar listo/);
+  const sections = ["Indicadores de hoy", "Requiere tu atención", "Flujo actual de pedidos", "Ventas por medio", "Operación de caja"].map((label) => home.indexOf(label));
+  assert.deepEqual(sections, [...sections].sort((left, right) => left - right));
+  assert.match(home, /grid-cols-2[\s\S]*sm:grid-cols-\[1fr_1fr_2fr_1fr\]/);
 });
 
 test("E1-TP60: atención diferencia decisiones de descuentos y consulta de cierres", () => {

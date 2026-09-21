@@ -22,6 +22,19 @@ export interface SessionCashReport {
   readonly completedOrders: number; readonly salesByMethod: Readonly<Record<string, number>>
   readonly tipsByMethod: Readonly<Record<string, number>>
 }
+export type OrderFlowCode = 'POR_RECIBIR' | 'EN_PREPARACION' | 'LISTOS_PARA_ENTREGAR'
+export interface CurrentOrderFlowDetail {
+  readonly orderId: number; readonly tableCode: string; readonly tableName: string
+  readonly currentStatus: string; readonly enteredGroupAt: string; readonly waitSeconds: number
+}
+export interface CurrentOrderFlowGroup {
+  readonly code: OrderFlowCode; readonly name: string; readonly count: number
+  readonly maxWaitSeconds: number | null; readonly averageWaitSeconds: number | null
+  readonly tables: readonly string[]; readonly orders: readonly CurrentOrderFlowDetail[]
+}
+export interface CurrentOrderFlow {
+  readonly serverNow: string; readonly groups: readonly CurrentOrderFlowGroup[]
+}
 export type SalesResult<T> = { readonly ok: true; readonly data: T } | { readonly ok: false; readonly error: string }
 
 const allowedRoles = new Set(['ADMINISTRADOR', 'CAJA'])
@@ -49,6 +62,14 @@ export function createSalesService(client: Pick<SupabaseClient, 'rpc'>) {
         const result = await client.rpc('rpc_obtener_reportes_sesion_caja', { p_sesion_caja_id: null })
         return result.error ? { ok: false, error: 'No pudimos cargar las sesiones.' } : { ok: true, data: ((result.data ?? []) as Record<string, unknown>[]).map(mapSession) }
       } catch { return { ok: false, error: 'No pudimos cargar las sesiones.' } }
+    },
+    async getCurrentOrderFlow(context: ValidatedProfileContext): Promise<SalesResult<CurrentOrderFlow>> {
+      if (context.role.codigo !== 'ADMINISTRADOR') return { ok: false, error: 'No tienes autorización para consultar el flujo de pedidos.' }
+      try {
+        const result = await client.rpc('rpc_obtener_flujo_actual_pedidos_admin')
+        if (result.error || !result.data?.[0]) return { ok: false, error: 'No pudimos cargar el flujo actual de pedidos.' }
+        return { ok: true, data: mapCurrentOrderFlow(result.data[0] as Record<string, unknown>) }
+      } catch { return { ok: false, error: 'No pudimos cargar el flujo actual de pedidos.' } }
     },
     async getSummary(context: ValidatedProfileContext): Promise<SalesResult<readonly SalesSummary[]>> {
       if (!allowedRoles.has(context.role.codigo)) return { ok: false, error: 'No tienes autorización para consultar ventas.' }
@@ -80,5 +101,27 @@ function mapSession(row: Record<string, unknown>): SessionCashReport {
     openedBy: String(row.abierta_por_nombre), closedBy: row.cerrada_por_nombre == null ? null : String(row.cerrada_por_nombre), openedAt: String(row.abierta_en), closedAt: row.cerrada_en == null ? null : String(row.cerrada_en),
     initialAmount: amount(row, 'monto_inicial'), expectedCash: amount(row, 'efectivo_esperado'), countedCash: row.efectivo_contado == null ? null : amount(row, 'efectivo_contado'), difference: row.diferencia == null ? null : amount(row, 'diferencia'), entries: amount(row, 'entradas'), exits: amount(row, 'salidas'), discounts: amount(row, 'descuentos'), annulments: amount(row, 'cantidad_anulaciones'), payments: amount(row, 'cantidad_pagos'), partialPayments: amount(row, 'pagos_parciales'), completedOrders: amount(row, 'cantidad_pedidos_completados'),
     salesByMethod: { EFECTIVO: amount(row, 'venta_efectivo'), YAPE: amount(row, 'venta_yape'), PLIN: amount(row, 'venta_plin'), TARJETA: amount(row, 'venta_tarjeta') }, tipsByMethod: { EFECTIVO: amount(row, 'propina_efectivo'), YAPE: amount(row, 'propina_yape'), PLIN: amount(row, 'propina_plin'), TARJETA: amount(row, 'propina_tarjeta') },
+  }
+}
+
+function mapCurrentOrderFlow(row: Record<string, unknown>): CurrentOrderFlow {
+  const rawGroups = typeof row.grupos === 'string' ? JSON.parse(row.grupos) as unknown : row.grupos
+  const groups = Array.isArray(rawGroups) ? rawGroups : []
+  return {
+    serverNow: String(row.servidor_ahora),
+    groups: groups.map((value) => {
+      const group = value as Record<string, unknown>
+      const rawOrders = Array.isArray(group.pedidos) ? group.pedidos : []
+      return {
+        code: String(group.codigo) as OrderFlowCode, name: String(group.nombre), count: Number(group.cantidad ?? 0),
+        maxWaitSeconds: group.mayor_espera_segundos == null ? null : Number(group.mayor_espera_segundos),
+        averageWaitSeconds: group.promedio_espera_segundos == null ? null : Number(group.promedio_espera_segundos),
+        tables: Array.isArray(group.mesas) ? group.mesas.map(String) : [],
+        orders: rawOrders.map((value) => { const order = value as Record<string, unknown>; return {
+          orderId: Number(order.pedido_id), tableCode: String(order.mesa_codigo), tableName: String(order.mesa_nombre),
+          currentStatus: String(order.estado_actual), enteredGroupAt: String(order.ingreso_grupo_en), waitSeconds: Number(order.espera_segundos),
+        } }),
+      }
+    }),
   }
 }

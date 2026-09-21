@@ -17,6 +17,11 @@ test('E1-TP56/58: reporte de sesión conserva actores, snapshots y solicita filt
   const result=await s.getSessionReports(context('ADMINISTRADOR'));assert.equal(result.ok,true);assert.equal(result.data[0].expectedCash,160);assert.equal(result.data[0].closedBy,'Caja B');assert.deepEqual(calls,[['rpc_obtener_reportes_sesion_caja',{p_sesion_caja_id:null}]])
 })
 test('E1-T12: roles operativos ajenos se rechazan antes de invocar reportes', async()=>{let called=false;const s=createSalesService({rpc:async()=>{called=true;return{data:[],error:null}}});assert.equal((await s.getDailyCashSummary(context('MOZO'))).ok,false);assert.equal((await s.getSessionReports(context('COCINA'))).ok,false);assert.equal(called,false)})
+test('E1-T16: flujo actual se limita a ADMIN y normaliza grupos y detalle', async () => {
+  const calls=[];const s=createSalesService({rpc:async(name)=>{calls.push(name);return{error:null,data:[{servidor_ahora:'2026-09-21T12:00:00Z',grupos:[{codigo:'EN_PREPARACION',nombre:'EN PREPARACIÓN',cantidad:1,mayor_espera_segundos:900,promedio_espera_segundos:900,mesas:['M02'],pedidos:[{pedido_id:17,mesa_codigo:'M02',mesa_nombre:'Mesa 2',estado_actual:'EN_PREPARACION',ingreso_grupo_en:'2026-09-21T11:45:00Z',espera_segundos:900}]}]}]}}})
+  const admin=await s.getCurrentOrderFlow(context('ADMINISTRADOR'));assert.equal(admin.ok,true);assert.deepEqual(calls,['rpc_obtener_flujo_actual_pedidos_admin']);assert.equal(admin.ok&&admin.data.groups[0].orders[0].waitSeconds,900)
+  const waiter=await s.getCurrentOrderFlow(context('MOZO'));assert.equal(waiter.ok,false);assert.equal(calls.length,1)
+})
 test('E1-TP58: CSV usa los snapshots cargados sin recalcular totales financieros',async()=>{const page=await readFile(new URL('../src/pages/SalesPage.tsx',import.meta.url),'utf8');assert.match(page,/dailyCsv\(daily\)/);assert.match(page,/sessionCsv\(selected\)/);assert.doesNotMatch(page,/summary\.reduce|total\s*=\s*.*reduce/)})
 test('H6-T02: administrador y caja tienen navegación visible de ida y retorno', async () => {
   const [menu, app, adminPage, cashierPage, salesPage] = await Promise.all([
