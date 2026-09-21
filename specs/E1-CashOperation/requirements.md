@@ -2,7 +2,7 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-El Spec Mode de **Evolución 1 — Operación de caja** está aprobado y la construcción se encuentra en validación humana. T03–T13 y el delta T15 de notificaciones internas completaron su validación técnica local; TP62 permanece abierto. T14 continúa en validación humana y E1 todavía no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
+El Spec Mode de **Evolución 1 — Operación de caja**, incluido el delta de Inicio ADMIN, está aprobado y la construcción se encuentra en validación humana. T03–T13 y el delta T15 de notificaciones internas completaron su validación técnica local; TP62 permanece abierto. T14 continúa en validación humana, T16 todavía no se ha iniciado y E1 no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
 
 `main`/`origin/main` en `f76c190`, verificado entonces sin cambios locales, se conserva como baseline histórica del inicio del Spec Mode y no describe el estado actual del árbol de trabajo. El MVP v1.0.0 y PM-001 están aceptados. PM-002 permanece `TRANSITIONING`; esta evolución no lo modifica y la construcción debe respetar su matriz de ambientes.
 
@@ -49,11 +49,12 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | E1-R21 | Los reportes mínimos mostrarán por sesión: apertura/cierre, totales por medio, efectivo esperado, contado/diferencia, entradas, salidas, descuentos, anulaciones, propinas, cobros y parciales, sin duplicar la venta por agrupar varios medios y sin convertirse en libro contable ni conciliación bancaria. | Must |
 | E1-R22 | La estación PC de Caja mostrará permanentemente estado de caja, quién abrió, monto inicial y esperado, sin presentar la sesión como exclusiva de esa persona; priorizará cobro rápido. El cobro normal preparará el saldo completo, permitirá agregar N líneas de medio y sólo habilitará una confirmación única cuando su suma coincida exactamente. `Cobrar una parte` será una acción secundaria diferenciada. Todo cobro mostrará antes de ejecutar pedido/mesa, total, medios, propina, saldo posterior y liberación de mesa cuando corresponda; un resync invalidará una confirmación obsoleta. Apertura, cierre, salidas, descuento y anulación mantendrán confirmación clara y estados de carga/error/reintento. | Must |
 | E1-R23 | Cada apertura y cada cierre de caja generarán exactamente una notificación interna para cada `ADMINISTRADOR` activo del mismo local en el momento del evento. La apertura informará caja, actor, fecha/hora y monto inicial. El cierre informará caja, actor, fecha/hora, efectivo esperado, contado y diferencia; si la diferencia es distinta de cero incluirá el motivo y tendrá prioridad visual de alerta. Cada destinatario conservará su estado leído/no leído entre sesiones y podrá marcar la notificación como leída. No habrá acceso cruzado entre locales ni flujo de aprobación: una diferencia continúa permitida con motivo obligatorio y sólo modifica la prioridad visual de la notificación. | Must |
+| E1-R24 | La primera pantalla de `ADMINISTRADOR` se llamará **Inicio** y resumirá exclusivamente el local actual. Mostrará ventas netas, pedidos pagados, ticket promedio y descuentos autorizados; descuentos pendientes y cierres con diferencia no leídos; estado operativo de la caja; y ventas por `EFECTIVO`, `YAPE`, `PLIN` y `TARJETA`. `Pendientes por aprobar` contendrá sólo solicitudes que requieren decisión administrativa, actualmente descuentos. Los cierres con diferencia permanecerán informativos, sin aprobación. No incluirá selector/consolidación multilocal ni métricas históricas, tiempos de cocina, rankings o productos más vendidos. | Must |
 
 ## 4. Seguridad, roles e invariantes
 
 - `CAJA`: cualquier usuario activo del local puede continuar la sesión abierta de una caja del mismo local, registrar entradas/salidas, cobrar y cerrar; cada operación conserva su actor. También solicita/aplica únicamente descuentos ya autorizados y consulta operación de caja de su local.
-- `ADMINISTRADOR`: autoriza descuentos, ejecuta directamente anulaciones, consulta sesiones/reportes y las notificaciones de apertura/cierre destinadas a él dentro de su local, y puede ejecutar cierre supervisor con motivo y auditoría. Puede marcar sus notificaciones como leídas. No hereda cobro operativo por defecto.
+- `ADMINISTRADOR`: inicia en el resumen operativo de su local, autoriza descuentos, ejecuta directamente anulaciones, consulta sesiones/reportes y las notificaciones de apertura/cierre destinadas a él dentro de su local, y puede ejecutar cierre supervisor con motivo y auditoría. Puede marcar sus notificaciones como leídas. No hereda cobro operativo por defecto.
 - `MOZO`: conserva pedido/entrega y no cobra, mueve efectivo ni autoriza.
 - `COCINA`: conserva transiciones de cocina y no accede a datos financieros.
 - No se crea un rol `SUPERVISOR`: `ADMINISTRADOR` cubre la capacidad aprobada de cierre supervisor con motivo y auditoría.
@@ -108,11 +109,11 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | DF-09 | División mediante selección de productos. | La selección sólo ayuda a calcular; se persiste importe, no asignación histórica por líneas. |
 | DF-10 | Notificaciones administrativas de apertura y cierre. | Toda apertura/cierre notifica una vez a cada `ADMINISTRADOR` activo del mismo local. Apertura y cierre sin diferencia son informativos; cierre con diferencia se destaca como alerta e incluye el motivo. La notificación no solicita ni registra aprobación. |
 
-No quedan decisiones funcionales ni técnicas abiertas. EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaciones mínimas elegidas. El delta T15 está construido y validado localmente; su migración permanece pendiente de aplicación manual en DEV y TP62 continúa abierto.
+No quedan decisiones funcionales ni técnicas abiertas para iniciar T16. EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaciones mínimas elegidas. El delta T15 está construido y validado localmente. R24/D16/T16 y la ampliación de TP59–TP64 están aprobados; E1 y TP62 continúan abiertos.
 
 ## 6. Fuera de alcance
 
-Inventario, recetas, compras/proveedores, SUNAT, Yape/Plin directo, pasarela bancaria, multiempresa/multilocal, usuarios multirol/multilocal, cancelación de productos por mozo, métricas NoSQL, replicación DEV/PROD, cambios de PM-002, contabilidad, conciliación bancaria completa, recepción de cocina completa, impresión de comandas y funcionalidades de otras evoluciones. La impresión opcional como apoyo al flujo digital de cocina se definirá en el Spec Mode de Evolución 7.
+Inventario, recetas, compras/proveedores, SUNAT, Yape/Plin directo, pasarela bancaria, multiempresa/multilocal, usuarios multirol/multilocal, selector o consolidación entre locales, métricas históricas/analíticas de E8, tiempos de cocina, rankings, productos más vendidos, cancelación de productos por mozo, métricas NoSQL, replicación DEV/PROD, cambios de PM-002, contabilidad, conciliación bancaria completa, recepción de cocina completa, impresión de comandas y funcionalidades de otras evoluciones. La impresión opcional como apoyo al flujo digital de cocina se definirá en el Spec Mode de Evolución 7.
 
 ## 7. Criterios de salida de construcción futura
 
@@ -120,4 +121,4 @@ Requisitos y decisiones sensibles aprobados; migraciones aditivas/reversibles re
 
 ## 8. Trazabilidad resumida
 
-La matriz detallada se mantiene en `test-plan.md`. Agrupación: R01–R08 → D02–D05, T02–T05, TP01–TP18; R09–R12 → D06–D07, T06–T07, TP19–TP30; R13–R18 → D08–D09, T08–T10, TP31–TP48; R19–R20 → D10, T11, TP49–TP55; R21–R22 → D11–D12, T12–T14, TP56–TP64; R23 → D02–D05/D10–D13, T15, TP02/TP06/TP10/TP17–TP18/TP51–TP52/TP55/TP59–TP60/TP62.
+La matriz detallada se mantiene en `test-plan.md`. Agrupación: R01–R08 → D02–D05, T02–T05, TP01–TP18; R09–R12 → D06–D07, T06–T07, TP19–TP30; R13–R18 → D08–D09, T08–T10, TP31–TP48; R19–R20 → D10, T11, TP49–TP55; R21–R22 → D11–D12, T12–T14, TP56–TP64; R23 → D02–D05/D10–D13, T15, TP02/TP06/TP10/TP17–TP18/TP51–TP52/TP55/TP59–TP60/TP62; R24 → D11/D16, T16, TP59–TP64 aplicables.

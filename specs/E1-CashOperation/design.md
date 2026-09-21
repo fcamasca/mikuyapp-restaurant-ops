@@ -167,4 +167,16 @@ La generación de notificación y destinatarios participa en la misma transacci�
 
 ## D15. Trazabilidad
 
-R01–R08 → D02–D05/D13; R09–R12 → D06–D07/D13; R13–R18 → D08–D09/D13; R19–R20 → D10; R21–R22 → D11–D12; R23 → D02–D05/D10–D13. Las tareas y pruebas conservan estos IDs.
+R01–R08 → D02–D05/D13; R09–R12 → D06–D07/D13; R13–R18 → D08–D09/D13; R19–R20 → D10; R21–R22 → D11–D12; R23 → D02–D05/D10–D13; R24 → D11/D16. Las tareas y pruebas conservan estos IDs.
+
+## D16. Inicio y navegación de Administración
+
+La ruta inicial de `ADMINISTRADOR` se presenta como **Inicio**, un resumen operativo del local derivado del contexto autenticado. No recibe ni permite seleccionar `local_id`; tampoco consolida sedes. En desktop usa sidebar persistente con esta arquitectura: `Inicio`; **OPERACIÓN** → `Pendientes por aprobar`; **REPORTES** → `Caja`, `Ventas`; **CONFIGURACIÓN** → `Carta`, `Mesas`, `Usuarios`. En tablet y móvil la misma jerarquía se conserva dentro de un drawer/hamburguesa accesible, con cierre al navegar, foco controlado, navegación por teclado y sin scroll horizontal.
+
+`Pendientes por aprobar` contiene únicamente solicitudes que necesitan una decisión del administrador, actualmente descuentos. Los cierres con diferencia no entran en esa bandeja: aparecen en Inicio mientras su notificación de alerta permanezca no leída y en la campana como parte de las notificaciones recientes. `Caja` y `Ventas` son consultas/reportes administrativos; no exponen operación de cobro ni convierten al administrador en `CAJA`. `Carta`, `Mesas` y `Usuarios` conservan su función de configuración.
+
+Inicio se compone, en orden, de: (1) KPI de ventas netas, pedidos pagados, ticket promedio y descuentos autorizados; (2) `Requiere tu atención`, limitado a descuentos pendientes y cierres con diferencia no leídos, con estado vacío **Todo en orden**; (3) `Operación de caja`, con caja, estado, actor/hora de apertura, inicial, efectivo esperado, entradas, salidas y acceso a la consulta de Caja, conservando el bloque cuando no exista sesión activa; y (4) ventas por `EFECTIVO`, `YAPE`, `PLIN` y `TARJETA`, mediante importe y barra proporcional, con porcentaje sólo cuando no perjudique legibilidad.
+
+Los importes y conteos reutilizan las lecturas autoritativas de E1/H6 cuando su semántica coincide. `Ventas netas`, `Pedidos pagados`, `Descuentos autorizados` y los importes por medio deben compartir local y corte operativo `America/Lima`; `Ticket promedio` es ventas netas dividido entre pedidos pagados y muestra cero/estado vacío cuando no hay pedidos. React no reconstruye descuentos, estados financieros ni mezcla propinas con venta. Si los contratos vigentes no entregan algún agregado con semántica inequívoca, T16 deberá documentar la brecha antes de proponer backend; este delta documental no autoriza cambios PostgreSQL.
+
+No se incorporan tendencias históricas, comparaciones entre fechas o locales, metas, tiempos de cocina, rankings, productos más vendidos ni otras métricas de E8. El diseño prioriza acciones vigentes y estado actual sobre densidad de indicadores. Este delta está aprobado para construcción dentro de T16.

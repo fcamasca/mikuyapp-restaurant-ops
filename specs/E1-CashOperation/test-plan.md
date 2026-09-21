@@ -107,17 +107,17 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP56 | R21 | Reporte de sesión con cobro multi-medio y todos los conceptos. | Apertura, cada medio, entradas/salidas, esperado, diferencia, descuentos, anulaciones, propinas y parciales concilian; venta no se duplica por agrupación. |
 | E1-TP57 | R21 | Resumen diario con cobros multi-medio y parciales. | Cada medio suma su parte, cada acto conserva identidad y el pedido se cuenta una sola vez al completar. |
 | E1-TP58 | R21 | Fecha Lima, dos locales y exportación. | Corte `America/Lima`, aislamiento y CSV coherente. |
-| E1-TP59 | R22–R23 | UI sin caja abierta, vacía, cargando, error/reintento, grilla de movimientos sin históricos y bandeja administrativa sin notificaciones. | Estado inequívoco; `+` inicia la primera fila; históricos bloqueados, nuevas editables y responsive sin perder columnas/controles. La campana muestra contador correcto, lista reciente y tratamiento normal/alerta según diferencia. |
-| E1-TP60 | R22–R23 | Confirmación única, doble clic/respuesta obsoleta, edición de movimientos y lectura de notificaciones. | Cobro conserva su protección; Cancelar no persiste y Guardar invoca una vez el lote. La bandeja muestra hasta 50 avisos recientes; marcar uno o todos como leídos actualiza el contador y sólo el estado del administrador autenticado, que persiste al cerrar sesión y volver a entrar. |
-| E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build y verificaciones de seguridad/concurrencia previstas en las tareas. | Cobro total de uno/N medios, entrega, terminalidad, reportes, RLS, Realtime e invariantes concurrentes sin regresión. |
+| E1-TP59 | R22–R24 | Estados UI de Caja y Administración: sin caja abierta, vacíos, loading, error/reintento, grilla sin históricos, bandeja sin avisos e Inicio sin actividad. | Caja conserva estados inequívocos y grilla responsive. Inicio muestra `Todo en orden`, caja cerrada sin desaparecer y KPI/medios en cero sin `NaN`; la campana conserva contador, lista reciente y prioridad normal/alerta. |
+| E1-TP60 | R22–R24 | Interacciones UI: confirmación única, edición de movimientos, lectura de notificaciones, navegación ADMIN y atención accionable. | Cobro y lote conservan protecciones. La bandeja permite lectura individual/masiva sólo propia. Sidebar/drawer presenta los grupos aprobados; Pendientes contiene sólo descuentos; cierres con diferencia no leídos aparecen en Inicio sin acción de aprobación y salen de atención al leerse. |
+| E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build, dashboard ADMIN y verificaciones de seguridad/concurrencia previstas en las tareas. | Además de los invariantes financieros existentes, KPI y ventas por medio concilian para el local/corte Lima, Caja/Ventas no habilitan cobro ADMIN, otro local no se mezcla y navegación/configuración no regresan. |
 
 ## 3. Pruebas humanas
 
 | ID | Escenario | Evidencia requerida |
 |---|---|---|
-| E1-TP62 | Jornada de Caja en PC: abrir, cobro total de uno y varios medios (incluido repetido), `Cobrar una parte`, dos actos parciales, propina, entrada, **salida** y cierre con/sin diferencia; validación administrativa de avisos. | Capturas/registro; composición/confirmación/documento por acto inequívocos. El cierre se revisa antes de mutar, Volver conserva la sesión, diferencia exige motivo y avisa que se notificará sin pedir aprobación; el reporte interno posterior se imprime manualmente en 80 mm desde snapshots. En ADMIN, campana/contador/lista, alerta de diferencia y lectura persistente se validan humanamente. TP62 permanece abierto. |
+| E1-TP62 | Jornada de Caja en PC y revisión de Inicio ADMIN: abrir, cobros, propina, movimientos, cierre con/sin diferencia; avisos, KPI, atención, caja y ventas por medio del local actual. | Capturas/registro; el flujo de Caja conserva sus reglas. En Inicio, KPI concilian con datos autoritativos; descuentos pendientes y cierres con diferencia no leídos se presentan diferenciados: los descuentos permiten decisión y los cierres permiten consulta sin aprobación; caja abierta/cerrada y `Todo en orden` son comprensibles; campana/contador/lectura persisten. TP62 permanece abierto. |
 | E1-TP63 | Descuento solicitado por `CAJA` y autorizado por `ADMINISTRADOR`; anulación ejecutada directamente por `ADMINISTRADOR`, incluidos rechazos. | Descuento conserva solicitante/autorizador; anulación conserva únicamente actor administrador, motivo, fecha/hora y efectos en pedido/mesa/reportes. |
-| E1-TP64 | Responsive aplicable: Caja PC principal, tablet como contingencia y regresión del flujo de mozo/cocina. | Acciones críticas visibles sin solapamiento; flujo mesa→pago y Realtime conservados. |
+| E1-TP64 | Responsive aplicable: Caja PC principal, tablet como contingencia, Inicio ADMIN en desktop/tablet/móvil y regresión de mozo/cocina. | Caja conserva acciones críticas. Inicio usa sidebar en desktop y drawer/hamburguesa accesible en anchos menores; jerarquía, foco, acciones, estados, barras e importes permanecen legibles sin overflow. No aparecen métricas E8 ni capacidades multilocal; mozo/cocina no regresan. |
 
 ## 4. Datos y concurrencia
 
@@ -130,7 +130,7 @@ La evidencia original de T08 valida los aspectos estructurales/legacy entonces a
 ## 5. Criterio de aprobación
 
 - DF-01–DF-04 y DF-06–DF-10 aprobadas y reflejadas en el spec; EC-06–EC-08 conservadas como decisiones cerradas.
-- TP01–TP61 automatizadas/técnicas vigentes aprobadas después de revalidar el delta T15, y TP62–TP64 aprobadas humanamente.
+- TP01–TP61 automatizadas/técnicas vigentes deberán revalidarse en los aspectos ampliados por T16; TP62–TP64 continúan como validación humana e incluyen el Inicio ADMIN aprobado.
 - Cero sobrepago, doble apertura/cierre/cobro, cobro multi-medio parcial, acceso cruzado o auditoría faltante; idempotencia por acto y atomicidad de todas sus líneas.
 - Regresión vigente completa, migraciones local/DEV alineadas y defectos no bloqueantes clasificados.
 - Ninguna aceptación se crea hasta aprobación explícita del usuario.
@@ -149,6 +149,7 @@ La evidencia original de T08 valida los aspectos estructurales/legacy entonces a
 | R21 | D11 | T12 | TP56–TP58 |
 | R22 | D12 | T10, T13–T14 | TP59–TP64 |
 | R23 | D02–D05, D10–D13 | T15 | TP02, TP06, TP10, TP17–TP18, TP51–TP52, TP55, TP59–TP60, TP62 |
+| R24 | D11, D16 | T16 | TP59–TP64 aplicables |
 
 ## 7. Evidencia incremental de E1-T04
 
@@ -289,7 +290,7 @@ TP62–TP64 y T14 permanecen pendientes de ejecución humana; E1 no está acepta
 
 ## 17. Evidencia incremental de E1-T15
 
-T15 se validó mediante replay limpio de **45 migraciones** y `supabase/seed.sql` en la base PostgreSQL local aislada `e1_t15_951aac247c5345e1a8943b4d7a78209e`. La migración final es `20260921000100_e1_t15_notificaciones_caja.sql`; no se aplicó a DEV remoto ni PROD.
+T15 se validó mediante replay limpio de **45 migraciones** y `supabase/seed.sql` en la base PostgreSQL local aislada `e1_t15_951aac247c5345e1a8943b4d7a78209e`. La migración final es `20260921000100_e1_t15_notificaciones_caja.sql`; fue aplicada manualmente en DEV y no se aplicó en PROD.
 
 | TP | Evidencia T15 | Estado |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 ## Estado
 
-**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. **T03–T13 y T15 están completadas técnicamente y validadas en PostgreSQL local aislado/frontend.** T14 y TP62–TP64 permanecen pausadas y E1 no está aceptada. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
+**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. **T03–T13 y T15 están completadas técnicamente y validadas en PostgreSQL local aislado/frontend.** T14 y TP62–TP64 permanecen pausadas y E1 no está aceptada. T16 está aprobada y pendiente de construcción. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
 
 | ID | Unidad implementable | Dependencias | Resultado verificable | Requisitos / pruebas | Est. |
 |---|---|---|---|---|---:|
@@ -20,7 +20,8 @@
 | E1-T12 | **Completada técnicamente en local aislado, incluida regresión delta.** Ajustar lecturas/reportes/exportación para agrupar por cobro y sumar cada fila por medio sin duplicar venta ni conteo de pedido. | Delta T09–T11 | Totales por medio, efectivo esperado, venta, propina y documentos concilian con cobros multi-medio. Evidencia en `implementation-t12.md`. | R21 / TP56–TP58 aplicables | 4 h |
 | E1-T13 | **Completada técnicamente — checkpoint delta aprobado.** Puerta integral del modelo/contrato de cobro: replay, SQL, seguridad, concurrencia, Node, `typecheck` y `build`. | Deltas T09–T12 | Cobertura técnica TP01–TP61 vigente sobre la versión final antes de volver a TP62. Evidencia en `implementation-t13.md`. | Todos / TP afectados y TP61 | 5 h |
 | E1-T14 | **EN VALIDACIÓN HUMANA, pausada en TP62.** Reanudar pruebas humanas sólo después del nuevo checkpoint T13 y Preview DEV actualizado; documentar evidencia y solicitar aceptación. | Nuevo checkpoint T13, deployment Preview DEV | TP62–TP64 aprobadas; no crear aceptación sin aprobación explícita. | Todos / TP62–TP64 | 4 h |
-| E1-T15 | **COMPLETADA técnicamente en local aislado.** Crear mediante migración aditiva las tablas mínimas de evento/destinatario, integrar generación transaccional e idempotente en apertura/cierre, exponer lectura y marcado de lectura con mínimo privilegio, e incorporar campana/contador/lista para `ADMINISTRADOR` y mensajes de diferencia en Caja. | T04–T05, T10–T11; spec aprobado | Una entrega por administrador activo del mismo local y por evento; contenido derivado de auditoría/snapshots, lectura persistente individual, alerta sólo por diferencia, cero aprobación y cero acceso cruzado. Evidencia en `implementation-t15.md`; migración pendiente de aplicación manual en DEV. | R23 / TP02, TP06, TP10, TP17–TP18, TP51–TP52, TP54–TP55, TP59–TP60; TP62 humano pendiente | 6 h |
+| E1-T15 | **COMPLETADA técnicamente en local aislado.** Crear mediante migración aditiva las tablas mínimas de evento/destinatario, integrar generación transaccional e idempotente en apertura/cierre, exponer lectura y marcado de lectura con mínimo privilegio, e incorporar campana/contador/lista para `ADMINISTRADOR` y mensajes de diferencia en Caja. | T04–T05, T10–T11; spec aprobado | Una entrega por administrador activo del mismo local y por evento; contenido derivado de auditoría/snapshots, lectura persistente individual, alerta sólo por diferencia, cero aprobación y cero acceso cruzado. Evidencia en `implementation-t15.md`; migración aplicada manualmente en DEV y no aplicada en PROD. | R23 / TP02, TP06, TP10, TP17–TP18, TP51–TP52, TP54–TP55, TP59–TP60; TP62 humano pendiente | 6 h |
+| E1-T16 | **APROBADA — pendiente de construcción.** Rediseñar la primera pantalla de `ADMINISTRADOR` como Inicio del local actual, incorporar sidebar/drawer, KPI mínimos, atención accionable, resumen de caja y ventas por medio; reutilizar contratos vigentes y registrar cualquier brecha antes de cambiar backend. | T12 y T15 | Navegación por grupos coherente; datos del local y día correctos; cierres con diferencia separados de aprobaciones; caja abierta/cerrada y estados vacíos claros; desktop/tablet/móvil sin overflow. | R24 / TP59–TP64 aplicables | 8 h |
 
 ## Dependencias y orden
 
@@ -30,11 +31,12 @@
 4. T06 define el total neto; T07 comparte locks/auditoría. El delta T09 depende de T05 + T06 + T08 y agrega la identidad del acto de cobro, composición atómica de medios y parciales separados.
 5. El orden del ajuste de cobro fue T09 (modelo/RPC/lecturas mínimas) → T10 (UI/documentos) → T11 (auditoría) → T12 (reportes) → T13 (checkpoint).
 6. T15 se construye sobre apertura/cierre y auditoría ya validados; agrega persistencia/lectura/UI de notificaciones sin cambiar sus reglas financieras. T14/TP62 sólo se reanudan después de validar T15 y sus regresiones directamente afectadas.
-7. PM-002 `TRANSITIONING` condiciona el ambiente: construcción/verificación en DEV/Preview no habilita PROD ni modifica el plan de cutover.
+7. T16 está habilitada para iniciar después de la aprobación humana de R24/D16/T16 y la ampliación de TP59–TP64. Reutiliza reportes T12 y notificaciones T15; una brecha de lectura autoritativa se reportará antes de proponer backend. La validación humana se incorpora a T14 sin renumerar TP62–TP64.
+8. PM-002 `TRANSITIONING` condiciona el ambiente: construcción/verificación en DEV/Preview no habilita PROD ni modifica el plan de cutover.
 
 ## Estrategia de validación durante construcción
 
-La cobertura final TP01–TP64 y el criterio de aceptación no cambian; los casos existentes incorporan el delta de notificaciones sin renumerar TP62. Para evitar regresiones integrales repetidas durante la construcción:
+La cobertura final TP01–TP64 se conserva continua; el delta amplía TP59–TP64 sin renumerar casos ni mover las pruebas humanas del final. Para evitar regresiones integrales repetidas durante la construcción:
 
 1. T03–T12 ejecutan los TP propios de la tarea y sólo las regresiones directamente afectadas por los archivos, esquema o contratos modificados.
 2. Una prueba ya aprobada no se repite dentro de la misma tarea salvo que un cambio pueda invalidarla, haya fallado y sido corregida, o sea necesaria para verificar una interacción nueva.
@@ -46,6 +48,7 @@ La cobertura final TP01–TP64 y el criterio de aceptación no cambian; los caso
 8. T09 será el checkpoint ampliado del núcleo financiero T03–T09.
 9. T13 conserva la puerta integral definitiva: TP01–TP61, SQL, seguridad, concurrencia, regresión H1–H6/PM-001, `typecheck` y `build`.
 10. T15 ejecutará los casos de apertura/cierre, seguridad y UI afectados, más un replay/checkpoint proporcional a la nueva migración, sin repetir suites no invalidadas.
+11. T16 ejecutará pruebas frontend de navegación/datos/estados/responsive y únicamente regresiones de reportes/notificaciones realmente afectadas; no repetirá SQL financiero si no cambia sus contratos.
 
 ## Ajuste detectado durante TP62
 
@@ -66,8 +69,9 @@ La estimación de construcción excluye T01–T02 ya realizadas en Spec Mode y a
 | Alcance | Construcción futura | Con Spec Mode T01–T02 | Comparación con plan 30–40 h |
 |---|---:|---:|---|
 | Operación financiera de caja, incluido delta de notificaciones | **59 h** | **65 h** | +19 h sobre máximo de referencia (construcción) |
+| Operación de caja con Inicio ADMIN aprobado | **67 h** | **73 h** | +27 h sobre máximo de referencia (construcción) |
 
-La referencia histórica de **30–40 horas** se conserva intacta. T01 (4 h) y T02 (2 h) suman **6 h de Spec Mode completado**; T03–T14 conservan sus **53 h** y T15 añade **6 h**, por lo que la construcción planificada suma **59 h** y el total con Spec Mode asciende a **65 h**. El alcance financiero todavía supera la referencia; no se fuerza la cifra ni se elimina trazabilidad o seguridad.
+La referencia histórica de **30–40 horas** se conserva intacta. T01 (4 h) y T02 (2 h) suman **6 h de Spec Mode completado**; T03–T14 conservan sus **53 h**, T15 añade **6 h** y T16 añade **8 h**. La construcción aprobada suma **67 h** y el total con Spec Mode asciende a **73 h**.
 
 ## Riesgos de planificación
 
