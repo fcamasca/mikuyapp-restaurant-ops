@@ -26,6 +26,7 @@ declare
   first_notification uuid;
   read_time timestamptz;
   snapshot jsonb;
+  bulk_updated integer;
   before_sessions bigint;
 begin
   insert into auth.users(id,aud,role,email,encrypted_password) values
@@ -112,6 +113,18 @@ begin
     raise exception 'TP18 alerta inválida: %',snapshot;
   end if;
 
+  -- TP60: lectura masiva afecta sólo al administrador autenticado y es idempotente.
+  bulk_updated := (public.rpc_marcar_notificaciones_caja_leidas()->>'actualizadas')::integer;
+  if bulk_updated<>3 or (public.rpc_obtener_notificaciones_caja()->>'no_leidas')::integer<>0 then
+    raise exception 'TP60 marcado masivo inválido';
+  end if;
+  bulk_updated := (public.rpc_marcar_notificaciones_caja_leidas()->>'actualizadas')::integer;
+  if bulk_updated<>0 then raise exception 'TP60 marcado masivo no idempotente'; end if;
+  perform pg_temp.t15_user(admin_b);
+  if (public.rpc_obtener_notificaciones_caja()->>'no_leidas')::integer<>4 then
+    raise exception 'TP60 marcado masivo afectó a otro administrador';
+  end if;
+
   -- TP51/TP52/TP55: tablas cerradas, roles/local aislados y funciones endurecidas.
   perform pg_temp.t15_user(waiter); execute 'set local role authenticated';
   begin perform public.rpc_obtener_notificaciones_caja(); raise exception 'MOZO autorizado'; exception when insufficient_privilege then null; end;
@@ -124,6 +137,7 @@ begin
   end if;
   reset role;
   perform pg_temp.t15_user(kitchen); begin perform public.rpc_obtener_notificaciones_caja(); raise exception 'COCINA autorizada'; exception when insufficient_privilege then null; end;
+  begin perform public.rpc_marcar_notificaciones_caja_leidas(); raise exception 'COCINA marcó todas'; exception when insufficient_privilege then null; end;
   perform pg_temp.t15_user(cashier); begin perform public.rpc_obtener_notificaciones_caja(); raise exception 'CAJA autorizada'; exception when insufficient_privilege then null; end;
   perform pg_temp.t15_user(admin_other);
   if (public.rpc_obtener_notificaciones_caja()->>'no_leidas')::integer<>0 then raise exception 'filtración entre locales'; end if;
@@ -134,7 +148,9 @@ begin
   if has_table_privilege('authenticated','public.notificacion_caja','SELECT,INSERT,UPDATE,DELETE')
     or has_table_privilege('authenticated','public.notificacion_caja_destinatario','SELECT,INSERT,UPDATE,DELETE')
     or has_function_privilege('anon','public.rpc_obtener_notificaciones_caja()','EXECUTE')
+    or has_function_privilege('anon','public.rpc_marcar_notificaciones_caja_leidas()','EXECUTE')
     or not has_function_privilege('authenticated','public.rpc_obtener_notificaciones_caja()','EXECUTE')
+    or not has_function_privilege('authenticated','public.rpc_marcar_notificaciones_caja_leidas()','EXECUTE')
     or (select rolname from pg_proc p join pg_roles r on r.oid=p.proowner where p.oid='public.rpc_obtener_notificaciones_caja()'::regprocedure)<>'postgres'
     or pg_get_functiondef('public.rpc_obtener_notificaciones_caja()'::regprocedure)!~* 'security definer'
     or pg_get_functiondef('public.rpc_obtener_notificaciones_caja()'::regprocedure)!~* 'set search_path to ''pg_catalog''' then

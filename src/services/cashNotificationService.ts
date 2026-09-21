@@ -22,6 +22,11 @@ export interface CashNotificationSnapshot {
   notifications: readonly CashNotification[];
 }
 
+export interface CashNotificationBulkReadResult {
+  updated: number;
+  readAt: string;
+}
+
 export type CashNotificationResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: { message: string } };
@@ -88,6 +93,24 @@ export function createCashNotificationService(client: Client) {
         return { ok: true, data: { id: String(data.id), readAt: String(data.leida_en) } };
       } catch {
         return { ok: false, error: { message: "No pudimos marcar la notificación como leída." } };
+      }
+    },
+    async markAllAsRead(context: ValidatedProfileContext): Promise<CashNotificationResult<CashNotificationBulkReadResult>> {
+      if (context.role.codigo !== "ADMINISTRADOR") {
+        return { ok: false, error: { message: "No autorizado." } };
+      }
+      try {
+        const result = await client.rpc("rpc_marcar_notificaciones_caja_leidas");
+        if (result.error) {
+          return { ok: false, error: { message: "No pudimos marcar las notificaciones como leídas." } };
+        }
+        const data = result.data as Record<string, unknown>;
+        return {
+          ok: true,
+          data: { updated: Number(data.actualizadas ?? 0), readAt: String(data.leida_en) },
+        };
+      } catch {
+        return { ok: false, error: { message: "No pudimos marcar las notificaciones como leídas." } };
       }
     },
   };

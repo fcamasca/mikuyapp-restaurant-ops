@@ -45,12 +45,33 @@ test("marca la entrega propia mediante RPC y rechaza roles no administradores lo
   assert.equal(calls.length, 1);
 });
 
+test("marca todas las entregas propias como leídas mediante una única RPC", async () => {
+  const calls = [];
+  const client = { rpc: async (name, args) => {
+    calls.push([name, args]);
+    return { error: null, data: { actualizadas: 3, leida_en: "2026-09-21T01:06:00Z" } };
+  } };
+  const service = createCashNotificationService(client);
+  const marked = await service.markAllAsRead(context());
+  assert.equal(marked.ok, true);
+  assert.deepEqual(marked.data, { updated: 3, readAt: "2026-09-21T01:06:00Z" });
+  assert.deepEqual(calls, [["rpc_marcar_notificaciones_caja_leidas", undefined]]);
+  assert.equal((await service.markAllAsRead(context("CAJA"))).ok, false);
+  assert.equal(calls.length, 1);
+});
+
 test("la campana ofrece estados informativo/alerta, contador y lectura; Caja avisa la diferencia", () => {
   const bell = readFileSync(new URL("../src/components/CashNotificationBell.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../src/pages/CashierPage.tsx", import.meta.url), "utf8");
   assert.match(bell, /Notificaciones de caja/);
   assert.match(bell, /no leídas/);
   assert.match(bell, /Marcar como leída/);
+  assert.match(bell, /Marcar todas como leídas/);
+  assert.match(bell, /markAllAsRead/);
+  assert.match(bell, /bg-emerald-700 px-2\.5 py-1 text-xs font-bold text-white/);
+  assert.match(bell, /document\.addEventListener\("pointerdown", closeOnOutsidePointer\)/);
+  assert.match(bell, /!rootRef\.current\.contains\(event\.target as Node\)/);
+  assert.match(bell, /setOpen\(false\)/);
   assert.match(bell, /Cierre con diferencia/);
   assert.match(bell, /bg-amber-50/);
   assert.match(bell, /bg-sky-50/);
@@ -64,4 +85,5 @@ test("la UI administrativa incorpora la campana sin ampliar lecturas directas de
   assert.doesNotMatch(service, /\.from\(["']perfil_usuario["']\)/);
   assert.match(service, /rpc_obtener_notificaciones_caja/);
   assert.match(service, /rpc_marcar_notificacion_caja_leida/);
+  assert.match(service, /rpc_marcar_notificaciones_caja_leidas/);
 });

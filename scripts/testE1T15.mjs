@@ -43,7 +43,7 @@ const migrations = readdirSync(resolve(root, "supabase/migrations"))
   .sort();
 for (const migration of migrations) file(`supabase/migrations/${migration}`);
 file("supabase/seed.sql");
-assert.equal(migrations.at(-1), "20260921000100_e1_t15_notificaciones_caja.sql");
+assert.equal(migrations.at(-1), "20260921000200_e1_t15_notificaciones_lectura_masiva.sql");
 console.log(`PASS replay limpio: ${migrations.length} migraciones + seed`);
 
 console.log(file("supabase/tests/e1_t15_notificaciones_caja.sql"));

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ValidatedProfileContext } from "../services/profileContext";
 import { createCashNotificationService, type CashNotification } from "../services/cashNotificationService";
 import { getSupabaseClient } from "../services/supabaseClient";
@@ -16,7 +16,9 @@ export default function CashNotificationBell({ context }: { readonly context: Va
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [markingAll, setMarkingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   async function load(): Promise<void> {
     if (!service) {
@@ -38,6 +40,17 @@ export default function CashNotificationBell({ context }: { readonly context: Va
 
   useEffect(() => { void load(); }, [context, service]);
 
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsidePointer(event: PointerEvent): void {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [open]);
+
   async function markAsRead(notification: CashNotification): Promise<void> {
     if (!service || notification.readAt) return;
     const result = await service.markAsRead(context, notification.id);
@@ -52,8 +65,24 @@ export default function CashNotificationBell({ context }: { readonly context: Va
     setError(null);
   }
 
+  async function markAllAsRead(): Promise<void> {
+    if (!service || unreadCount === 0 || markingAll) return;
+    setMarkingAll(true);
+    const result = await service.markAllAsRead(context);
+    setMarkingAll(false);
+    if (!result.ok) {
+      setError(result.error.message);
+      return;
+    }
+    setNotifications((current) => current.map((item) => item.readAt
+      ? item
+      : { ...item, readAt: result.data.readAt }));
+    setUnreadCount(0);
+    setError(null);
+  }
+
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button
         aria-expanded={open}
         aria-label={`Notificaciones${unreadCount > 0 ? `, ${unreadCount} no leídas` : ""}`}
@@ -69,7 +98,10 @@ export default function CashNotificationBell({ context }: { readonly context: Va
         <section aria-label="Notificaciones recientes" className="absolute right-0 z-30 mt-2 max-h-[32rem] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-stone-200 bg-white p-3 shadow-xl">
           <div className="flex items-center justify-between gap-3 border-b border-stone-200 pb-3">
             <div><h2 className="font-bold">Notificaciones</h2><p className="text-xs text-stone-500">{unreadCount} no leídas</p></div>
-            <button className="rounded-lg px-2 py-1 text-sm font-semibold text-emerald-800 hover:bg-emerald-50" disabled={loading} onClick={() => { void load(); }} type="button">Actualizar</button>
+            <div className="flex items-center gap-1">
+              {unreadCount > 0 && <button className="rounded-lg px-2 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:opacity-60" disabled={loading || markingAll} onClick={() => { void markAllAsRead(); }} type="button">{markingAll ? "Marcando…" : "Marcar todas como leídas"}</button>}
+              <button className="rounded-lg px-2 py-1 text-sm font-semibold text-emerald-800 hover:bg-emerald-50" disabled={loading || markingAll} onClick={() => { void load(); }} type="button">Actualizar</button>
+            </div>
           </div>
           {error && <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-800" role="alert">{error}</p>}
           {loading ? <p aria-busy="true" className="py-5 text-center text-sm text-stone-500">Cargando notificaciones…</p>
@@ -78,7 +110,7 @@ export default function CashNotificationBell({ context }: { readonly context: Va
                 const alert = notification.priority === "ALERTA";
                 return <li className={`py-3 ${notification.readAt ? "opacity-70" : ""}`} key={notification.id}>
                   <button className={`w-full rounded-xl border p-3 text-left ${alert ? "border-amber-300 bg-amber-50" : "border-sky-200 bg-sky-50"}`} disabled={Boolean(notification.readAt)} onClick={() => { void markAsRead(notification); }} type="button">
-                    <span className="flex items-center justify-between gap-2"><b>{notification.type === "APERTURA" ? "Caja abierta" : alert ? "Cierre con diferencia" : "Caja cerrada"}</b><span className="text-xs">{notification.readAt ? "Leída" : "Marcar como leída"}</span></span>
+                    <span className="flex items-center justify-between gap-2"><b>{notification.type === "APERTURA" ? "Caja abierta" : alert ? "Cierre con diferencia" : "Caja cerrada"}</b><span className={notification.readAt ? "rounded-full bg-stone-200 px-2 py-1 text-xs font-semibold text-stone-600" : "rounded-full bg-emerald-700 px-2.5 py-1 text-xs font-bold text-white shadow-sm ring-2 ring-emerald-100"}>{notification.readAt ? "Leída" : "Marcar como leída"}</span></span>
                     <span className="mt-1 block text-sm">{notification.cashboxCode} · {notification.cashboxName}</span>
                     <span className="block text-sm">{notification.actorName} · {dateTime.format(new Date(notification.createdAt))}</span>
                     {notification.type === "APERTURA" ? <span className="mt-2 block text-sm">Monto inicial: <b>{money.format(notification.initialAmount ?? 0)}</b></span>
