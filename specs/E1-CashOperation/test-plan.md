@@ -304,3 +304,9 @@ T15 se validó mediante replay limpio de **45 migraciones** y `supabase/seed.sql
 | TP59/TP60 | Campana, contador, vacío/error, prioridades informativa/alerta y marcado individual persistente cubiertos por SQL y frontend. | Aprobada técnicamente |
 
 Dos administradores activos del local recibieron una entrega cada uno; el administrador inactivo y el de otro local no recibieron ninguna. La lectura de un administrador no alteró la entrega del otro. Las regresiones SQL directamente afectadas T04, T05 y T11 aprobaron. Aprobaron **58/58 pruebas Node/React afectadas**, `typecheck` y `build`; el único warning fue el tamaño de chunk de Vite. TP62 no se ejecutó ni se marcó aprobado.
+
+## 18. Evidencia técnica de E1-T16
+
+T16 aplicó en PostgreSQL local aislado un replay limpio de **47 migraciones + seed** y validó `rpc_obtener_flujo_actual_pedidos_admin()`: tres grupos siempre presentes, clasificación de estados, exclusión de terminales, mayor/promedio con hora servidor, detalle descendente, aislamiento entre locales, vacíos y continuidad temporal durante `RECIBIDO_COCINA → EN_PREPARACION`. La RPC es `SECURITY DEFINER`, owner `postgres`, `search_path=pg_catalog`, sin ejecución para `PUBLIC`/`anon`, sin grants directos nuevos y rechaza `CAJA`, `MOZO` y `COCINA`.
+
+Las regresiones SQL directamente afectadas `h4_t04_derived_order_table_state` y `e1_t12_reportes_caja` aprobaron. Aprobaron **28/28 pruebas frontend afectadas**, `typecheck`, `build` y `git diff --check`; el build mantuvo sólo el warning no bloqueante de tamaño de chunk. TP62–TP64 continúan pendientes de validación humana, por lo que T16 no se considera completada ni E1 aceptada.

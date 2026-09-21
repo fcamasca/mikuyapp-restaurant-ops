@@ -2,7 +2,7 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-El Spec Mode de **Evolución 1 — Operación de caja**, incluido el delta base de Inicio ADMIN, está aprobado y la construcción se encuentra en validación humana. T03–T13 y el delta T15 de notificaciones internas completaron su validación técnica local; la base frontend de T16 fue construida y validada técnicamente. TP62 permanece abierto, T14 continúa en validación humana y E1 no está aceptada. La ampliación documental de T16 para `Flujo actual de pedidos` queda pendiente de aprobación humana antes de continuar su construcción. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
+El Spec Mode de **Evolución 1 — Operación de caja**, incluido Inicio ADMIN y su `Flujo actual de pedidos`, está aprobado y la construcción se encuentra en validación humana. T03–T13 y T15 completaron su validación técnica local; T16 fue construida y validada técnicamente en local aislado. TP62–TP64 permanecen abiertos, T14 continúa en validación humana y E1 no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
 
 `main`/`origin/main` en `f76c190`, verificado entonces sin cambios locales, se conserva como baseline histórica del inicio del Spec Mode y no describe el estado actual del árbol de trabajo. El MVP v1.0.0 y PM-001 están aceptados. PM-002 permanece `TRANSITIONING`; esta evolución no lo modifica y la construcción debe respetar su matriz de ambientes.
 
@@ -109,7 +109,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | DF-09 | División mediante selección de productos. | La selección sólo ayuda a calcular; se persiste importe, no asignación histórica por líneas. |
 | DF-10 | Notificaciones administrativas de apertura y cierre. | Toda apertura/cierre notifica una vez a cada `ADMINISTRADOR` activo del mismo local. Apertura y cierre sin diferencia son informativos; cierre con diferencia se destaca como alerta e incluye el motivo. La notificación no solicita ni registra aprobación. |
 
-EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaciones mínimas elegidas. El delta T15 está construido y validado localmente y la base de R24/D16/T16 fue construida en frontend. La ampliación de `Flujo actual de pedidos` documentada en R24/D16/T16 y TP59–TP64 no habilita construcción hasta recibir aprobación humana; E1 y TP62 continúan abiertos.
+EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaciones mínimas elegidas. T15 y la construcción técnica de R24/D16/T16 están validadas localmente. E1 y TP62–TP64 continúan abiertos y T16 no se considera aceptada por esta validación técnica.
 
 ## 6. Fuera de alcance
 

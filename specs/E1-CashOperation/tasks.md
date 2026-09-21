@@ -2,7 +2,7 @@
 
 ## Estado
 
-**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. **T03–T13 y T15 están completadas técnicamente y validadas en PostgreSQL local aislado/frontend.** T14 y TP62–TP64 permanecen pausadas y E1 no está aceptada. La base frontend de T16 está construida y validada técnicamente; su ampliación `Flujo actual de pedidos` queda documentada y pendiente de aprobación humana antes de continuar construcción. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
+**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. **T03–T13 y T15 están completadas técnicamente y validadas en PostgreSQL local aislado/frontend.** T16, incluido `Flujo actual de pedidos`, está implementada y validada técnicamente en local aislado, pero no completada/aceptada mientras TP62–TP64 sigan pendientes. T14 continúa en validación humana y E1 no está aceptada. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
 
 | ID | Unidad implementable | Dependencias | Resultado verificable | Requisitos / pruebas | Est. |
 |---|---|---|---|---|---:|
@@ -21,7 +21,7 @@
 | E1-T13 | **Completada técnicamente — checkpoint delta aprobado.** Puerta integral del modelo/contrato de cobro: replay, SQL, seguridad, concurrencia, Node, `typecheck` y `build`. | Deltas T09–T12 | Cobertura técnica TP01–TP61 vigente sobre la versión final antes de volver a TP62. Evidencia en `implementation-t13.md`. | Todos / TP afectados y TP61 | 5 h |
 | E1-T14 | **EN VALIDACIÓN HUMANA, pausada en TP62.** Reanudar pruebas humanas sólo después del nuevo checkpoint T13 y Preview DEV actualizado; documentar evidencia y solicitar aceptación. | Nuevo checkpoint T13, deployment Preview DEV | TP62–TP64 aprobadas; no crear aceptación sin aprobación explícita. | Todos / TP62–TP64 | 4 h |
 | E1-T15 | **COMPLETADA técnicamente en local aislado.** Crear mediante migración aditiva las tablas mínimas de evento/destinatario, integrar generación transaccional e idempotente en apertura/cierre, exponer lectura y marcado de lectura con mínimo privilegio, e incorporar campana/contador/lista para `ADMINISTRADOR` y mensajes de diferencia en Caja. | T04–T05, T10–T11; spec aprobado | Una entrega por administrador activo del mismo local y por evento; contenido derivado de auditoría/snapshots, lectura persistente individual, alerta sólo por diferencia, cero aprobación y cero acceso cruzado. Evidencia en `implementation-t15.md`; migración aplicada manualmente en DEV y no aplicada en PROD. | R23 / TP02, TP06, TP10, TP17–TP18, TP51–TP52, TP54–TP55, TP59–TP60; TP62 humano pendiente | 6 h |
-| E1-T16 | **BASE CONSTRUIDA Y VALIDADA EN FRONTEND; ampliación pendiente de aprobación.** Mantener Inicio del local actual con sidebar/drawer, KPI, atención, ventas por medio y caja; agregar mediante nueva RPC mínima el snapshot no persistido `Flujo actual de pedidos`, sus tres grupos y detalle de sólo consulta. No continuar esta ampliación antes de aprobación humana. | T12 y T15; historial/timestamps H3–H5 existentes | Orden definitivo del dashboard; clasificación y tiempos calculados por servidor; aislamiento local; detalle descendente; cero persistencia analítica; ADMIN sin mutaciones de Cocina/Mozo; responsive sin overflow. | R24 / TP59–TP64 aplicables | 12 h (`8 h` originales + `4 h` delta) |
+| E1-T16 | **IMPLEMENTADA Y VALIDADA TÉCNICAMENTE EN LOCAL; pendiente de TP62–TP64 humanos.** Inicio del local actual con sidebar/drawer, KPI, atención, flujo vivo, ventas por medio y caja; RPC mínima para los tres grupos y detalle de sólo consulta. No implica aceptación de E1. | T12 y T15; historial/timestamps H3–H5 existentes | Orden definitivo del dashboard; clasificación y tiempos calculados por servidor; aislamiento local; detalle descendente; cero persistencia analítica; ADMIN sin mutaciones de Cocina/Mozo; responsive sin overflow. | R24 / TP59–TP64 aplicables | 12 h (`8 h` originales + `4 h` delta) |
 
 ## Dependencias y orden
 
@@ -31,7 +31,7 @@
 4. T06 define el total neto; T07 comparte locks/auditoría. El delta T09 depende de T05 + T06 + T08 y agrega la identidad del acto de cobro, composición atómica de medios y parciales separados.
 5. El orden del ajuste de cobro fue T09 (modelo/RPC/lecturas mínimas) → T10 (UI/documentos) → T11 (auditoría) → T12 (reportes) → T13 (checkpoint).
 6. T15 se construye sobre apertura/cierre y auditoría ya validados; agrega persistencia/lectura/UI de notificaciones sin cambiar sus reglas financieras. T14/TP62 sólo se reanudan después de validar T15 y sus regresiones directamente afectadas.
-7. La base de T16 se construyó sobre reportes T12 y notificaciones T15. Su ampliación `Flujo actual de pedidos` requiere aprobación humana de este delta antes de construir la nueva lectura PostgreSQL y UI; reutiliza `historial_estado`/timestamps existentes sin crear eventos ni persistir métricas. La validación humana se incorpora a T14 sin renumerar TP62–TP64.
+7. T16 se construyó sobre reportes T12, notificaciones T15 e `historial_estado`/timestamps existentes, sin crear eventos ni persistir métricas. Su validación humana se incorpora a T14 sin renumerar TP62–TP64.
 8. PM-002 `TRANSITIONING` condiciona el ambiente: construcción/verificación en DEV/Preview no habilita PROD ni modifica el plan de cutover.
 
 ## Estrategia de validación durante construcción
