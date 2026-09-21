@@ -212,8 +212,9 @@ test("TP35, TP45-47 y TP59-60 están representados", () => {
 });
 test("administración queda en shell admin sin capacidad de cobro", () => {
   for (const text of [
-    "Operación financiera administrativa",
     "Solicitudes de descuento",
+    "Valor solicitado",
+    "Motivo del rechazo",
     "Autorizar",
     "Rechazar",
     "Anular pedido",
@@ -225,6 +226,14 @@ test("administración queda en shell admin sin capacidad de cobro", () => {
   assert.match(serviceSource, /rpc_obtener_pedidos_operacion_admin/);
   assert.match(serviceSource, /rpc_decidir_descuento_pedido/);
   assert.match(serviceSource, /anular_pedido_supervisado/);
+  assert.match(admin, /Solicitudes de descuento \(\{visibleDiscounts\.length\}\)/);
+  assert.match(admin, /No hay descuentos pendientes de aprobación/);
+  assert.match(admin, /formatDiscount\(d\)/);
+  assert.match(admin, /Motivo del rechazo/);
+  assert.match(admin, /window\.confirm\(`¿Rechazar el descuento/);
+  assert.match(admin, /window\.confirm\(`¿Autorizar el descuento/);
+  assert.match(admin, /bg-emerald-800/);
+  assert.match(admin, /border-rose-300/);
 });
 
 test("TP62 UX separa estado, pedido, cobro y pagos con controles visibles", () => {
