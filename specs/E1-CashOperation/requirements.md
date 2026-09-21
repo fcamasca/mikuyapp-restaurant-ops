@@ -2,7 +2,7 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-El Spec Mode de **Evolución 1 — Operación de caja** está aprobado y la construcción se encuentra en validación humana. T03–T13 completaron su validación técnica previa, pero TP62 detectó una diferencia funcional entre un **acto de cobro**, sus **N medios de pago** y un **cobro parcial**. Este ajuste queda aprobado documentalmente y requiere construcción/revalidación posterior antes de reanudar TP62. T14 permanece en validación humana y E1 todavía no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
+El Spec Mode de **Evolución 1 — Operación de caja** está aprobado y la construcción se encuentra en validación humana. T03–T13 completaron su validación técnica previa y TP62 permanece abierto. Durante esa validación se aprobó incorporar notificaciones internas a los `ADMINISTRADOR` del mismo local por apertura y cierre de caja; este delta queda especificado, pero todavía no está construido ni validado. T14 permanece en validación humana y E1 todavía no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
 
 `main`/`origin/main` en `f76c190`, verificado entonces sin cambios locales, se conserva como baseline histórica del inicio del Spec Mode y no describe el estado actual del árbol de trabajo. El MVP v1.0.0 y PM-001 están aceptados. PM-002 permanece `TRANSITIONING`; esta evolución no lo modifica y la construcción debe respetar su matriz de ambientes.
 
@@ -17,6 +17,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | Cobro | RPC `registrar_pago_pedido` valida contexto `CAJA`, bloquea pedido/mesa, calcula detalles, inserta un pago, marca `PAGADO` y libera mesa atómicamente. | Debe evolucionar sin aceptar importes autoritativos del frontend y sin perder protección contra doble cobro. |
 | Pedido/entrega | `PAGADO` y `ANULADO` son terminales. `ENTREGADO` puede reabrirse sólo antes del pago. | No hay descuentos ni anulación supervisada; la división requiere definir cuándo se alcanza el pago completo. |
 | Auditoría | `historial_estado` registra sólo transiciones de estado de `pedido`. | No representa aperturas, arqueos, movimientos, autorizaciones ni valores financieros anteriores/nuevos. |
+| Notificaciones | No existe infraestructura persistente reutilizable para avisos internos ni lectura individual por administrador. | Apertura/cierre requieren entrega local, contador no leído y estado de lectura persistente sin convertirse en un sistema genérico. |
 | Reportes | Resumen diario por medio desde `pago`; ventas pagadas para CSV; fecha Lima. | No muestra sesiones, efectivo esperado, diferencias, movimientos, descuentos, anulaciones, propinas o pagos parciales. |
 | Realtime | Señales `INSERT`/`UPDATE` de `detalle_pedido`, `pedido`, `mesa`; resync autoritativo; `pago` no publicado. | Caja necesitará refrescar sesión/movimientos sin convertir eventos Realtime en autoridad. |
 | Seguridad | Contexto autenticado, mínimo privilegio, RLS, RPC `SECURITY DEFINER`, `search_path` fijo. | Nuevas operaciones y lecturas requieren autorización por rol/local y pruebas negativas. |
@@ -47,11 +48,12 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | E1-R20 | Los registros financieros y de auditoría no admitirán `UPDATE`/`DELETE` desde cliente. Correcciones futuras deberán ser eventos compensatorios explícitos. Se conservarán FKs `ON DELETE RESTRICT` y trazabilidad histórica. | Must |
 | E1-R21 | Los reportes mínimos mostrarán por sesión: apertura/cierre, totales por medio, efectivo esperado, contado/diferencia, entradas, salidas, descuentos, anulaciones, propinas, cobros y parciales, sin duplicar la venta por agrupar varios medios y sin convertirse en libro contable ni conciliación bancaria. | Must |
 | E1-R22 | La estación PC de Caja mostrará permanentemente estado de caja, quién abrió, monto inicial y esperado, sin presentar la sesión como exclusiva de esa persona; priorizará cobro rápido. El cobro normal preparará el saldo completo, permitirá agregar N líneas de medio y sólo habilitará una confirmación única cuando su suma coincida exactamente. `Cobrar una parte` será una acción secundaria diferenciada. Todo cobro mostrará antes de ejecutar pedido/mesa, total, medios, propina, saldo posterior y liberación de mesa cuando corresponda; un resync invalidará una confirmación obsoleta. Apertura, cierre, salidas, descuento y anulación mantendrán confirmación clara y estados de carga/error/reintento. | Must |
+| E1-R23 | Cada apertura y cada cierre de caja generarán exactamente una notificación interna para cada `ADMINISTRADOR` activo del mismo local en el momento del evento. La apertura informará caja, actor, fecha/hora y monto inicial. El cierre informará caja, actor, fecha/hora, efectivo esperado, contado y diferencia; si la diferencia es distinta de cero incluirá el motivo y tendrá prioridad visual de alerta. Cada destinatario conservará su estado leído/no leído entre sesiones y podrá marcar la notificación como leída. No habrá acceso cruzado entre locales ni flujo de aprobación: una diferencia continúa permitida con motivo obligatorio y sólo modifica la prioridad visual de la notificación. | Must |
 
 ## 4. Seguridad, roles e invariantes
 
 - `CAJA`: cualquier usuario activo del local puede continuar la sesión abierta de una caja del mismo local, registrar entradas/salidas, cobrar y cerrar; cada operación conserva su actor. También solicita/aplica únicamente descuentos ya autorizados y consulta operación de caja de su local.
-- `ADMINISTRADOR`: autoriza descuentos, ejecuta directamente anulaciones, consulta sesiones/reportes del local y puede ejecutar cierre supervisor con motivo y auditoría. No hereda cobro operativo por defecto.
+- `ADMINISTRADOR`: autoriza descuentos, ejecuta directamente anulaciones, consulta sesiones/reportes y las notificaciones de apertura/cierre destinadas a él dentro de su local, y puede ejecutar cierre supervisor con motivo y auditoría. Puede marcar sus notificaciones como leídas. No hereda cobro operativo por defecto.
 - `MOZO`: conserva pedido/entrega y no cobra, mueve efectivo ni autoriza.
 - `COCINA`: conserva transiciones de cocina y no accede a datos financieros.
 - No se crea un rol `SUPERVISOR`: `ADMINISTRADOR` cubre la capacidad aprobada de cierre supervisor con motivo y auditoría.
@@ -82,6 +84,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | PT-02 | Implementar la división como múltiples actos de cobro sobre un pedido; cada acto agrupa sus N medios, sin subpedidos ni asignación por productos. |
 | PT-03 | Modelar propina separada del importe de venta dentro del evento de pago. |
 | PT-04 | Aplicar antes del primer pago el snapshot de descuento asociado al pedido, persistido exclusivamente en `descuento_pedido`. |
+| PT-05 | Persistir una notificación mínima por evento `APERTURA`/`CIERRE` y una fila destinataria por `ADMINISTRADOR` activo del mismo local, reutilizando `auditoria_caja` y los snapshots de sesión como fuente de contenido financiero. |
 
 ### Decisión técnica aprobada
 
@@ -89,6 +92,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 |---|---|---|
 | DT-01 | Fuente autoritativa del descuento. | `descuento_pedido` conserva el snapshot; `pedido` no duplica subtotal, descuento ni total neto; una función PostgreSQL obtiene los tres importes aplicables al cobro. |
 | DT-02 | Identidad persistente del acto de cobro. | Crear una cabecera mínima `cobro` y asociar mediante `pago.cobro_id` las N filas de medio. La cabecera concentra pedido, sesión, actor, hora, total aplicado, saldo anterior/posterior e idempotencia; `pago` conserva medio, importe y propina. Pagos legacy permanecen identificables sin fabricar cabeceras. |
+| DT-03 | Persistencia específica de notificaciones de caja. | Crear `notificacion_caja` como referencia inmutable y única al evento de `auditoria_caja`, y `notificacion_caja_destinatario` como relación única por administrador con `leida_en`. No se duplican importes ni reglas financieras: las lecturas componen el contenido desde auditoría, sesión, caja y snapshots de cierre. |
 
 ### Decisiones funcionales aprobadas
 
@@ -102,8 +106,9 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | DF-07 | Cierre supervisor. | `ADMINISTRADOR` puede ejecutarlo con motivo y auditoría. |
 | DF-08 | Caja física operativa en E1. | `/caja` usa automáticamente la única caja activa/configurada del local. No muestra selector ni elige arbitrariamente si existen varias; la selección explícita por el usuario `CAJA` se difiere a una evolución posterior. El modelo conserva soporte backend para múltiples cajas. |
 | DF-09 | División mediante selección de productos. | La selección sólo ayuda a calcular; se persiste importe, no asignación histórica por líneas. |
+| DF-10 | Notificaciones administrativas de apertura y cierre. | Toda apertura/cierre notifica una vez a cada `ADMINISTRADOR` activo del mismo local. Apertura y cierre sin diferencia son informativos; cierre con diferencia se destaca como alerta e incluye el motivo. La notificación no solicita ni registra aprobación. |
 
-No quedan decisiones funcionales ni técnicas abiertas para construir el ajuste detectado en TP62. EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 define la representación mínima elegida. La construcción y revalidación de este ajuste aún no se han ejecutado.
+No quedan decisiones funcionales ni técnicas abiertas para construir los ajustes aprobados durante TP62. EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaciones mínimas elegidas. La construcción y revalidación del delta de notificaciones aún no se han ejecutado.
 
 ## 6. Fuera de alcance
 
@@ -115,4 +120,4 @@ Requisitos y decisiones sensibles aprobados; migraciones aditivas/reversibles re
 
 ## 8. Trazabilidad resumida
 
-La matriz detallada se mantiene en `test-plan.md`. Agrupación: R01–R08 → D02–D05, T02–T05, TP01–TP18; R09–R12 → D06–D07, T06–T07, TP19–TP30; R13–R18 → D08–D09, T08–T10, TP31–TP48; R19–R20 → D10, T11, TP49–TP55; R21–R22 → D11–D12, T12–T14, TP56–TP64.
+La matriz detallada se mantiene en `test-plan.md`. Agrupación: R01–R08 → D02–D05, T02–T05, TP01–TP18; R09–R12 → D06–D07, T06–T07, TP19–TP30; R13–R18 → D08–D09, T08–T10, TP31–TP48; R19–R20 → D10, T11, TP49–TP55; R21–R22 → D11–D12, T12–T14, TP56–TP64; R23 → D02–D05/D10–D13, T15, TP02/TP06/TP10/TP17–TP18/TP51–TP52/TP55/TP59–TP60/TP62.

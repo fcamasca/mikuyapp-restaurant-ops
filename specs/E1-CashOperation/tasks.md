@@ -2,7 +2,7 @@
 
 ## Estado
 
-**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. **T03–T13, incluido el delta de acto de cobro con N medios, están completadas técnicamente y validadas en PostgreSQL local aislado/frontend.** T14 y TP62–TP64 permanecen pausadas y E1 no está aceptada. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
+**E1-T01 y E1-T02 (Spec Mode)** quedan completadas documentalmente. **T03–T13, incluido el delta de acto de cobro con N medios, están completadas técnicamente y validadas en PostgreSQL local aislado/frontend.** T14 y TP62–TP64 permanecen pausadas. El delta de notificaciones de apertura/cierre queda especificado como T15, todavía no construido; E1 no está aceptada. La impresión de comandas se trasladó a Evolución 7 y no forma parte de estas tareas.
 
 | ID | Unidad implementable | Dependencias | Resultado verificable | Requisitos / pruebas | Est. |
 |---|---|---|---|---|---:|
@@ -20,6 +20,7 @@
 | E1-T12 | **Completada técnicamente en local aislado, incluida regresión delta.** Ajustar lecturas/reportes/exportación para agrupar por cobro y sumar cada fila por medio sin duplicar venta ni conteo de pedido. | Delta T09–T11 | Totales por medio, efectivo esperado, venta, propina y documentos concilian con cobros multi-medio. Evidencia en `implementation-t12.md`. | R21 / TP56–TP58 aplicables | 4 h |
 | E1-T13 | **Completada técnicamente — checkpoint delta aprobado.** Puerta integral del modelo/contrato de cobro: replay, SQL, seguridad, concurrencia, Node, `typecheck` y `build`. | Deltas T09–T12 | Cobertura técnica TP01–TP61 vigente sobre la versión final antes de volver a TP62. Evidencia en `implementation-t13.md`. | Todos / TP afectados y TP61 | 5 h |
 | E1-T14 | **EN VALIDACIÓN HUMANA, pausada en TP62.** Reanudar pruebas humanas sólo después del nuevo checkpoint T13 y Preview DEV actualizado; documentar evidencia y solicitar aceptación. | Nuevo checkpoint T13, deployment Preview DEV | TP62–TP64 aprobadas; no crear aceptación sin aprobación explícita. | Todos / TP62–TP64 | 4 h |
+| E1-T15 | **PENDIENTE — notificaciones internas de apertura/cierre.** Crear mediante migración futura las tablas mínimas de evento/destinatario, integrar generación transaccional e idempotente en apertura/cierre, exponer lectura y marcado de lectura con mínimo privilegio, e incorporar campana/contador/lista para `ADMINISTRADOR` y mensajes de diferencia en Caja. | T04–T05, T10–T11; spec aprobado | Una entrega por administrador activo del mismo local y por evento; contenido derivado de auditoría/snapshots, lectura persistente individual, alerta sólo por diferencia, cero aprobación y cero acceso cruzado. Revalidación técnica antes de reanudar T14. | R23 / TP02, TP06, TP10, TP17–TP18, TP51–TP52, TP55, TP59–TP60 y TP62 aplicables | 6 h |
 
 ## Dependencias y orden
 
@@ -27,12 +28,13 @@
 2. T03–T04 establecen caja, sesión y apertura. T08 adelanta exclusivamente la estructura/compatibilidad legacy de `pago` necesaria para asociar cobros y propinas a sesión.
 3. T05 depende de T04 + T08 para calcular efectivo esperado y ejecutar TP18 cierre-vs-cobro sin inferencias por fecha.
 4. T06 define el total neto; T07 comparte locks/auditoría. El delta T09 depende de T05 + T06 + T08 y agrega la identidad del acto de cobro, composición atómica de medios y parciales separados.
-5. El orden del ajuste es T09 (modelo/RPC/lecturas mínimas) → T10 (UI/documentos) → T11 (auditoría) → T12 (reportes) → T13 (checkpoint). T14/TP62 sólo se reanudan después.
-6. PM-002 `TRANSITIONING` condiciona el ambiente: construcción/verificación en DEV/Preview no habilita PROD ni modifica el plan de cutover.
+5. El orden del ajuste de cobro fue T09 (modelo/RPC/lecturas mínimas) → T10 (UI/documentos) → T11 (auditoría) → T12 (reportes) → T13 (checkpoint).
+6. T15 se construye sobre apertura/cierre y auditoría ya validados; agrega persistencia/lectura/UI de notificaciones sin cambiar sus reglas financieras. T14/TP62 sólo se reanudan después de validar T15 y sus regresiones directamente afectadas.
+7. PM-002 `TRANSITIONING` condiciona el ambiente: construcción/verificación en DEV/Preview no habilita PROD ni modifica el plan de cutover.
 
 ## Estrategia de validación durante construcción
 
-La cobertura final TP01–TP64 y el criterio de aceptación no cambian. Para evitar regresiones integrales repetidas durante la construcción:
+La cobertura final TP01–TP64 y el criterio de aceptación no cambian; los casos existentes incorporan el delta de notificaciones sin renumerar TP62. Para evitar regresiones integrales repetidas durante la construcción:
 
 1. T03–T12 ejecutan los TP propios de la tarea y sólo las regresiones directamente afectadas por los archivos, esquema o contratos modificados.
 2. Una prueba ya aprobada no se repite dentro de la misma tarea salvo que un cambio pueda invalidarla, haya fallado y sido corregida, o sea necesaria para verificar una interacción nueva.
@@ -43,6 +45,7 @@ La cobertura final TP01–TP64 y el criterio de aceptación no cambian. Para evi
 7. La evidencia original de T08 conserva validez para estructura/compatibilidad legacy de `pago`; el delta T09 deberá repetir los invariantes legacy afectados por agregar `cobro_id`, sin fabricar cabeceras retroactivas.
 8. T09 será el checkpoint ampliado del núcleo financiero T03–T09.
 9. T13 conserva la puerta integral definitiva: TP01–TP61, SQL, seguridad, concurrencia, regresión H1–H6/PM-001, `typecheck` y `build`.
+10. T15 ejecutará los casos de apertura/cierre, seguridad y UI afectados, más un replay/checkpoint proporcional a la nueva migración, sin repetir suites no invalidadas.
 
 ## Ajuste detectado durante TP62
 
@@ -54,7 +57,7 @@ El comportamiento construido trataba cada fila `pago` como un acto independiente
 4. ajustar lecturas, documentos, auditoría y reportes para agrupar por cobro;
 5. ejecutar sólo las regresiones invalidadas y terminar con el checkpoint integral aplicable antes de volver a T14.
 
-Esta homologación no autoriza implementación, migración ni despliegue. Las horas existentes se conservan como estimación aprobada de las unidades T01–T14; cualquier variación real del delta deberá estimarse al autorizar su construcción, sin alterar la referencia histórica de 30–40 horas.
+Esta homologación no autoriza implementación, migración ni despliegue. Las horas existentes de T01–T14 se conservan; T15 estima por separado el delta aprobado de notificaciones, sin alterar la referencia histórica de 30–40 horas.
 
 ## Estimación
 
@@ -62,9 +65,9 @@ La estimación de construcción excluye T01–T02 ya realizadas en Spec Mode y a
 
 | Alcance | Construcción futura | Con Spec Mode T01–T02 | Comparación con plan 30–40 h |
 |---|---:|---:|---|
-| Operación financiera de caja | **53 h** | **59 h** | +13 h sobre máximo de referencia (construcción) |
+| Operación financiera de caja, incluido delta de notificaciones | **59 h** | **65 h** | +19 h sobre máximo de referencia (construcción) |
 
-La referencia histórica de **30–40 horas** se conserva intacta. T01 (4 h) y T02 (2 h) suman **6 h de Spec Mode completado**; T03–T14 suman **53 h de construcción futura**; el total planificado de E1 permanece en **59 h**. La aprobación de decisiones cambia el estado de T02, no su estimación ni el total. El alcance financiero todavía supera la referencia; no se fuerza la cifra ni se elimina trazabilidad o seguridad.
+La referencia histórica de **30–40 horas** se conserva intacta. T01 (4 h) y T02 (2 h) suman **6 h de Spec Mode completado**; T03–T14 conservan sus **53 h** y T15 añade **6 h**, por lo que la construcción planificada suma **59 h** y el total con Spec Mode asciende a **65 h**. El alcance financiero todavía supera la referencia; no se fuerza la cifra ni se elimina trazabilidad o seguridad.
 
 ## Riesgos de planificación
 

@@ -16,6 +16,8 @@ La evolución es aditiva salvo el contrato de pago único, que debe transformars
 | `descuento_pedido` | Snapshot único vigente por pedido para esta evolución: tipo `IMPORTE`/`PORCENTAJE`, valor solicitado, subtotal base, importe aplicado, total neto, motivo, solicitante, autorizador y timestamps. |
 | `cobro` | Cabecera mínima e inmutable de un acto de cobro: `id`, pedido, sesión, actor, total aplicado, propina total derivable, saldo anterior/posterior, hora servidor e idempotencia única en su contexto. Agrupa uno o varios medios y origina un único documento/evento lógico. |
 | `auditoria_caja` | Evento append-only específico: tipo, local, sesión/pedido/cobro/pago/movimiento opcionales, actor/autorizador, valores anteriores/nuevos acotados y hora. No reemplaza `historial_estado`. |
+| `notificacion_caja` | Evento interno mínimo `APERTURA`/`CIERRE`: `id`, `local_id`, `sesion_caja_id`, `auditoria_caja_id`, tipo, prioridad `INFORMATIVA`/`ALERTA` y hora servidor. `auditoria_caja_id` es único y evita duplicación ante reintentos. No copia importes ni snapshots financieros. |
+| `notificacion_caja_destinatario` | Entrega por administrador: `notificacion_caja_id`, `administrador_id`, `leida_en`; clave única por notificación/destinatario. Materializa únicamente los `ADMINISTRADOR` activos del mismo local al producirse el evento y conserva lectura individual entre sesiones. |
 | `pago` evolucionado | Cada fila representa un medio dentro de un acto: agregar `cobro_id`, conservar sesión/actor/hora por compatibilidad y trazabilidad, `medio`, `importe` aplicado a venta y `propina` separada. Para filas nuevas `cobro_id` es obligatorio; las legacy pueden permanecer sin cabecera identificadas explícitamente. |
 
 No se propone una tabla genérica de “autorizaciones”: los únicos casos actuales son descuento y anulación, con semánticas diferentes. La autorización de descuento vive en `descuento_pedido`; la anulación se registra como evento de auditoría y transición de pedido. Tampoco se crea `cuenta`, `subcuenta`, `pago_detalle` ni contabilidad de doble partida.
@@ -29,7 +31,7 @@ RPC conceptual `abrir_sesion_caja(p_caja_id, p_monto_inicial, p_idempotency_key)
 1. Obtiene `auth.uid()` y contexto; exige `CAJA`, mismo local, caja activa e importe no negativo.
 2. Bloquea la caja y consulta sesión abierta.
 3. Si ya existe una sesión abierta, no crea otra y devuelve su snapshot autorizado para que cualquier `CAJA` activo del mismo local continúe operándola; un reintento con igual clave retorna el resultado original.
-4. Inserta sesión `ABIERTA`, evento de auditoría y devuelve snapshot.
+4. Inserta sesión `ABIERTA`, evento de auditoría, notificación y destinatarios administrativos del mismo local, y devuelve snapshot.
 
 La restricción única parcial es la defensa final ante doble apertura por caja física. La sesión no pertenece exclusivamente a `abierta_por`: un cambio de cajero no provoca cierre ni arqueo. Toda operación posterior valida un actor `CAJA` activo del mismo local y lo registra independientemente.
 
@@ -54,12 +56,14 @@ RPC `cerrar_sesion_caja(p_sesion_id, p_efectivo_contado, p_motivo_diferencia, p_
 1. Valida actor `CAJA` activo, local y caja; no exige que sea `abierta_por`; bloquea caja y sesión.
 2. Impide nuevos pagos/movimientos tomando locks compatibles; las RPC de cobro/movimiento bloquean primero sesión y luego pedido cuando aplique.
 3. Calcula dentro de la transacción los snapshots por medio, movimientos, esperado y diferencia.
-4. Aplica DF-01/DF-02, guarda valores de cierre y `cerrada_por`, conserva `abierta_por`, marca `CERRADA` e inserta auditoría.
+4. Aplica DF-01/DF-02, guarda valores de cierre y `cerrada_por`, conserva `abierta_por`, marca `CERRADA` e inserta auditoría, notificación y destinatarios administrativos del mismo local.
 5. Los reportes leen snapshots de cierre; nunca los recalculan para alterar historia. Pueden mostrar un recálculo diagnóstico, sin sustituir lo guardado.
 
 La UI no ejecuta el cierre desde el primer clic. Primero presenta caja, inicial, cobros/propinas en efectivo, entradas, salidas, esperado, contado y la diferencia `contado - esperado`; exige motivo cuando esa diferencia no es cero y ofrece únicamente `Confirmar cierre`/`Volver`. Sólo la confirmación invoca la RPC y queda protegida contra doble envío. Después del éxito muestra el snapshot persistido como `REPORTE INTERNO DE CIERRE`, imprimible manualmente en formato térmico de 80 mm, no fiscal y sin recalcular la historia.
 
-La operación de cierre supervisor aprobada en DF-07 será separada, exigirá `ADMINISTRADOR`, motivo y auditoría, y conservará `abierta_por`, `cerrada_por` y el actor supervisor.
+Si la diferencia es distinta de cero, el resumen previo informa: `Se registrará la diferencia y se notificará al administrador.` Esto no introduce autorización ni espera administrativa. Tras el éxito, la UI puede confirmar: `Caja cerrada con diferencia. El administrador ha sido notificado.`
+
+La operación de cierre supervisor aprobada en DF-07 será separada, exigirá `ADMINISTRADOR`, motivo y auditoría, y conservará `abierta_por`, `cerrada_por` y el actor supervisor. Como todo cierre, genera la misma notificación idempotente para los administradores activos del local, sin crear un flujo de aprobación.
 
 ## D06. Descuentos autorizados
 
@@ -114,6 +118,8 @@ Cada cabecera `cobro` origina un único documento. Un acto parcial devuelve un r
 
 Los IDs, actores e importes principales se almacenan en columnas normalizadas; JSONB se usa únicamente para snapshots complementarios acotados por tipo de evento. La inserción ocurre dentro de cada RPC; los clientes no reciben privilegio de escritura. RLS permite lectura local según rol y jamás acceso cruzado.
 
+Las notificaciones no sustituyen ni duplican la auditoría. La apertura o cierre crea `notificacion_caja` en la misma transacción que su evento de `auditoria_caja`; una unicidad sobre `auditoria_caja_id` hace idempotente la generación. Por cada `ADMINISTRADOR` activo del local se inserta una relación destinataria, protegida además por unicidad `(notificacion_caja_id, administrador_id)`. El cierre usa prioridad `ALERTA` sólo cuando el snapshot persistido de diferencia es distinto de cero; los demás eventos usan `INFORMATIVA`. No existe estado de aprobación, decisión o revisión.
+
 ## D11. Lecturas, reportes y Realtime
 
 Crear snapshots RPC de sesión activa, cierre/histórico y reporte. Derivan local desde contexto servidor. El reporte suma las filas por medio, separa venta y propina, calcula efectivo sólo desde líneas `EFECTIVO` y cuenta el pedido una sola vez al llegar a `PAGADO`; `cobro` evita confundir N medios con N actos o duplicar venta.
@@ -122,9 +128,11 @@ Como soporte técnico aditivo de T10, `obtener_pedidos_pendientes_pago_caja()` c
 
 `rpc_obtener_movimientos_sesion_caja(p_sesion_id)` devuelve `id`, sesión, tipo, importe, motivo, actor ID/nombre y hora en orden cronológico. Sólo `CAJA` o `ADMINISTRADOR` activos pueden leer sesiones de su propio local; el local deriva del contexto servidor y la función resuelve el nombre sin ampliar el `SELECT` directo de `perfil_usuario`.
 
+Las lecturas conceptuales `rpc_obtener_notificaciones_caja()` y `rpc_marcar_notificacion_caja_leida(p_notificacion_id)` exigen `ADMINISTRADOR` activo y derivan usuario/local de `auth.uid()`. La primera devuelve únicamente entregas del administrador autenticado, recientes primero, junto con contador de no leídas, y compone caja, actor legible, hora e importes desde `auditoria_caja`, `caja` y snapshots de `sesion_caja`. El nombre del actor de apertura/cierre se resuelve dentro de esta RPC autorizada, sin ampliar el `SELECT` directo sobre `perfil_usuario`. La segunda sólo actualiza `leida_en` de la relación destinataria propia y es idempotente. `CAJA`, `MOZO`, `COCINA`, `anon`, otros locales y escritura directa quedan denegados.
+
 No publicar payload financiero como verdad. La opción mínima es conservar `pago` fuera de Realtime y hacer resync explícito después de comandos; para cambios de sesión/movimientos entre terminales, se pueden publicar tablas con RLS si la verificación confirma filtrado suficiente o usar una tabla de señales sin montos. La decisión técnica debe privilegiar no exponer importes por eventos. `pedido`/`mesa` siguen anunciando pago final.
 
-## D12. UX de Caja
+## D12. UX de Caja y Administración
 
 La cabecera fija usa automáticamente la única caja activa/configurada del local y muestra, en una fila cuando el ancho lo permite, código/nombre de caja, estado de sesión, inicial, esperado y acciones de movimientos/cierre. No repite el usuario conectado ni presenta selector de caja. Si existen cero o varias cajas activas, la UI informa la configuración inválida y no elige una arbitrariamente; la selección explícita se difiere a una evolución posterior sin eliminar el soporte backend para múltiples cajas. Sin sesión abierta, cobro y movimientos quedan deshabilitados y el foco es “Abrir caja”. Con sesión abierta, cualquier `CAJA` activo del local puede continuar y se priorizan pedidos pendientes/cobro; movimientos e historial quedan secundarios. La lista lateral de pedidos puede colapsarse: conserva una barra angosta con el control de expansión y etiquetas seleccionables por código de mesa, resaltando la selección vigente y permitiendo cambiar de pedido sin expandirla; admite desplazamiento vertical para listas largas, sin desplazamiento horizontal. Cierre presenta el resumen previo y la diferencia `contado - esperado` antes de habilitar la única confirmación mutante; `Volver` no cambia la sesión. Tras cerrar, la UI consume el snapshot persistido, permite imprimir manualmente el reporte interno de 80 mm y luego continuar sin sesión abierta.
 
@@ -134,11 +142,15 @@ Descuento muestra solicitante, autorización y motivo. Anulación muestra el adm
 
 La confirmación única presenta pedido/mesa, total del acto, detalle de medios, propina, saldo posterior y aviso de liberación cuando corresponda. Sólo confirmar invoca la RPC; `Volver` no muta. Doble clic/request en curso queda bloqueado. Todo resync/Realtime invalida el borrador/modal y obliga a revisar el snapshot autoritativo. PRECUENTA, RECIBO INTERNO parcial y TICKET INTERNO final reutilizan la misma base visual térmica, identidad local, aviso no fiscal, acciones e impresión, conservando el contenido propio definido para cada documento. En el panel del pedido se priorizan, en este orden, encabezado, resumen financiero compacto sin repetir el saldo del bloque de cobro, cobro, historial de pagos y productos. Los productos permanecen colapsados por defecto y se expanden al activar la división; su selección sigue siendo una calculadora separada y nunca representa medios ni persistencia por líneas.
 
+La interfaz de `ADMINISTRADOR` incorpora una campana visible con contador de entregas no leídas y una lista de notificaciones recientes. Aperturas y cierres con diferencia cero usan tratamiento informativo; los cierres con diferencia usan tratamiento de alerta ámbar o rojo y muestran diferencia y motivo. Marcar una entrega como leída actualiza únicamente el estado del administrador autenticado y persiste entre sus sesiones. No se muestran acciones `Aprobar`/`Rechazar` ni estado de aprobación.
+
 ## D13. Concurrencia y orden de bloqueos
 
 Orden recomendado: `caja` → `sesion_caja` → `pedido` → `mesa`; operaciones que no necesitan todos omiten los posteriores. Descuento/anulación/cobro bloquean pedido; cierre bloquea sesión antes de agregar totales; cobro bloquea sesión antes de pedido. Restricciones únicas/idempotencia complementan locks.
 
 Casos obligatorios: doble apertura/cierre/cobro, dos cobros sobre el mismo saldo, cobro vs cierre, cobro vs anulación, descuento vs cobro, reapertura vs primer cobro, dos parciales sobre el mismo saldo, error en una línea y reintento del cobro completo después de timeout. Todo error revierte cabecera, todas las líneas, auditoría, historial y estados juntos.
+
+La generación de notificación y destinatarios participa en la misma transacción que apertura/cierre. Un fallo revierte dominio, auditoría y notificación; un reintento idempotente recupera el resultado existente y no vuelve a entregar el evento.
 
 ## D14. Riesgos y compatibilidad
 
@@ -151,7 +163,8 @@ Casos obligatorios: doble apertura/cierre/cobro, dos cobros sobre el mismo saldo
 | Histórico sin sesión. | Permitir legacy identificable; nunca fabricar asociación retroactiva. |
 | Confundir N medios con N cobros/documentos. | Cabecera `cobro` obligatoria para nuevas filas; lecturas y documentos agrupan por ella. |
 | Migración de idempotencia por fila a idempotencia de cobro. | Nueva unicidad en cabecera; RPC anterior deja de ser vía de escritura una vez migrados consumidores. |
+| Duplicar datos financieros o convertir avisos en un sistema genérico. | Referenciar auditoría/snapshots, persistir sólo evento/destinatario/lectura y limitar tipos a `APERTURA`/`CIERRE`. |
 
 ## D15. Trazabilidad
 
-R01–R08 → D02–D05/D13; R09–R12 → D06–D07/D13; R13–R18 → D08–D09/D13; R19–R20 → D10; R21–R22 → D11–D12. Las tareas y pruebas conservan estos IDs.
+R01–R08 → D02–D05/D13; R09–R12 → D06–D07/D13; R13–R18 → D08–D09/D13; R19–R20 → D10; R21–R22 → D11–D12; R23 → D02–D05/D10–D13. Las tareas y pruebas conservan estos IDs.

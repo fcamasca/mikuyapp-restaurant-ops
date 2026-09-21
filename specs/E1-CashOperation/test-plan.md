@@ -25,15 +25,15 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | ID | Requisitos | Caso | Resultado esperado |
 |---|---|---|---|
 | E1-TP01 | R01 | Caja física vs sesión. | Varias sesiones históricas pertenecen a una caja; sólo una puede estar abierta. |
-| E1-TP02 | R01–R03 | Apertura normal con monto inicial cero/positivo. | Sesión abierta con actor/local/hora servidor y auditoría. |
+| E1-TP02 | R01–R03/R23 | Apertura normal con monto inicial cero/positivo. | Sesión abierta con actor/local/hora servidor y auditoría; cada `ADMINISTRADOR` activo del mismo local recibe una sola notificación informativa con caja, actor, hora y monto inicial. |
 | E1-TP03 | R02 | Doble apertura secuencial. | La segunda apertura sobre la misma caja devuelve el snapshot autorizado de la sesión vigente, sin error funcional, sin insertar otra sesión y sin alterar `abierta_por`. |
 | E1-TP04 | R02 | Doble apertura concurrente. | Sólo una llamada crea la sesión; la otra recupera esa misma sesión. Ambas observan el mismo `sesion_caja.id` y queda exactamente una `ABIERTA`. La RPC resuelve de forma segura cualquier conflicto interno `23505`, sin exponerlo como resultado funcional normal; la restricción única parcial permanece como defensa final. |
 | E1-TP05 | R01–R03 | Cajero B accede a la caja con sesión abierta por Cajero A. | Recupera y continúa la misma sesión sin cierre ni arqueo; `abierta_por` permanece Cajero A. |
-| E1-TP06 | R02–R03 | Reintento con misma idempotencia tras timeout. | Devuelve la misma apertura; no duplica auditoría. |
+| E1-TP06 | R02–R03/R23 | Reintento con misma idempotencia tras timeout. | Devuelve la misma apertura; no duplica auditoría, notificación ni destinatarios. |
 | E1-TP07 | R02 | Monto inicial negativo/null/NaN conceptual. | Rechazo servidor sin cambios. |
 | E1-TP08 | R01–R04 | Operación sobre sesión cerrada, otra caja, caja inactiva u otro local. | Rechazo servidor sin cambios ni filtración de datos. |
 | E1-TP09 | R03–R06/R19 | Cajeros A y B alternan pagos, entradas y salidas en la misma sesión. | Cada operación persiste su actor real; `abierta_por` no cambia. |
-| E1-TP10 | R03/R06 | Cajero B cierra la sesión abierta por Cajero A. | Cierre válido sin arqueo intermedio; quedan trazados `abierta_por=A` y `cerrada_por=B` con sus fechas. |
+| E1-TP10 | R03/R06/R23 | Cajero B cierra la sesión abierta por Cajero A. | Cierre válido sin arqueo intermedio; quedan trazados `abierta_por=A` y `cerrada_por=B` con sus fechas, y la notificación identifica a B como actor del cierre. |
 | E1-TP11 | R08 | Histórico por `CAJA` y `ADMINISTRADOR`. | Sólo sesiones del local autorizado, con actores por operación y apertura/cierre. |
 | E1-TP12 | R01–R08 | `MOZO`, `COCINA`, `anon` o perfil/rol/local inactivo ejecutan RPC/SELECT. | Denegado por grants/RLS y validación interna. |
 
@@ -45,8 +45,8 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP14 | R04 | **Salida de caja** y lote mixto de varias entradas/salidas. | Cada fila explícita queda trazable; el lote completo actualiza esperado con la fórmula vigente. |
 | E1-TP15 | R04 | Importe cero/negativo, motivo vacío, sesión cerrada o una fila inválida dentro del lote. | Rechazo atómico: cero movimientos, auditorías o cabecera idempotente parcial. |
 | E1-TP16 | R04–R05 | Entradas/salidas concurrentes, reintento del lote y reutilización conflictiva de clave. | Todos los eventos válidos se suman una vez; misma clave/datos retorna el lote original y otros datos se rechazan. |
-| E1-TP17 | R05–R07 | Cierre correcto sin diferencia. | El primer clic no muta; resumen previo muestra componentes, `contado - esperado = 0` y no exige motivo. Sólo confirmar ejecuta una vez la RPC; la sesión queda cerrada y el reporte posterior usa el snapshot persistido. |
-| E1-TP18 | R05–R07 | Diferencia, Volver, doble cierre y cierre vs cobro/movimiento. | Diferencia visible; motivo obligatorio si es distinta de cero; Volver no muta; sólo un cierre. El reporte interno conserva actores/fechas/importes del snapshot y permite impresión manual de 80 mm, no fiscal. La carrera cierre-vs-cobro se ejecuta en T05 después de T08. |
+| E1-TP17 | R05–R07/R23 | Cierre correcto sin diferencia. | El primer clic no muta; resumen previo muestra componentes, `contado - esperado = 0` y no exige motivo. Sólo confirmar ejecuta una vez la RPC; la sesión queda cerrada, el reporte posterior usa el snapshot persistido y cada administrador activo del local recibe una sola notificación informativa con diferencia cero. |
+| E1-TP18 | R05–R07/R23 | Diferencia, Volver, doble cierre y cierre vs cobro/movimiento. | Diferencia visible; motivo obligatorio si es distinta de cero; la UI avisa que se notificará al administrador, pero no exige aprobación. Volver no muta ni notifica; sólo un cierre/notificación. La alerta contiene esperado, contado, diferencia y motivo. El reporte interno conserva actores/fechas/importes del snapshot y permite impresión manual de 80 mm, no fiscal. La carrera cierre-vs-cobro se ejecuta en T05 después de T08. |
 
 ### Descuentos y anulaciones
 
@@ -94,11 +94,11 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 |---|---|---|---|
 | E1-TP49 | R19 | Reconstrucción de sesión compartida completa. | Apertura por A, movimientos/cobros por A y B, medios agrupados por acto, autorizaciones, anulación directa y cierre por B aparecen en orden con cada actor/hora. |
 | E1-TP50 | R19 | Valores anteriores/nuevos de descuento/anulación/cierre. | Snapshots suficientes y consistentes con tablas de dominio. |
-| E1-TP51 | R19–R20 | Cliente intenta INSERT/UPDATE/DELETE directo. | Denegado por privilegios/RLS; RPC única vía de escritura. |
-| E1-TP52 | R19–R20 | Manipulación de local/sesión/pedido IDs, incluida lectura/batch de movimientos por CAJA/ADMIN y rechazo a MOZO/COCINA/anon. | Sin lectura/escritura cruzada; respuesta no filtra datos y no se amplía lectura directa de perfiles. |
+| E1-TP51 | R19–R20/R23 | Cliente intenta INSERT/UPDATE/DELETE directo, incluso sobre notificaciones/destinatarios. | Denegado por privilegios/RLS; RPC autorizada es la única vía de escritura y sólo permite al administrador marcar su propia entrega como leída. |
+| E1-TP52 | R19–R20/R23 | Manipulación de local/sesión/pedido/notificación IDs, incluida lectura/batch de movimientos por CAJA/ADMIN y rechazo a CAJA/MOZO/COCINA/anon para notificaciones. | Sin lectura/escritura cruzada; otro local no puede descubrir ni marcar avisos, la respuesta no filtra datos y no se amplía lectura directa de perfiles. |
 | E1-TP53 | R20 | Intento de borrar actor/caja/pedido referenciado. | `ON DELETE RESTRICT` conserva trazabilidad. |
-| E1-TP54 | R19–R20 | Error a mitad de RPC, incluida una línea intermedia de un cobro multi-medio. | Cabecera, todas las líneas, dominio y auditoría revierten juntos; cero huérfanos. |
-| E1-TP55 | R19–R20 | Funciones/owners/search_path/grants/policies, incluidas RPC de lectura y lote de movimientos. | `SECURITY DEFINER` endurecido; `PUBLIC`/`anon` revocados; mínimo privilegio y escritura directa denegada. |
+| E1-TP54 | R19–R20/R23 | Error a mitad de RPC, incluida una línea intermedia de un cobro multi-medio o la generación de destinatarios de apertura/cierre. | Cabecera, todas las líneas, dominio, auditoría y notificaciones revierten juntos; cero huérfanos. |
+| E1-TP55 | R19–R20/R23 | Funciones/owners/search_path/grants/policies, incluidas RPC de lectura/lote de movimientos y lectura/marcado de notificaciones. | `SECURITY DEFINER` endurecido; `PUBLIC`/`anon` revocados; mínimo privilegio, aislamiento por destinatario/local y escritura directa denegada. |
 
 ### Reportes, regresión y responsive
 
@@ -107,21 +107,21 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | E1-TP56 | R21 | Reporte de sesión con cobro multi-medio y todos los conceptos. | Apertura, cada medio, entradas/salidas, esperado, diferencia, descuentos, anulaciones, propinas y parciales concilian; venta no se duplica por agrupación. |
 | E1-TP57 | R21 | Resumen diario con cobros multi-medio y parciales. | Cada medio suma su parte, cada acto conserva identidad y el pedido se cuenta una sola vez al completar. |
 | E1-TP58 | R21 | Fecha Lima, dos locales y exportación. | Corte `America/Lima`, aislamiento y CSV coherente. |
-| E1-TP59 | R22 | UI sin caja abierta, vacía, cargando, error/reintento y grilla de movimientos sin históricos. | Estado inequívoco; `+` inicia la primera fila; históricos bloqueados, nuevas editables y responsive sin perder columnas/controles. |
-| E1-TP60 | R22 | Confirmación única, doble clic/respuesta obsoleta y edición de movimientos con `+`, `−`, Guardar y Cancelar. | Cobro conserva su protección; Cancelar no persiste y Guardar invoca una vez el lote, refresca esperado/histórico y muestra confirmación. |
+| E1-TP59 | R22–R23 | UI sin caja abierta, vacía, cargando, error/reintento, grilla de movimientos sin históricos y bandeja administrativa sin notificaciones. | Estado inequívoco; `+` inicia la primera fila; históricos bloqueados, nuevas editables y responsive sin perder columnas/controles. La campana muestra contador correcto, lista reciente y tratamiento normal/alerta según diferencia. |
+| E1-TP60 | R22–R23 | Confirmación única, doble clic/respuesta obsoleta, edición de movimientos y lectura de notificaciones. | Cobro conserva su protección; Cancelar no persiste y Guardar invoca una vez el lote. Marcar una notificación leída actualiza una vez el contador y el estado persiste al cerrar sesión y volver a entrar. |
 | E1-TP61 | Todos | Regresión H1–H6/PM-001, SQL, typecheck, build y verificaciones de seguridad/concurrencia previstas en las tareas. | Cobro total de uno/N medios, entrega, terminalidad, reportes, RLS, Realtime e invariantes concurrentes sin regresión. |
 
 ## 3. Pruebas humanas
 
 | ID | Escenario | Evidencia requerida |
 |---|---|---|
-| E1-TP62 | Jornada de Caja en PC: abrir, cobro total de uno y varios medios (incluido repetido), `Cobrar una parte`, dos actos parciales, propina, entrada, **salida** y cierre con/sin diferencia. | Capturas/registro; composición/confirmación/documento por acto inequívocos. El cierre se revisa antes de mutar, Volver conserva la sesión, diferencia exige motivo y el reporte interno posterior se imprime manualmente en 80 mm desde snapshots. TP62 permanece abierto hasta repetir humanamente ambos cierres. |
+| E1-TP62 | Jornada de Caja en PC: abrir, cobro total de uno y varios medios (incluido repetido), `Cobrar una parte`, dos actos parciales, propina, entrada, **salida** y cierre con/sin diferencia; validación administrativa de avisos. | Capturas/registro; composición/confirmación/documento por acto inequívocos. El cierre se revisa antes de mutar, Volver conserva la sesión, diferencia exige motivo y avisa que se notificará sin pedir aprobación; el reporte interno posterior se imprime manualmente en 80 mm desde snapshots. En ADMIN, campana/contador/lista, alerta de diferencia y lectura persistente se validan humanamente. TP62 permanece abierto. |
 | E1-TP63 | Descuento solicitado por `CAJA` y autorizado por `ADMINISTRADOR`; anulación ejecutada directamente por `ADMINISTRADOR`, incluidos rechazos. | Descuento conserva solicitante/autorizador; anulación conserva únicamente actor administrador, motivo, fecha/hora y efectos en pedido/mesa/reportes. |
 | E1-TP64 | Responsive aplicable: Caja PC principal, tablet como contingencia y regresión del flujo de mozo/cocina. | Acciones críticas visibles sin solapamiento; flujo mesa→pago y Realtime conservados. |
 
 ## 4. Datos y concurrencia
 
-Fixtures mínimos: dos locales; dos cajas; dos usuarios `CAJA`; un `ADMINISTRADOR`; `MOZO`/`COCINA`; sesiones abiertas/cerradas; pedidos en cada estado; descuentos; pagos legacy sin cabecera; cobros de uno/N medios, parciales y finales; movimientos; propinas. Los fixtures se crean y limpian en transacciones o procedimientos aprobados sólo en DEV.
+Fixtures mínimos: dos locales; dos cajas; dos usuarios `CAJA`; dos `ADMINISTRADOR` activos del mismo local, uno inactivo y otro administrador de distinto local; `MOZO`/`COCINA`; sesiones abiertas/cerradas; pedidos en cada estado; descuentos; pagos legacy sin cabecera; cobros de uno/N medios, parciales y finales; movimientos; propinas. Los fixtures se crean y limpian en transacciones o procedimientos aprobados sólo en DEV.
 
 Las pruebas concurrentes usarán conexiones/sesiones distintas y barreras reproducibles; no se simulará concurrencia sólo con llamadas secuenciales. Después de cada caso se verifican conteos, sumas, estados, locks liberados, auditoría y ausencia de residuos.
 
@@ -129,8 +129,8 @@ La evidencia original de T08 valida los aspectos estructurales/legacy entonces a
 
 ## 5. Criterio de aprobación
 
-- DF-01–DF-04 y DF-06–DF-09 aprobadas y reflejadas en el spec; EC-06–EC-08 conservadas como decisiones cerradas.
-- TP01–TP61 automatizadas/técnicas aprobadas y TP62–TP64 aprobadas humanamente.
+- DF-01–DF-04 y DF-06–DF-10 aprobadas y reflejadas en el spec; EC-06–EC-08 conservadas como decisiones cerradas.
+- TP01–TP61 automatizadas/técnicas vigentes aprobadas después de revalidar el delta T15, y TP62–TP64 aprobadas humanamente.
 - Cero sobrepago, doble apertura/cierre/cobro, cobro multi-medio parcial, acceso cruzado o auditoría faltante; idempotencia por acto y atomicidad de todas sus líneas.
 - Regresión vigente completa, migraciones local/DEV alineadas y defectos no bloqueantes clasificados.
 - Ninguna aceptación se crea hasta aprobación explícita del usuario.
@@ -148,6 +148,7 @@ La evidencia original de T08 valida los aspectos estructurales/legacy entonces a
 | R19–R20 | D10 | T11 | TP49–TP55 |
 | R21 | D11 | T12 | TP56–TP58 |
 | R22 | D12 | T10, T13–T14 | TP59–TP64 |
+| R23 | D02–D05, D10–D13 | T15 | TP02, TP06, TP10, TP17–TP18, TP51–TP52, TP55, TP59–TP60, TP62 |
 
 ## 7. Evidencia incremental de E1-T04
 
