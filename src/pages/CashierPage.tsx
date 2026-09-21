@@ -59,6 +59,11 @@ const formatDiscountValue = (discount: AdminDiscount) =>
   discount.tipo === "PORCENTAJE"
     ? `${Number(discount.valor_solicitado).toFixed(2)}%`
     : money.format(discount.valor_solicitado);
+const discountStatusText: Readonly<Record<AdminDiscount["estado"], string>> = {
+  PENDIENTE: "Solicitud pendiente de autorización",
+  AUTORIZADO: "Descuento autorizado y aplicado",
+  RECHAZADO: "Solicitud de descuento rechazada",
+};
 const userInitials = (name: string) => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "U";
@@ -336,6 +341,7 @@ export default function CashierPage({
     [selectedId, setSelectedId] = useState<number | null>(null),
     [payments, setPayments] = useState<readonly PaymentHistory[]>([]),
     [discount, setDiscount] = useState<AdminDiscount | null>(null),
+    [discountLoading, setDiscountLoading] = useState(false),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
@@ -495,15 +501,24 @@ export default function CashierPage({
     if (!service || !selected) {
       setPayments([]);
       setDiscount(null);
+      setDiscountLoading(false);
       return;
     }
+    let active = true;
+    setError(null);
+    setDiscount(null);
+    setDiscountMode(false);
+    setDiscountLoading(true);
     void Promise.all([
       service.getPayments(context, selected.orderId),
       service.getOrderDiscount(context, selected.orderId),
     ]).then(([p, d]) => {
+      if (!active) return;
       if (p.ok) setPayments(p.data);
       if (d.ok) setDiscount(d.data);
+      setDiscountLoading(false);
     });
+    return () => { active = false; };
   }, [context, selected, service]);
   const run = async (
     action: () => Promise<{ ok: boolean; error?: { message: string } }>,
@@ -542,6 +557,18 @@ export default function CashierPage({
   const totalToReceive = saleAmount + totalTip;
   const invalidLines = preparedLines.some((line) => !Number.isFinite(line.amount) || line.amount <= 0 || !Number.isFinite(line.tip) || line.tip < 0);
   const difference = paymentToApply - preparedTotal;
+  const requestedDiscount = n(discountValue);
+  const discountValidationMessage = discountValue.trim() === ""
+    ? "Ingresa el valor del descuento."
+    : !Number.isFinite(requestedDiscount) || requestedDiscount <= 0
+      ? "El descuento debe ser mayor que cero."
+      : discountType === "IMPORTE" && requestedDiscount > (selected?.subtotal ?? 0)
+        ? `El descuento no puede superar el subtotal de ${money.format(selected?.subtotal ?? 0)}.`
+        : discountType === "PORCENTAJE" && requestedDiscount > 100
+          ? "El porcentaje no puede superar 100%."
+          : discountReason.trim() === ""
+            ? "Ingresa el motivo del descuento."
+            : null;
   const accumulatedPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const chronologicalPayments = [...payments].sort(
     (left, right) => new Date(left.paidAt).getTime() - new Date(right.paidAt).getTime(),
@@ -899,21 +926,22 @@ export default function CashierPage({
                   </div>
                   {moreOptions && <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
                     <button className={secondaryButtonClass} type="button" onClick={() => { setProductsOpen(true); setDivideMode(true); setDiscountMode(false); setMoreOptions(false); }}>Dividir por productos</button>
-                    <button className={secondaryButtonClass} disabled={selected.paid > 0} type="button" onClick={() => { setDiscountMode(true); setDivideMode(false); setMoreOptions(false); }}>Solicitar descuento</button>
+                    {!discountLoading && !discount && <button className={secondaryButtonClass} disabled={selected.paid > 0} type="button" onClick={() => { setDiscountMode(true); setDivideMode(false); setMoreOptions(false); }}>Solicitar descuento</button>}
                   </div>}
                 </form>
                 {confirmationNotice && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="status">{confirmationNotice}</p>}
                 {discount && (
-                  <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                    Descuento: <b>{discount.estado}</b> · {discount.tipo} · {formatDiscountValue(discount)}
+                  <p className={`mt-4 rounded-xl border p-3 text-sm ${discount.estado === "AUTORIZADO" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : discount.estado === "RECHAZADO" ? "border-stone-300 bg-stone-50 text-stone-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+                    <b>{discountStatusText[discount.estado]}</b> · {discount.tipo} · {formatDiscountValue(discount)}
                   </p>
                 )}
-                {discountMode && <form
+                {discountMode && !discountLoading && !discount && <form
                   className="mt-4 rounded-xl border border-stone-200 bg-white p-4"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    if (discountValidationMessage) return;
                     if (service) void run(async () => {
-                      const result = await service.requestDiscount(context, selected.orderId, discountType, n(discountValue), discountReason, key());
+                      const result = await service.requestDiscount(context, selected.orderId, discountType, requestedDiscount, discountReason.trim(), key());
                       if (result.ok) setDiscountMode(false);
                       return result;
                     });
@@ -929,13 +957,14 @@ export default function CashierPage({
                       </select>
                     </label>
                     <label className="block text-sm font-semibold text-stone-700">Valor
-                      <input className={fieldClass} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} />
+                      <input className={fieldClass} max={discountType === "IMPORTE" ? selected.subtotal : 100} min="0.01" step={discountType === "IMPORTE" ? "0.01" : "0.0001"} type="number" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} />
                     </label>
                     <label className="block text-sm font-semibold text-stone-700">Motivo
                       <input className={fieldClass} value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} />
                     </label>
                   </div>
-                  <button className={`${secondaryButtonClass} mt-4 w-full sm:w-auto`} disabled={busy || selected.paid > 0}>
+                  {discountValidationMessage && <p className="mt-3 text-sm font-semibold text-amber-800" role="status">{discountValidationMessage}</p>}
+                  <button className={`${secondaryButtonClass} mt-4 w-full sm:w-auto`} disabled={busy || selected.paid > 0 || discountValidationMessage !== null}>
                     Solicitar descuento
                   </button>
                 </form>}

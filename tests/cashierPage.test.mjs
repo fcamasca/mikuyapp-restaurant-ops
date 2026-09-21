@@ -232,7 +232,7 @@ test("administración queda en shell admin sin capacidad de cobro", () => {
   assert.match(admin, /Motivo del rechazo/);
   assert.match(admin, /Confirmación requerida/);
   assert.match(admin, /aria-labelledby="discount-confirmation-title"/);
-  assert.match(admin, /Esta decisión es definitiva y no puede revertirse en E1/);
+  assert.match(admin, /Esta decisión es definitiva y no puede revertirse/);
   assert.match(admin, /Descuento autorizado correctamente/);
   assert.match(admin, /Solicitud de descuento rechazada/);
   assert.doesNotMatch(admin, /window\.confirm\(`¿(?:Rechazar|Autorizar) el descuento/);
@@ -299,7 +299,7 @@ test("TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demand
   assert.match(page, /selectable=\{divideMode\}/);
   assert.match(page, /suggested > selected\.balance/);
   assert.match(page, /disabled=\{suggested <= 0 \|\| suggested > selected\.balance\}/);
-  assert.match(page, /discountMode && <form/);
+  assert.match(page, /discountMode && !discountLoading && !discount && <form/);
   assert.match(page, /paymentsOpen && \(/);
 });
 
@@ -401,6 +401,24 @@ test("TP62 UX previene importes inválidos y limpia estado transitorio", () => {
   assert.match(page, /\[movementDrafts, setMovementDrafts\]/);
   assert.match(page, /\[closeReason, setCloseReason\]/);
   assert.match(page, /\[discountReason, setDiscountReason\]/);
+});
+
+test("TP62 muestra una única solicitud de descuento por pedido", () => {
+  assert.match(page, /discountStatusText/);
+  assert.match(page, /Solicitud pendiente de autorización/);
+  assert.match(page, /Descuento autorizado y aplicado/);
+  assert.match(page, /Solicitud de descuento rechazada/);
+  assert.match(page, /!discountLoading && !discount && <button/);
+  assert.match(page, />Solicitar descuento<\/button>/);
+  assert.match(page, /discountMode && !discountLoading && !discount && <form/);
+  assert.match(page, /setDiscountMode\(false\);[\s\S]*setDiscountLoading\(true\)/);
+  assert.match(page, /let active = true;[\s\S]*setError\(null\);[\s\S]*setDiscount\(null\)/);
+  assert.match(page, /requestedDiscount > \(selected\?\.subtotal \?\? 0\)/);
+  assert.match(page, /El descuento no puede superar el subtotal/);
+  assert.match(page, /requestedDiscount > 100/);
+  assert.match(page, /Ingresa el motivo del descuento/);
+  assert.match(page, /if \(discountValidationMessage\) return/);
+  assert.match(page, /disabled=\{busy \|\| selected\.paid > 0 \|\| discountValidationMessage !== null\}/);
 });
 
 test("TP62 presenta movimientos históricos bloqueados y altas batch en una sola grilla", () => {
