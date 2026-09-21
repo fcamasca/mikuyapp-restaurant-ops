@@ -23,6 +23,9 @@ test("E1-TP59: Inicio conserva KPI, vacíos, caja cerrada y medios en cero", () 
   assert.match(home, /Mayor espera/);
   assert.match(home, /Promedio/);
   assert.match(home, /Ver pedidos/);
+  assert.match(home, /disabled=\{group\.count === 0\}/);
+  assert.match(home, /group\.count > 0 && selectedFlow === group\.code/);
+  assert.match(home, /attentionCount === 1 \? "p-3 sm:p-4" : "p-4 sm:p-5"/);
   assert.match(home, /role="table"/);
   assert.match(home, /setSelectedFlow\(null\)/);
   assert.doesNotMatch(home, /Actualizar estado|Recibir pedido|Marcar listo/);
