@@ -14,6 +14,7 @@ import type { ValidatedProfileContext } from "../services/profileContext";
 import AuthenticatedUserMenu from "../components/AuthenticatedUserMenu";
 import { getSupabaseClient } from "../services/supabaseClient";
 import CashAdministrationPanel from "../components/CashAdministrationPanel";
+import CashNotificationBell from "../components/CashNotificationBell";
 
 interface CategoryAdministrationPageProps {
   readonly context: ValidatedProfileContext;
@@ -538,6 +539,7 @@ export default function CategoryAdministrationPage({
           </div>
 
           <div className="flex w-full flex-wrap gap-3 sm:w-auto">
+            <CashNotificationBell context={context} />
             <button
               className="min-h-11 flex-1 rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-800 hover:bg-stone-50 sm:flex-none"
               onClick={onNavigateToTechnical}

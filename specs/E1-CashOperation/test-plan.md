@@ -286,3 +286,20 @@ Regresión `h6_t02_sales_exports.sql`: aprobada. Pruebas Node/React directamente
 T13 aprobó nuevamente la matriz técnica completa **TP01–TP61** sobre el delta de cobro. El replay limpio final aplicó las **43 migraciones** y el seed sobre PostgreSQL 17 local, aislado, sin red ni bind mounts. Aprobaron las regresiones SQL aplicables H1–H6/PM-001/E1, los deltas T09–T12, seguridad final, cinco carreras de cobro con conexiones independientes, **311/311 pruebas Node/React**, `typecheck`, `build` y `git diff --check`. Las inspecciones históricas basadas en inventarios/fingerprints exactos se homologaron únicamente para admitir los objetos y columnas aditivos aprobados, conservando sus invariantes de permisos y contratos. No existe script/dependencia de lint, por lo que no se ejecutó ni se incorporó una herramienta nueva. Evidencia detallada: `implementation-t13.md`.
 
 TP62–TP64 y T14 permanecen pendientes de ejecución humana; E1 no está aceptada.
+
+## 17. Evidencia incremental de E1-T15
+
+T15 se validó mediante replay limpio de **45 migraciones** y `supabase/seed.sql` en la base PostgreSQL local aislada `e1_t15_951aac247c5345e1a8943b4d7a78209e`. La migración final es `20260921000100_e1_t15_notificaciones_caja.sql`; no se aplicó a DEV remoto ni PROD.
+
+| TP | Evidencia T15 | Estado |
+|---|---|---|
+| TP02/TP06 | Una apertura real creó una notificación; el reintento devolvió la misma sesión sin duplicar notificación ni destinatarios. | Aprobada |
+| TP10 | La notificación de cierre conservó como actor al cajero que cerró, aunque fuera distinto de quien abrió. | Aprobada |
+| TP17 | Cierre con diferencia cero creó una única notificación `INFORMATIVA` con esperado, contado y diferencia cero. | Aprobada |
+| TP18 | Cierre con diferencia creó una única `ALERTA` con diferencia y motivo, sin aprobación administrativa; reintento sin duplicados. | Aprobada |
+| TP51/TP52 | Escritura directa denegada; CAJA/MOZO/COCINA/anon y otro local no pudieron leer ni marcar entregas. | Aprobada |
+| TP54 | Fallo inducido al insertar destinatarios revirtió sesión, auditoría, notificación y entregas; cero huérfanos. | Aprobada |
+| TP55 | RPC `SECURITY DEFINER`, owner `postgres`, `search_path=pg_catalog`, grants mínimos y RLS activa. ADMIN no pudo leer directamente el perfil del cajero; el nombre se resolvió dentro de la RPC. | Aprobada |
+| TP59/TP60 | Campana, contador, vacío/error, prioridades informativa/alerta y marcado individual persistente cubiertos por SQL y frontend. | Aprobada técnicamente |
+
+Dos administradores activos del local recibieron una entrega cada uno; el administrador inactivo y el de otro local no recibieron ninguna. La lectura de un administrador no alteró la entrega del otro. Las regresiones SQL directamente afectadas T04, T05 y T11 aprobaron. Aprobaron **58/58 pruebas Node/React afectadas**, `typecheck` y `build`; el único warning fue el tamaño de chunk de Vite. TP62 no se ejecutó ni se marcó aprobado.

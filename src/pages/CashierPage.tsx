@@ -1114,6 +1114,7 @@ export default function CashierPage({
                 <div className="sm:col-span-2"><dt className="text-stone-600">Diferencia (contado - esperado)</dt><dd className={`text-lg font-bold ${closeDifference === 0 ? "text-emerald-700" : "text-rose-700"}`}>{money.format(closeDifference)}</dd></div>
                 {closeReasonRequired && <div className="sm:col-span-2"><dt className="text-stone-600">Motivo de diferencia</dt><dd className="font-bold">{closeReason.trim() || "Debe ingresar un motivo antes de confirmar."}</dd></div>}
               </dl>
+              {closeReasonRequired && <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Se registrará la diferencia y se notificará al administrador.</p>}
               <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button className={auxiliaryButtonClass} disabled={busy} onClick={() => { setCloseConfirmation(false); closeKeyRef.current = null; }} type="button">Volver</button>
                 <button
