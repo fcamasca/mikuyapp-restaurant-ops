@@ -79,7 +79,7 @@ test("E1-TP59/60/63/64: Pedidos ADMIN conserva lectura, anulación y responsive 
   assert.match(orders, /Cargando pedidos/);
   assert.match(orders, /No hay pedidos actuales en el local/);
   assert.match(orders, /Reintentar/);
-  assert.match(orders, /\['Mesa', 'Pedido', 'Estado', 'Pago', 'Acción'\]/);
+  assert.match(orders, /\['Mesa', 'Pedido', 'Estado', 'Cuenta', 'Acción'\]/);
   assert.match(orders, /hidden grid-cols/);
   assert.match(orders, /grid grid-cols-2/);
   assert.doesNotMatch(orders, /overflow-x-auto|overflow-x-scroll/);

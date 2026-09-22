@@ -146,6 +146,7 @@ export interface AdminOrder {
   tableName: string;
   orderStatus: string;
   tableStatus: string;
+  updatedAt: string;
   hasPayments: boolean;
   paymentCount: number;
   subtotal: number;
@@ -619,6 +620,7 @@ const adminOrder = (x: Record<string, unknown>): AdminOrder => ({
   tableName: String(x.mesa_nombre),
   orderStatus: String(x.pedido_estado),
   tableStatus: String(x.mesa_estado),
+  updatedAt: String(x.ultima_actualizacion_en ?? x.creado_en),
   hasPayments: Boolean(x.tiene_pagos),
   paymentCount: Number(x.cantidad_pagos),
   subtotal: Number(x.subtotal),
