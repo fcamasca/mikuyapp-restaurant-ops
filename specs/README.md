@@ -10,3 +10,4 @@ Los documentos pueden conservar prefijos históricos del hito. Cada paquete reú
 - [H4 — Cocina en tiempo real](H4-KitchenRealtime/): cerrado, validado y aceptado.
 - [H5 — Caja e impresión](H5-DeliveryCashPaymentPrint/): cerrado, validado y aceptado.
 - [H6 — MVP liberado](H6-MVPReleased/): cerrado, validado y aceptado.
+- [E1 — Operación de caja](E1-CashOperation/): cerrada, validada y aceptada.

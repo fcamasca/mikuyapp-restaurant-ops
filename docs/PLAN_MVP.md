@@ -561,6 +561,8 @@ El MVP se considerará terminado si:
 
 ### Evolución 1 — Operación de caja (30–40 horas)
 
+**Estado: CERRADA Y APROBADA — 21/09/2026.** La referencia histórica de **30–40 horas** se conserva sin cambios.
+
 - Apertura y cierre de caja.
 - Movimientos de efectivo.
 - Descuentos autorizados.

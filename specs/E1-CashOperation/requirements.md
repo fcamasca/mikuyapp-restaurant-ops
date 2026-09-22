@@ -2,7 +2,7 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-El Spec Mode de **Evolución 1 — Operación de caja**, incluido Inicio ADMIN y su `Flujo actual de pedidos`, está aprobado y la construcción se encuentra en validación humana. T03–T13 y T15 completaron su validación técnica local; T16 y T17 fueron construidas y validadas técnicamente en frontend local. TP62 está aprobado humanamente, TP63 está en ejecución y TP64 permanece pendiente; T14 continúa la validación humana en TP63 y E1 no está aceptada. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido.
+La **Evolución 1 — Operación de caja**, incluido Inicio ADMIN y su `Flujo actual de pedidos`, quedó implementada, validada, aprobada y cerrada el **21/09/2026**. T01–T17 están completadas y TP62, TP63 y TP64 quedaron aprobadas humanamente. La referencia histórica del plan es **30–40 horas**; no representa tiempo consumido y permanece intacta.
 
 `main`/`origin/main` en `f76c190`, verificado entonces sin cambios locales, se conserva como baseline histórica del inicio del Spec Mode y no describe el estado actual del árbol de trabajo. El MVP v1.0.0 y PM-001 están aceptados. PM-002 permanece `TRANSITIONING`; esta evolución no lo modifica y la construcción debe respetar su matriz de ambientes.
 
@@ -109,7 +109,7 @@ El objetivo es ampliar la estación de Caja para controlar turnos, efectivo, des
 | DF-09 | División mediante selección de productos. | La selección sólo ayuda a calcular; se persiste importe, no asignación histórica por líneas. |
 | DF-10 | Notificaciones administrativas de apertura y cierre. | Toda apertura/cierre notifica una vez a cada `ADMINISTRADOR` activo del mismo local. Apertura y cierre sin diferencia son informativos; cierre con diferencia se destaca como alerta e incluye el motivo. La notificación no solicita ni registra aprobación. |
 
-EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaciones mínimas elegidas. T15 y la construcción técnica previa de R24/D16/T16 están validadas localmente. El delta documental que restituye el acceso visible a la anulación está aprobado y habilita la construcción de T17. TP62 está aprobado humanamente, TP63 está en ejecución, TP64 permanece pendiente y E1 no está aceptada.
+EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaciones mínimas elegidas. T15–T17 quedaron validadas y las pruebas humanas TP62–TP64 fueron aprobadas. E1 queda formalmente **APROBADA Y CERRADA**.
 
 ## 6. Fuera de alcance
 

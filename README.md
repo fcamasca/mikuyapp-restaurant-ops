@@ -6,7 +6,11 @@
 
 Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedido → cocina → entrega → pago**.
 
-**Estado actual:** MVP v1.0.0 H1–H6 cerrado, validado, aceptado y operativo en producción. Los cambios posteriores se registran en la [bitácora post-MVP](docs/POST_MVP_CHANGELOG.md).
+## Estado actual
+
+El MVP v1.0.0 H1–H6 está cerrado, validado y aceptado. La **Evolución 1 — Operación de caja** también quedó aprobada y cerrada el **21/09/2026**. E1 amplía el control diario de Caja y ofrece a Administración una vista operativa del local.
+
+Los cambios posteriores al MVP se registran en la [bitácora post-MVP](docs/POST_MVP_CHANGELOG.md). La disponibilidad en producción depende del proceso de despliegue de cada evolución.
 
 **Producción:** <https://mikuyapp.pages.dev/>
 
@@ -29,10 +33,25 @@ H1 establece la base técnica verificable, H2 incorpora autenticación, roles, c
 | H5 | Entrega, caja, cobro e impresión | Cerrado, validado y aceptado |
 | H6 | MVP liberado | Cerrado, validado y aceptado |
 | PM-001 | DB Standardization | Aceptado y desplegado |
+| E1 | Operación de caja e Inicio ADMIN | Cerrada, validada y aceptada |
 
 El plan base fue de **24 h**. La referencia de planificación vigente es **40.5 h**, incluida la reestimación aprobada de H5 de 4 h a 12 h; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
 
 Los cambios `PM-###` son posteriores al MVP y no reemplazan ni renumeran las Evoluciones 1–5 de [PLAN_MVP.md](docs/PLAN_MVP.md). PM-001 centralizó tres RPC de consulta mediante el contexto autenticado, incorporó el hardening `42501 / No autorizado` y estandarizó metadatos PostgreSQL sin ampliar el alcance funcional del MVP.
+
+## Qué incluye E1
+
+- Apertura, recuperación y cierre controlado de sesiones de caja.
+- Cobros totales o parciales, varios medios de pago y propinas separadas de la venta.
+- Precuenta, recibo parcial, ticket final y reporte interno de cierre imprimibles.
+- Entradas y salidas de efectivo con seguimiento del monto esperado.
+- Descuentos solicitados desde Caja y decididos por Administración.
+- Notificaciones administrativas por aperturas, cierres y diferencias de caja.
+- Inicio ADMIN con indicadores del día, asuntos que requieren atención, flujo actual de pedidos, ventas por medio y estado de caja.
+- Consulta administrativa de pedidos y anulación directa de pedidos elegibles sin pagos.
+- Navegación adaptable para escritorio, tablet y móvil.
+
+El [resumen funcional de E1](docs/E1_RESUMEN_FUNCIONAL.md) explica el alcance en lenguaje operativo. También están disponibles la [presentación para usuarios](docs/E1_PRESENTACION_USUARIO.md) y las [notas de entrega](docs/E1_RELEASE_NOTES.md).
 
 ## Funcionalidades disponibles
 
@@ -76,10 +95,10 @@ H6 está implementado y aceptado. El dominio propio y la impresión en equipo t�
 
 | Rol | Destino después del login | Accesos actuales |
 |---|---|---|
-| `ADMINISTRADOR` | `/admin/catalogo` | Administración de categorías, productos y mesas; resumen diario y exportaciones en `/ventas`; acceso a `/tecnica` |
+| `ADMINISTRADOR` | `/admin/inicio` | Inicio operativo, pendientes de descuento, consulta de pedidos y anulaciones elegibles, reportes de Caja/Ventas, carta, mesas y notificaciones |
 | `MOZO` | `/mozo/mesas` | Tablero, pedidos en `/mozo/pedidos/:id`, carta operativa y acceso a `/tecnica` |
 | `COCINA` | `/cocina` | Tablero Realtime de cocina y acceso a `/tecnica` |
-| `CAJA` | `/caja` | Pedidos pendientes de pago, consumo autoritativo, precuenta, cobro, ticket interno y resumen diario en `/ventas`; acceso a `/tecnica` |
+| `CAJA` | `/caja` | Sesión y movimientos de caja, pedidos pendientes, descuentos, precuenta, cobros totales/parciales, propinas, documentos internos, cierre y resumen diario |
 
 Las rutas protegidas requieren sesión y contexto válidos. Un acceso de rol no autorizado se dirige a `/403`; una sesión ausente se dirige a `/login`. `ADMINISTRADOR` conserva sus funciones administrativas, pero no ejecuta entrega ni cobro; `MOZO` entrega y `CAJA` cobra.
 
@@ -367,10 +386,14 @@ H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, 
 - [Tareas de H6](specs/H6-MVPReleased/tasks.md)
 - [Plan de pruebas de H6](specs/H6-MVPReleased/test-plan.md)
 - [Aceptación de H6](specs/H6-MVPReleased/acceptance.md)
+- [Aceptación de E1](specs/E1-CashOperation/acceptance.md)
+- [Resumen funcional de E1](docs/E1_RESUMEN_FUNCIONAL.md)
+- [Presentación de E1 para usuarios](docs/E1_PRESENTACION_USUARIO.md)
+- [Notas de entrega de E1](docs/E1_RELEASE_NOTES.md)
 
 ## Estado de liberación
 
-MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado, aceptado y operativo. PM-001 — DB Standardization es el primer cambio post-MVP aceptado y desplegado; los cambios siguientes requieren alcance, evidencia y registro propios.
+MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado y aceptado. PM-001 — DB Standardization está aceptado y desplegado. E1 — Operación de caja está cerrada, validada y aceptada; su publicación en producción sigue el proceso de despliegue correspondiente.
 
 ## Licencia
 

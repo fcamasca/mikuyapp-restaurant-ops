@@ -2,7 +2,7 @@
 
 ## 1. Estrategia y ambientes
 
-La construcción futura combinará pruebas SQL transaccionales, Node/React, concurrencia en sesiones independientes, RLS con usuarios reales por rol, regresión integral y validación humana. PostgreSQL es el oráculo de montos/estados. Cada caso financiero verificará filas, auditoría y ausencia de efectos parciales.
+La validación de E1 combinó pruebas SQL transaccionales, Node/React, concurrencia en sesiones independientes, control de acceso con usuarios reales por rol, regresión integral y validación humana. PostgreSQL actuó como autoridad de montos y estados. Cada caso financiero verificó datos persistidos, auditoría y ausencia de efectos parciales.
 
 Mientras PM-002 permanezca `TRANSITIONING`, las pruebas se ejecutarán primero en local/DEV y deployment Preview dirigido a DEV. Este plan no autoriza tocar PROD, Cloudflare Production, variables, datos ni completar PM-002.
 
@@ -116,8 +116,8 @@ La matriz TP01–TP64 permanece íntegra. Durante T03–T12 se ejecutan los TP p
 | ID | Escenario | Evidencia requerida |
 |---|---|---|
 | E1-TP62 | **APROBADO HUMANAMENTE.** Jornada de Caja en PC y revisión de Inicio ADMIN: abrir, cobros, propina, movimientos, cierre con/sin diferencia; avisos, KPI, atención, flujo actual de pedidos, ventas por medio y caja del local actual. | Capturas/registro aprobados; el flujo de Caja conserva sus reglas. En Inicio se respeta `KPI → atención → flujo → ventas por medio → caja`; KPI concilian; los tres grupos muestran cantidad, mayor/promedio, mesas y detalle coherentes; descuentos permiten decisión, cierres consulta sin aprobación y el flujo no ofrece acciones operativas. Caja abierta/cerrada, vacíos y campana son comprensibles. |
-| E1-TP63 | **EN EJECUCIÓN.** Descuento solicitado por `CAJA` y autorizado/rechazado por `ADMINISTRADOR`; anulación directa desde `Operación → Pedidos`. | Descuento conserva solicitante/autorizador. ADMIN sólo ve pedidos de su local; motivo y confirmación son obligatorios; `EN_PREPARACION`/`LISTO`/`ENTREGADO` advierten impacto. Cada estado anulable sin pagos termina `ANULADO` con mesa consistente, actor/fecha/hora/historial/auditoría; pago parcial/completo y estados terminales muestran bloqueo sin acción ni efectos parciales. Pendientes continúa limitado a descuentos. |
-| E1-TP64 | **PENDIENTE.** Responsive aplicable: Caja PC principal, tablet como contingencia, Inicio y `Operación → Pedidos` ADMIN en desktop/tablet/móvil, y regresión de mozo/cocina. | Caja conserva acciones críticas. ADMIN usa sidebar en desktop y drawer/hamburguesa accesible; la grilla de pedidos adapta columnas/filas sin scroll horizontal ni ocultar estado/acción; tarjetas y detalle del flujo hacen wrap y siguen sin acciones. No aparecen históricos/analítica E8 ni capacidades multilocal; mozo/cocina no regresan. |
+| E1-TP63 | **APROBADO HUMANAMENTE.** Descuento solicitado por `CAJA` y autorizado/rechazado por `ADMINISTRADOR`; anulación directa desde `Operación → Pedidos`. | Descuento conserva solicitante/autorizador. ADMIN sólo ve pedidos de su local; motivo y confirmación son obligatorios; `EN_PREPARACION`/`LISTO`/`ENTREGADO` advierten impacto. Cada estado anulable sin pagos termina `ANULADO` con mesa consistente, actor/fecha/hora/historial/auditoría; pago parcial/completo y estados terminales muestran bloqueo sin acción ni efectos parciales. Pendientes continúa limitado a descuentos. |
+| E1-TP64 | **APROBADO HUMANAMENTE.** Responsive aplicable: Caja PC principal, tablet como contingencia, Inicio y `Operación → Pedidos` ADMIN en desktop/tablet/móvil, y regresión de mozo/cocina. | Caja conserva acciones críticas. ADMIN usa sidebar en desktop y drawer/hamburguesa accesible; la grilla de pedidos adapta columnas/filas sin scroll horizontal ni ocultar estado/acción; tarjetas y detalle del flujo hacen wrap y siguen sin acciones. No aparecen históricos/analítica E8 ni capacidades multilocal; mozo/cocina no regresan. |
 
 ## 4. Datos y concurrencia
 
@@ -130,10 +130,10 @@ La evidencia original de T08 valida los aspectos estructurales/legacy entonces a
 ## 5. Criterio de aprobación
 
 - DF-01–DF-04 y DF-06–DF-10 aprobadas y reflejadas en el spec; EC-06–EC-08 conservadas como decisiones cerradas.
-- TP01–TP61 automatizadas/técnicas vigentes deberán revalidarse en los aspectos ampliados por T16/T17; TP62 está aprobado humanamente, TP63 está en ejecución y TP64 permanece pendiente.
+- TP01–TP61 automatizadas/técnicas vigentes quedaron cubiertas por la evidencia incremental; TP62, TP63 y TP64 fueron aprobadas humanamente.
 - Cero sobrepago, doble apertura/cierre/cobro, cobro multi-medio parcial, acceso cruzado o auditoría faltante; idempotencia por acto y atomicidad de todas sus líneas.
 - Regresión vigente completa, migraciones local/DEV alineadas y defectos no bloqueantes clasificados.
-- Ninguna aceptación se crea hasta aprobación explícita del usuario.
+- La aprobación explícita del usuario autoriza `acceptance.md` y el cierre formal de E1.
 
 ## 6. Matriz requisito → diseño → tarea → prueba
 
@@ -313,6 +313,10 @@ Las regresiones SQL directamente afectadas `h4_t04_derived_order_table_state` y 
 
 ## 19. Evidencia técnica de E1-T17
 
-T17 reutilizó sin cambios `rpc_obtener_pedidos_operacion_admin()` y `anular_pedido_supervisado(...)`; no creó migraciones ni modificó PostgreSQL, RLS, grants o RPC. La ruta ADMIN, sidebar y drawer incorporan `Pedidos` antes de `Pendientes por aprobar`. La pantalla distingue loading, vacío, error/reintento, anulable y bloqueo por pago/estado terminal; exige motivo, advierte el impacto operativo en `EN_PREPARACION`/`LISTO`/`ENTREGADO`, conserva una clave de idempotencia por intento, bloquea doble envío y refresca el snapshot autoritativo tras éxito o error.
+La entrega inicial de T17 reutilizó `rpc_obtener_pedidos_operacion_admin()` y `anular_pedido_supervisado(...)` sin cambiar sus reglas. La ruta ADMIN, sidebar y drawer incorporan `Pedidos` antes de `Pendientes por aprobar`. La pantalla distingue loading, vacío, error/reintento, anulable y bloqueo por pago/estado terminal; exige motivo, advierte el impacto operativo en `EN_PREPARACION`/`LISTO`/`ENTREGADO`, conserva una clave de idempotencia por intento, bloquea doble envío y refresca el snapshot autoritativo tras éxito o error. El ajuste posterior de última actualización amplió únicamente la salida de la lectura administrativa mediante una migración aditiva.
 
 Aprobaron **52/52 pruebas frontend directamente afectadas** de navegación, Inicio, Caja y T17, además de **14/14 pruebas responsive**, `typecheck` y `build`. El delta `20260921000400_e1_t17_pedidos_admin_ultima_actualizacion.sql` compiló y se aplicó correctamente sólo en PostgreSQL local, después de las migraciones locales pendientes T15/T16; no se aplicó a DEV remoto ni PROD. La RPC conserva contexto servidor, aislamiento local, `SECURITY DEFINER`, `search_path` endurecido y grants mínimos, y ahora ordena por `ultima_actualizacion_en DESC`. El build mantuvo sólo el warning no bloqueante de tamaño de chunk de Vite. La grilla cambia a distribución apilada en anchos menores sin scroll horizontal. TP63 continúa en ejecución humana y TP64 permanece pendiente; esta evidencia técnica no completa T14 ni acepta E1.
+
+## 20. Cierre humano de E1
+
+El usuario aprobó formalmente E1 el **21/09/2026**. TP62, TP63 y TP64 quedaron **APROBADAS HUMANAMENTE**. Con la evidencia técnica acumulada y la aceptación explícita registrada en `acceptance.md`, E1 queda **APROBADA Y CERRADA**. Las referencias a pruebas pendientes dentro de secciones de evidencia anteriores se conservan como registro histórico del estado que existía durante cada ejecución.
