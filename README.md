@@ -8,9 +8,13 @@ Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedid
 
 ## Estado actual
 
-El MVP v1.0.0 H1–H6 está cerrado, validado y aceptado. La **Evolución 1 — Operación de caja** también quedó aprobada y cerrada el **21/09/2026**. E1 amplía el control diario de Caja y ofrece a Administración una vista operativa del local.
+- **Baseline MVP v1.0.0:** H1–H6 está cerrado, validado y aceptado. Esta baseline conserva el flujo histórico de cobro único y el modelo inicial de 10 tablas.
+- **Producción actual:** <https://mikuyapp.pages.dev/> continúa sobre la versión desplegada del MVP y los cambios post-MVP ya publicados, como PM-001.
+- **E1 — Operación de caja:** implementada, validada, aceptada y cerrada documentalmente el **21/09/2026**. Su despliegue a producción continúa pendiente del proceso de liberación correspondiente.
 
-Los cambios posteriores al MVP se registran en la [bitácora post-MVP](docs/POST_MVP_CHANGELOG.md). La disponibilidad en producción depende del proceso de despliegue de cada evolución.
+E1 reemplaza funcionalmente el cobro único de la baseline por actos de cobro totales o parciales, con uno o varios medios y propinas separadas. También amplía el modelo de caja; por ello, las cifras históricas de H1 no describen la arquitectura vigente de E1.
+
+Los cambios posteriores al MVP se registran en la [bitácora post-MVP](docs/POST_MVP_CHANGELOG.md). Aceptación funcional y disponibilidad en producción son estados distintos.
 
 **Producción:** <https://mikuyapp.pages.dev/>
 
@@ -33,7 +37,7 @@ H1 establece la base técnica verificable, H2 incorpora autenticación, roles, c
 | H5 | Entrega, caja, cobro e impresión | Cerrado, validado y aceptado |
 | H6 | MVP liberado | Cerrado, validado y aceptado |
 | PM-001 | DB Standardization | Aceptado y desplegado |
-| E1 | Operación de caja e Inicio ADMIN | Cerrada, validada y aceptada |
+| E1 | Operación de caja e Inicio ADMIN | Implementada, cerrada y aceptada; pendiente de despliegue |
 
 El plan base fue de **24 h**. La referencia de planificación vigente es **40.5 h**, incluida la reestimación aprobada de H5 de 4 h a 12 h; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
 
@@ -53,9 +57,9 @@ Los cambios `PM-###` son posteriores al MVP y no reemplazan ni renumeran las Evo
 
 El [resumen funcional de E1](docs/E1_RESUMEN_FUNCIONAL.md) explica el alcance en lenguaje operativo. También están disponibles la [presentación para usuarios](docs/E1_PRESENTACION_USUARIO.md) y las [notas de entrega](docs/E1_RELEASE_NOTES.md).
 
-## Funcionalidades disponibles
+## Funcionalidades de la baseline desplegada
 
-La aplicación permite comprobar:
+La versión actualmente publicada permite comprobar las capacidades de la baseline MVP v1.0.0 y los cambios post-MVP ya desplegados:
 
 - URL productiva: <https://mikuyapp.pages.dev/>;
 - local demo `MIKUY-DEMO`;
@@ -76,7 +80,7 @@ La aplicación permite comprobar:
 - estados mixtos, agregados posteriores y derivación transaccional de la cabecera y la mesa;
 - entrega segura por `MOZO`, conservando detalles `LISTO` y pasando la mesa a `PENDIENTE_PAGO`;
 - reapertura de pedidos `ENTREGADO` antes del pago mediante nuevos detalles `ABIERTO`, retorno del pedido al flujo operativo y de la mesa a `OCUPADA`, con posibilidad de una nueva entrega;
-- ruta protegida `/caja` para `CAJA`, consumo y total autoritativos, precuenta, cobro único y ticket interno posterior al pago;
+- ruta protegida `/caja` para `CAJA`, consumo y total autoritativos, precuenta, cobro único y ticket interno posterior al pago —comportamiento histórico de la baseline, sustituido por E1 cuando se despliegue—;
 - liberación automática de la mesa después del cobro y bloqueo terminal en `PAGADO`/`ANULADO`;
 - sincronización de mozo y caja mediante Realtime sobre `detalle_pedido`, `pedido` y `mesa`, sin publicar `pago`;
 - impresión estándar del navegador con presentación térmica de 80 mm;
@@ -91,7 +95,9 @@ La aplicación permite comprobar:
 
 H6 está implementado y aceptado. El dominio propio y la impresión en equipo térmico físico permanecen como pendientes operativos no bloqueantes.
 
-## Roles y rutas
+## Roles y rutas de E1
+
+La siguiente navegación corresponde a E1 implementada y aceptada. Estará disponible para usuarios productivos cuando finalice su proceso de despliegue.
 
 | Rol | Destino después del login | Accesos actuales |
 |---|---|---|
@@ -176,16 +182,16 @@ flowchart TB
 - Impresión física en equipo térmico, mientras no se disponga del hardware.
 - Operación offline, ESC/POS e impresión silenciosa.
 
-## Modelo de datos
+## Modelo de datos de la baseline MVP v1.0.0
 
-Las diez tablas se agrupan por responsabilidad:
+Las diez tablas iniciales se agruparon por responsabilidad:
 
 - **Configuración y catálogo:** `local`, `rol`, `mesa`, `categoria`, `producto`.
 - **Identidad:** `perfil_usuario`.
 - **Operación de pedidos:** `pedido`, `detalle_pedido`, `historial_estado`.
 - **Operación de caja:** `pago`.
 
-El estado productivo vigente contiene 28 migraciones y mantiene RLS en las 10 tablas públicas con 27 policies.
+Estas cifras corresponden a la baseline histórica de H1/MVP y no al modelo ampliado de E1. La versión productiva previa a E1 contiene 28 migraciones y mantiene RLS en esas 10 tablas públicas con 27 policies. E1 incorpora estructuras adicionales para sesiones, movimientos, cobros, auditoría y notificaciones; su diseño vigente está documentado en `specs/E1-CashOperation/` y aún no se presenta aquí como desplegado en producción.
 
 Métricas verificadas en H1:
 
@@ -393,7 +399,7 @@ H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, 
 
 ## Estado de liberación
 
-MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado y aceptado. PM-001 — DB Standardization está aceptado y desplegado. E1 — Operación de caja está cerrada, validada y aceptada; su publicación en producción sigue el proceso de despliegue correspondiente.
+MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado, aceptado y constituye la baseline productiva. PM-001 — DB Standardization está aceptado y desplegado. E1 — Operación de caja está implementada, cerrada, validada y aceptada, pero todavía no debe considerarse disponible en producción hasta completar su proceso de despliegue.
 
 ## Licencia
 

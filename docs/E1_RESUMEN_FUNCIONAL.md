@@ -87,7 +87,7 @@ Administración dispone de una vista de pedidos del local. Puede filtrar los anu
 
 ## Resultado esperado en la operación diaria
 
-Caja inicia el turno con una sesión identificable, registra cada movimiento y cobra con información clara. Administración ve el estado del local, atiende descuentos, consulta cierres con diferencia y actúa sobre pedidos anulables. Al final de la jornada, el cierre conserva un resumen verificable y puede imprimirse para control interno.
+Caja inicia la operación con una sesión identificable, registra cada movimiento y cobra con información clara. Administración ve el estado del local, atiende descuentos, consulta cierres con diferencia y actúa sobre pedidos anulables. Al cerrar la sesión de caja, el cierre conserva un resumen verificable y puede imprimirse para control interno.
 
 ## Alcance que permanece fuera de E1
 

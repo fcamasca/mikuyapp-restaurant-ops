@@ -98,6 +98,8 @@ Al finalizar las 15 jornadas de trabajo, correspondientes a dos semanas de lunes
 
 ## 4. Alcance del MVP
 
+> **Lectura histórica y vigente.** Las secciones 4–5 y 14 documentan el alcance y los criterios originales del MVP v1.0.0 y se conservan como referencia histórica. Las evoluciones registradas en la sección 15 actualizan el comportamiento vigente cuando incorporan capacidades posteriores. En particular, E1 habilitó división de cuenta, propinas y múltiples actos de cobro —incluidos cobros parciales— sin alterar el total de venta del pedido.
+
 ### 4.1 Inicio de sesión y seguridad
 
 - Inicio y cierre de sesión.

@@ -11,7 +11,7 @@
 ## Diapositiva 2 — Objetivo de E1
 
 - Reunir la operación de caja en un flujo claro.
-- Reducir dudas al cobrar, registrar efectivo y cerrar el turno.
+- Reducir dudas al cobrar, registrar efectivo y cerrar la sesión de caja.
 - Dar a Administración información útil para decidir durante el día.
 - Conservar responsables, motivos y resultados de cada operación importante.
 
@@ -58,7 +58,7 @@ Inicio muestra:
 - El cajero conoce el saldo y el total que debe recibir.
 - Administración detecta pendientes sin recorrer varias pantallas.
 - Los cobros parciales y medios combinados se entienden con facilidad.
-- El cierre diario ofrece información clara para revisión.
+- El cierre de caja ofrece información clara para revisión.
 - Caja, Mozo, Cocina y Administración mantienen responsabilidades definidas.
 - La operación gana orden y trazabilidad sin agregar aprobaciones innecesarias.
 

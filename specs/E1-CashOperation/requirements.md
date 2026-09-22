@@ -115,9 +115,9 @@ EC-06, EC-07 y EC-08 permanecen cerradas; DT-02 y DT-03 definen las representaci
 
 Inventario, recetas, compras/proveedores, SUNAT, Yape/Plin directo, pasarela bancaria, multiempresa/multilocal, usuarios multirol/multilocal, selector o consolidación entre locales, persistencia o análisis histórico de tiempos, series, tendencias, comparaciones, SLA, rankings, productividad, productos más vendidos y demás analítica de E8, cancelación de productos por mozo, métricas NoSQL, replicación DEV/PROD, cambios de PM-002, contabilidad, conciliación bancaria completa, recepción de cocina completa, impresión de comandas y funcionalidades de otras evoluciones. E1 sólo incorpora el snapshot operacional actual no persistido definido en R24. La impresión opcional como apoyo al flujo digital de cocina se definirá en el Spec Mode de Evolución 7.
 
-## 7. Criterios de salida de construcción futura
+## 7. Criterios de salida y aceptación alcanzados
 
-Requisitos y decisiones sensibles aprobados; migraciones aditivas/reversibles revisadas; RPC/RLS/grants y concurrencia aprobados; regresión H1–H6/PM-001 sin fallos; pruebas humanas de Caja ejecutadas; documentación actualizada; cero defectos financieros bloqueantes. La aceptación será un acto posterior y no forma parte de este Spec Mode.
+Requisitos y decisiones sensibles aprobados; migraciones aditivas/reversibles revisadas; RPC/RLS/grants y concurrencia aprobados; regresión H1–H6/PM-001 sin fallos; pruebas humanas de Caja ejecutadas; documentación actualizada; cero defectos financieros bloqueantes. TP62, TP63 y TP64 fueron aprobados humanamente y la aceptación formal quedó registrada en `acceptance.md`; E1 está **APROBADA Y CERRADA** desde el 21/09/2026.
 
 ## 8. Trazabilidad resumida
 

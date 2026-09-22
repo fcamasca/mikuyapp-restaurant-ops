@@ -9,6 +9,8 @@ El usuario aprobó formalmente la **Evolución 1 — Operación de caja** despu�
 
 Con esta aprobación, E1 queda **CERRADA**. El cierre documental no implica un despliegue automático en producción.
 
+Al cierre, el usuario aplicó manualmente en DEV la migración final de T17, `20260921000400_e1_t17_pedidos_admin_ultima_actualizacion.sql`. `supabase db push` finalizó correctamente sin informar otras migraciones pendientes, por lo que las migraciones E1 quedaron alineadas entre local y DEV. Este cierre **no desplegó E1 ni sus migraciones a PROD**.
+
 ## Alcance funcional aceptado
 
 E1 entrega una operación de caja más completa y una supervisión diaria más clara para el administrador:
