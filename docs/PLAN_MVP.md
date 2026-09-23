@@ -650,6 +650,23 @@ El MVP se considerará terminado si:
 - El cierre de jornada deberá considerar las condiciones operativas pendientes que se definan en su futuro Spec Mode.
 - Historial y trazabilidad de aperturas y cierres.
 
+### Validación técnica pendiente — Concurrencia transaccional
+
+- Ejecutar una campaña específica de concurrencia transaccional, distinta de las pruebas de fan-out Realtime ya realizadas.
+- Escenario objetivo de estrés: hasta 10 mozos + 5 cocinas + 5 cajas ejecutando operaciones de negocio concurrentemente.
+- Validar:
+  - operaciones sobre pedidos distintos;
+  - operaciones concurrentes sobre un mismo pedido;
+  - locks y contención;
+  - dobles registros y dobles cobros;
+  - conflictos controlados;
+  - latencia y errores;
+  - comportamiento de Realtime durante mutaciones simultáneas.
+- Estimación de campaña: 14–16 horas si no aparecen incidencias.
+- Reserva recomendada para investigación/corrección de incidencias: 8–16 horas adicionales.
+- No bloquea el cierre del MVP ni de Evolución 1.
+- Ejecutar antes de aumentar significativamente la cantidad de puestos operativos o antes de una expansión multi-restaurante.
+
 La numeración de las evoluciones es identificadora y no implica necesariamente su orden de ejecución.
 
 ## 16. Riesgos y mitigación
