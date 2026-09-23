@@ -188,3 +188,37 @@ Se incorpora una lectura PostgreSQL autorizada conceptual `rpc_obtener_flujo_act
 Los importes y conteos reutilizan las lecturas autoritativas de E1/H6 cuando su semántica coincide. `Ventas netas`, `Pedidos pagados`, `Descuentos autorizados` y los importes por medio deben compartir local y corte operativo `America/Lima`; `Ticket promedio` es ventas netas dividido entre pedidos pagados y muestra cero/estado vacío cuando no hay pedidos. React no reconstruye descuentos, estados financieros ni mezcla propinas con venta. Si los contratos vigentes no entregan algún agregado con semántica inequívoca, T16 deberá documentar la brecha antes de proponer backend; este delta documental no autoriza cambios PostgreSQL.
 
 E1 incorpora únicamente este snapshot actual no persistido. E8 conserva históricos, series, tendencias, comparaciones entre periodos/locales, metas/SLA, productividad, rankings, análisis de cuellos de botella, productos más vendidos y demás analítica. El diseño prioriza acciones vigentes y estado actual sobre densidad de indicadores. T16 y el acceso T17 `Operación → Pedidos` quedaron construidos y validados. TP62, TP63 y TP64 fueron aprobados humanamente; E1 quedó **APROBADA Y CERRADA** el 21/09/2026.
+
+## D17. Convención de códigos de error entre PostgREST y RPC (correctivo post-cierre, 22/09/2026)
+
+**Contexto.** Una prueba de capacidad en DEV detectó CPU alta y un volumen masivo de errores Postgres originados por `rpc_solicitar_descuento_pedido`. La causa raíz confirmada, según la documentación oficial de Supabase sobre PostgREST 14, es que un `raise exception` con `errcode='40001'` (`serialization_failure`) indica a PostgREST que el fallo es transitorio y dispara reintento automático de la transacción. El proyecto no usa aislamiento `SERIALIZABLE` en ningún punto (verificado): las 53 apariciones históricas de `40001` en las migraciones eran siempre conflictos funcionales de aplicación, no condiciones nativas de PostgreSQL, y cada retry automático repite exactamente el mismo conflicto permanente, generando CPU/errores sin límite útil.
+
+**Convención corregida.**
+- `40001` queda reservado exclusivamente para una eventual condición nativa de serialización de PostgreSQL (hoy inexistente en el esquema) y no se genera manualmente en ninguna función ni trigger.
+- Todo conflicto funcional de aplicación (sesión cerrada, solicitud/decisión de descuento duplicada o ya resuelta, pedido/mesa ya no disponibles para la operación, saldo agotado, pedido ya anulado, pago existente que bloquea mutación, etc.) usa `errcode='PT409'`. PostgREST interpreta el prefijo `PT` seguido de un código HTTP (`PT409`) como una instrucción directa de mapeo a ese status, sin inferir semántica de reintento.
+- El mensaje textual (`message=`) de cada conflicto se conserva exactamente igual; no cambia ninguna regla de negocio, únicamente el `errcode` interno.
+- Los consumidores TypeScript (`cashierService.ts`, `kitchenRealtimeService.ts`, `waiterOrderService.ts`) reconocen `PT409` como conflicto, conservando temporalmente compatibilidad con `40001` y `23505` para no invalidar ningún flujo ni prueba existente durante la transición.
+- La corrección se aplica mediante una migración nueva (`supabase/migrations/`) que reemplaza, con `create or replace function`/`create or replace function ... returns trigger`, únicamente las versiones **vigentes** de cada función/trigger afectado. Ninguna migración histórica se modifica.
+
+**Alcance de funciones/triggers corregidos:** `h3_abrir_o_recuperar_pedido`, `crear_o_recuperar_pedido_mesa`, `agregar_detalle_pedido`, `actualizar_estado_detalle_cocina`, `liberar_mesa_pedido_vacio`, `entregar_pedido`, `registrar_pago_pedido`, `rpc_abrir_sesion_caja`, `rpc_obtener_sesion_caja_activa`, `rpc_registrar_movimiento_caja`, `fn_cerrar_sesion_caja`, `rpc_solicitar_descuento_pedido`, `rpc_decidir_descuento_pedido`, `anular_pedido_supervisado`, `tgf_bloquear_detalle_pedido_con_pago`, `rpc_registrar_cobro_pedido`, `registrar_movimientos_caja`. `h3_abrir_o_recuperar_pedido` y `registrar_pago_pedido(bigint,text)` no tienen ningún llamador en `src` (verificado por búsqueda) pero permanecen vigentes en el esquema y se corrigen igualmente.
+
+Ver R25 (requisito) y E1-T18 (tarea) para la traza completa de este correctivo.
+
+## D18. Campaña de capacidad post-correctivo T18 y cierre de E1 (23/09/2026)
+
+**Objetivo.** Verificar, tras aplicar el correctivo D17 (`40001` → `PT409`), que el comportamiento de refresh en tiempo real de caja, cocina y mozo se mantiene estable bajo concurrencia creciente, antes de cerrar formalmente E1-T18.
+
+**Diseño.** Arnés de prueba en navegador que replica fielmente el debounce/coalescing de `operationsRealtimeService.ts` (caja), el refresh de una sola RPC de `kitchenRealtimeService.ts` (cocina) y las 4 consultas (2 condicionales) de `waiterOrderService.getTableBoard` (mozo), contra el proyecto Supabase DEV (`ibfrrifvhvtgcxfxuinf`). Niveles ejecutados: 5, 10, 20 y 40 clientes concurrentes (listeners). Detalle completo de metodología, consultas de tablero SQL y resultados crudos por nivel en `docs/E1_T18_CAPACITY_TEST_EVIDENCE.md`, secciones 0–22.
+
+**Resultados finales.**
+- **Cocina:** latencia de refresh prácticamente plana en los cuatro niveles (~234–248 ms promedio); sin degradación atribuible a la concurrencia.
+- **Mozo:** latencia de refresh se degrada en curva acelerada al doblar clientes (×1.65, ×1.92, ×1.96), alcanzando ~3.3 s promedio / ~3.7 s p95 a 40 clientes; en el nivel de 40 apareció por primera vez backlog de cooldown (17 refreshes encolados, drenados en ~3.6 s tras la ráfaga).
+- **Caja:** sin degradación relevante en los niveles probados.
+- **Errores:** 0 errores, 0 ocurrencias de `PT409` o `40001`, 0 reconexiones en los cuatro niveles.
+- **Servidor (según métricas reportadas por el usuario, no auto-medidas):** sin saturación de CPU, conexiones, memoria ni IOPS/disco en Supabase/PostgreSQL en ningún nivel, incluido 40 clientes.
+
+**Conclusión.** La degradación observada en el tablero de mozo a 40 listeners es de extremo a extremo (ruta cliente/red), no un límite demostrado de PostgreSQL/Supabase: no hubo evidencia de saturación en el servidor en ningún nivel probado. En consecuencia, **no se requiere escalar compute ni cambiar el plan Supabase Free** para el alcance actual de E1. La degradación del tablero de mozo a 40 listeners queda registrada como **observación no bloqueante** para el cierre de E1-T18; no bloquea la aprobación ni implica una acción correctiva inmediata. Cualquier optimización del refresh de mozo queda fuera del alcance de este correctivo y de E1.
+
+La campaña de capacidad queda **cerrada** con los niveles 5/10/20/40. No se ejecutan niveles adicionales ni pruebas de carga adicionales como parte de E1-T18.
+
+Ver D17, E1-T18 (tarea), TP65 (test-plan.md) y `docs/E1_T18_CAPACITY_TEST_EVIDENCE.md` para la evidencia técnica completa.

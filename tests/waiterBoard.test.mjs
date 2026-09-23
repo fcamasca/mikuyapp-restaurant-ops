@@ -440,6 +440,12 @@ test('H5-TH01 entrega rechaza rol ajeno y traduce conflicto sin falso éxito', a
   assert.equal(conflict.error.kind, 'concurrent-conflict')
   assert.match(conflict.error.message, /ya fue procesado/)
 
+  const pt409Fixture = createClient({ rpcData: null, rpcError: { code: 'PT409' } })
+  const pt409Conflict = await createWaiterOrderService(pt409Fixture.client).deliverOrder(context(), 12)
+  assert.equal(pt409Conflict.ok, false)
+  assert.equal(pt409Conflict.error.kind, 'concurrent-conflict')
+  assert.match(pt409Conflict.error.message, /ya fue procesado/)
+
   const unconfirmed = createClient({ rpcData: [] })
   const failed = await createWaiterOrderService(unconfirmed.client).deliverOrder(context(), 12)
   assert.equal(failed.ok, false)

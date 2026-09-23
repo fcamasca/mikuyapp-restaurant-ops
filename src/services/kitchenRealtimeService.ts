@@ -178,7 +178,9 @@ export function createKitchenRealtimeService(
           p_estado_esperado: expectedStatus,
           p_estado_nuevo: newStatus,
         })
-        if (result.error?.code === '40001') {
+        // PT409 es el código vigente para este conflicto (E1-T18); 40001 se
+        // conserva temporalmente por compatibilidad.
+        if (result.error?.code === 'PT409' || result.error?.code === '40001') {
           return {
             ok: false,
             error: {

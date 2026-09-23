@@ -114,6 +114,25 @@ test('H4-T06 transición usa RPC, conserva estados esperados y traduce conflicto
   }])
 })
 
+test('E1-T18 H4-T06 transición traduce conflicto con el código vigente PT409', async () => {
+  const rpcCalls = []
+  const client = {
+    async rpc(name, args) {
+      rpcCalls.push({ name, args })
+      return { data: null, error: { code: 'PT409' } }
+    },
+    channel() { throw new Error('No debe suscribirse para esta prueba') },
+    async removeChannel() {},
+  }
+  const result = await createKitchenRealtimeService(client).transitionDetail(101, 'ENVIADO', 'RECIBIDO_COCINA')
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'concurrent-conflict')
+  assert.deepEqual(rpcCalls, [{
+    name: 'actualizar_estado_detalle_cocina',
+    args: { p_detalle_id: 101, p_estado_esperado: 'ENVIADO', p_estado_nuevo: 'RECIBIDO_COCINA' },
+  }])
+})
+
 test('H4-T06 bloquea por detalle, muestra feedback y resincroniza tras éxito o conflicto', () => {
   assert.match(pageSource, /pendingTransitions\.current\.has\(detail\.detalle_id\)/)
   assert.match(pageSource, /pendingTransitions\.current\.set\(detail\.detalle_id/)

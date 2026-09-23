@@ -320,3 +320,23 @@ Aprobaron **52/52 pruebas frontend directamente afectadas** de navegación, Inic
 ## 20. Cierre humano de E1
 
 El usuario aprobó formalmente E1 el **21/09/2026**. TP62, TP63 y TP64 quedaron **APROBADAS HUMANAMENTE**. Con la evidencia técnica acumulada y la aceptación explícita registrada en `acceptance.md`, E1 queda **APROBADA Y CERRADA**. Las referencias a pruebas pendientes dentro de secciones de evidencia anteriores se conservan como registro histórico del estado que existía durante cada ejecución.
+
+## 21. TP65 — Correctivo post-cierre: convención de errcode `PT409` (22/09/2026)
+
+**Definición (antes de implementar).** Verificar que ningún conflicto funcional de aplicación siga representado con `SQLSTATE 40001` tras la migración correctiva, sin alterar ninguna regla de negocio ni mensaje:
+
+1. Auditoría estática: `grep` sobre `supabase/migrations/*.sql` no debe encontrar `errcode\s*=\s*'40001'` en la nueva migración correctiva salvo, si corresponde, dentro de un comentario explicativo; la migración debe cubrir las 17 funciones/triggers vigentes identificadas en D17.
+2. Cada función corregida conserva exactamente su firma, mensajes y lógica; sólo cambia el `errcode` de `'40001'` a `'PT409'`.
+3. `cashierService.ts` (`fail`), `kitchenRealtimeService.ts` y `waiterOrderService.ts` (`deliverOrder`) reconocen `'PT409'` como `conflict`/`concurrent-conflict`, conservando compatibilidad temporal con `'40001'` y `'23505'`.
+4. Pruebas Node afectadas (`tests/kitchenBoard.test.mjs`, `tests/waiterBoard.test.mjs`) cubren tanto `PT409` (comportamiento nuevo) como `40001` (compatibilidad temporal) para el mismo camino de conflicto.
+5. `typecheck` (`tsc --noEmit`) y `build` (`vite build`) en verde.
+6. No se ejecuta ninguna prueba de carga como parte de esta verificación; la validación es estática/unitaria únicamente, conforme a la restricción vigente de no reanudar pruebas de capacidad hasta que el correctivo esté aplicado y validado.
+
+La evidencia de ejecución se agrega a continuación de esta sección una vez completada.
+
+**Evidencia de ejecución (22/09/2026).** Auditoría estática confirmada: para las 17 funciones/triggers de D17, la migración `20260922000100_e1_delta_t18_migrar_errcode_conflicto_funcional.sql` es la última `create (or replace) function` de cada una en el historial de migraciones (verificado programáticamente, no por inspección manual), por lo que ninguna versión vigente conserva un `errcode='40001'` manual; las 53 apariciones históricas siguen intactas en sus migraciones originales, sin modificarlas. `cashierService.ts`, `kitchenRealtimeService.ts` y `waiterOrderService.ts` reconocen `PT409` conservando `40001`/`23505`.
+
+Pruebas Node ejecutadas (`node --experimental-strip-types --test`): `tests/kitchenBoard.test.mjs`, `tests/waiterBoard.test.mjs`, `tests/kitchenRealtimeService.test.mjs`, `tests/cashierPage.test.mjs` y la prueba nueva `tests/cashierService.test.mjs` (sin cobertura previa del mapeo de conflicto de `cashierService`). **105/105 aprobadas**, incluidas las pruebas nuevas/ampliadas que cubren `PT409` y la compatibilidad temporal con `40001`/`23505`.
+
+`typecheck` (`tsc --noEmit`) aprobó sin errores. `build` (`vite build`) **no pudo ejecutarse en el entorno Linux de verificación de esta sesión**: el `node_modules` de este checkout fue instalado en Windows (binario nativo `@rolldown/binding-win32-x64-msvc`) y el shell Linux usado para esta verificación no tiene el binario `linux-x64-gnu` ni acceso al registro npm para obtenerlo; `tsc --noEmit` sí pudo ejecutarse reutilizando un binario nativo ya presente en el dispositivo. Esta limitación es exclusivamente del entorno Linux de verificación, no del código cambiado (ningún archivo de configuración de build fue tocado), y no tiene impacto en la validación del proyecto. **El usuario ejecutó y aprobó `npm run build` en su entorno Windows habitual**: `tsc --noEmit && vite build`, 86 módulos transformados, build finalizado correctamente en 625 ms; el warning de chunk >500 kB no fue bloqueante. El build queda validado de extremo a extremo.
+

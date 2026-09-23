@@ -274,7 +274,9 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         const result = await client.rpc('entregar_pedido', { p_pedido_id: orderId })
         const row = (result.data as DeliveredOrderRow[] | null)?.[0]
         if (result.error) {
-          if (result.error.code === '40001') {
+          // PT409 es el código vigente para este conflicto (E1-T18); 40001 se
+          // conserva temporalmente por compatibilidad.
+          if (result.error.code === 'PT409' || result.error.code === '40001') {
             return {
               ok: false,
               error: {

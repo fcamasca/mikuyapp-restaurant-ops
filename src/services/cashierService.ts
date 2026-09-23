@@ -203,7 +203,12 @@ const methods = new Set<PaymentMethodCode>([
 const fail = (message: string, code?: string): CashierResult<never> => ({
   ok: false,
   error: {
-    kind: code === "40001" || code === "23505" ? "conflict" : "operation-error",
+    // PT409 es el código vigente para conflictos funcionales (E1-T18); 40001
+    // y 23505 se conservan temporalmente por compatibilidad.
+    kind:
+      code === "PT409" || code === "40001" || code === "23505"
+        ? "conflict"
+        : "operation-error",
     message,
   },
 });
