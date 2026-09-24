@@ -7,6 +7,11 @@ const privilegeMigration = readFileSync(
   new URL('../supabase/migrations/20260825000200_h2_authenticated_table_privileges.sql', import.meta.url),
   'utf8',
 )
+// E7-D02 (E7-T11): concesión aditiva por columna posterior a H2 (`producto.requiere_cocina`).
+const e7ModelMigration = readFileSync(
+  new URL('../supabase/migrations/20260924000100_e7_t02_modelo_cocina_historial_comanda.sql', import.meta.url),
+  'utf8',
+)
 const policyMigration = readFileSync(
   new URL('../supabase/migrations/20260825000300_h2_authenticated_rls_policies.sql', import.meta.url),
   'utf8',
@@ -111,6 +116,16 @@ function grantColumns(operation, resource) {
   const match = privilegeMigration.match(pattern)
   assert.ok(match, `Debe existir GRANT ${operation} por columnas para ${resource}`)
   return match[1].split(',').map((column) => column.trim())
+}
+
+// Columnas efectivas = concesión histórica H2 + concesiones aditivas de E7 (sin retirar ninguna columna H2).
+function effectiveGrantColumns(operation, resource) {
+  const pattern = new RegExp(
+    `grant\\s+${operation}\\s*\\(([^)]+)\\)\\s+on\\s+table\\s+public\\.${resource}\\s+to\\s+authenticated`,
+    'gi',
+  )
+  const additive = [...e7ModelMigration.matchAll(pattern)].flatMap((match) => match[1].split(',').map((column) => column.trim()))
+  return [...grantColumns(operation, resource), ...additive]
 }
 
 function policy(name) {
@@ -269,8 +284,9 @@ test('los INSERT válidos construyen exclusivamente columnas autorizadas y local
 
     assert.equal(result.ok, true)
     const insert = fixture.calls.find((call) => call.operation === 'insert')
-    assert.deepEqual(new Set(Object.keys(insert.payload)), new Set(grantColumns('insert', resource)))
+    assert.deepEqual(new Set(Object.keys(insert.payload)), new Set(effectiveGrantColumns('insert', resource)))
     assert.equal(insert.payload.local_id, context.local.id)
+    if (resource === 'producto') assert.equal(insert.payload.requiere_cocina, true)
     if (resource === 'mesa') {
       assert.equal('estado' in insert.payload, false)
       assert.equal(fixture.records.mesa.find((item) => item.id === 'mesa-created').estado, 'LIBRE')

@@ -196,7 +196,13 @@ async function main() {
     step('producto sin cocina → LISTO', detalles.find((d) => d.id === bebida)?.estado === 'LISTO' && detalles.find((d) => d.id === bebida)?.requiere_cocina === false)
 
     // 3. Comanda: primera solicitud concurrente (PT409), reimpresión y documento
-    const comanda = kitchenBoard.comandas.find((c) => c.pedido_id === orderId && c.numero === 1)
+    let comanda = kitchenBoard?.comandas.find((c) => c.pedido_id === orderId && c.numero === 1)
+    if (!comanda) { // Diagnóstico: sin señal Realtime, se continúa con el snapshot autoritativo leído vía RPC (el paso Realtime ya quedó en FAIL)
+      console.log(`diagnóstico: refrescos de cocina=${kitchenRefreshes}, snapshot recibido=${kitchenBoard ? 'sí' : 'no'}`)
+      const board = must(await cocina1.rpc('rpc_obtener_tablero_cocina'), 'tablero (diagnóstico)')
+      comanda = board.comandas.find((c) => c.pedido_id === orderId && c.numero === 1)
+      kitchenBoard = board
+    }
     const [p1, p2] = await Promise.all([commands1.registerPrint(comanda.comanda_id, false), commands2.registerPrint(comanda.comanda_id, false)])
     step('primera solicitud única con PT409 concurrente', [p1, p2].filter((r) => r.ok).length === 1 && [p1, p2].some((r) => !r.ok && r.error.kind === 'concurrent-conflict'))
     const reprint = await commands2.registerPrint(comanda.comanda_id, true)
