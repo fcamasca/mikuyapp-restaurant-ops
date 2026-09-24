@@ -228,16 +228,17 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       if (input.observacion !== undefined) changes.observacion = input.observacion?.trim() || null
       if (Object.keys(changes).length === 0) return { ok: true, data: null }
       try {
-        let mutation = client.from('detalle_pedido').update(changes).eq('id', detailId).eq('estado', 'ABIERTO')
-        if (expected?.cantidad !== undefined) mutation = mutation.eq('cantidad', expected.cantidad)
-        if (expected && 'observacion' in expected) {
-          mutation = expected.observacion === null
-            ? mutation.is('observacion', null)
-            : mutation.eq('observacion', expected.observacion)
-        }
-        const result = await mutation.select('id').returns<{ id: number }[]>()
+        // E7-D15: la edición H3 se ejecuta vía RPC con orden de locks pedido -> detalle.
+        // NULL = campo sin cambio / sin verificación; '' = sin observación (misma semántica que el UPDATE directo previo).
+        const result = await client.rpc('rpc_modificar_detalle_pedido', {
+          p_detalle_id: detailId,
+          p_cantidad: changes.cantidad ?? null,
+          p_observacion: 'observacion' in changes ? changes.observacion ?? '' : null,
+          p_cantidad_esperada: expected?.cantidad ?? null,
+          p_observacion_esperada: expected && 'observacion' in expected ? expected.observacion ?? '' : null,
+        })
+        if (result.error?.code === 'PT409') return concurrentConflict()
         if (result.error) return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
-        if (!result.data?.length) return concurrentConflict()
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
@@ -247,9 +248,10 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
     async removeOpenDetail(context: ValidatedProfileContext, detailId: number): Promise<WaiterOrderResult<null>> {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para retirar productos.')
       try {
-        const result = await client.from('detalle_pedido').delete().eq('id', detailId).eq('estado', 'ABIERTO').select('id').returns<{ id: number }[]>()
+        // E7-D15 / HZ-01: el retiro H3 se ejecuta vía RPC, que además recalcula pedido y mesa.
+        const result = await client.rpc('rpc_retirar_detalle_pedido', { p_detalle_id: detailId })
+        if (result.error?.code === 'PT409') return concurrentConflict()
         if (result.error) return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
-        if (!result.data?.length) return concurrentConflict()
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
