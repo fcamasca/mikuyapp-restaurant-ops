@@ -25,6 +25,78 @@ export interface KitchenBoardRow {
   readonly modificado_en: string
 }
 
+/** E7-D08/D12: comanda documental incluida en el snapshot de cocina. */
+export interface KitchenCommandLine {
+  readonly detalle_id: number
+  readonly producto_codigo: string
+  readonly producto_nombre: string
+  readonly cantidad: number
+  readonly observacion: string | null
+}
+
+export interface KitchenCommand {
+  readonly comanda_id: number
+  readonly pedido_id: number
+  readonly numero: number
+  readonly mesa_codigo: string
+  readonly mesa_nombre: string
+  readonly enviado_en: string
+  readonly creado_en: string
+  readonly creado_por_nombre: string
+  readonly lineas: readonly KitchenCommandLine[]
+  readonly impresiones: number
+  readonly primera_impresion_en: string | null
+  readonly ultima_impresion_en: string | null
+}
+
+/** E7-D08/D10: cancelación por el mozo de un producto de cocina (sólo lectura). */
+export interface KitchenCancellation {
+  readonly pedido_id: number
+  readonly detalle_id: number
+  readonly producto_nombre: string
+  readonly cantidad: number
+  readonly observacion: string | null
+  readonly estado_anterior: string
+  readonly motivo: string
+  readonly cancelado_en: string
+}
+
+export interface KitchenBoardSnapshot {
+  readonly detalles: readonly KitchenBoardRow[]
+  readonly comandas: readonly KitchenCommand[]
+  readonly cancelaciones: readonly KitchenCancellation[]
+}
+
+/** Valida la forma del snapshot autoritativo de rpc_obtener_tablero_cocina. */
+export function parseKitchenSnapshot(data: unknown): KitchenBoardSnapshot | null {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null
+  const value = data as Record<string, unknown>
+  if (!Array.isArray(value.detalles) || !Array.isArray(value.comandas) || !Array.isArray(value.cancelaciones)) return null
+  return {
+    detalles: value.detalles as KitchenBoardRow[],
+    comandas: value.comandas as KitchenCommand[],
+    cancelaciones: value.cancelaciones as KitchenCancellation[],
+  }
+}
+
+/** Agrupa cancelaciones por pedido para mostrarlas junto a su grupo del tablero. */
+export function groupKitchenCancellations(
+  cancellations: readonly KitchenCancellation[],
+): ReadonlyMap<number, readonly KitchenCancellation[]> {
+  const byOrder = new Map<number, KitchenCancellation[]>()
+  for (const item of cancellations) {
+    const current = byOrder.get(item.pedido_id) ?? []
+    current.push(item)
+    byOrder.set(item.pedido_id, current)
+  }
+  return byOrder
+}
+
+/** Cantidad de detalles ENVIADO del grupo que procesaría la recepción completa. */
+export function countPendingReception(details: readonly Pick<KitchenBoardRow, 'estado'>[]): number {
+  return details.filter((detail) => detail.estado === 'ENVIADO').length
+}
+
 export interface KitchenOrderGroup {
   readonly key: number
   readonly pedidoId: number
@@ -98,7 +170,7 @@ export function formatKitchenAge(sentAt: string, now = Date.now()): string {
 }
 
 export interface KitchenRealtimeCallbacks {
-  readonly onSnapshot: (rows: readonly KitchenBoardRow[]) => void
+  readonly onSnapshot: (rows: readonly KitchenBoardRow[], snapshot: KitchenBoardSnapshot) => void
   readonly onError: (message: string) => void
 }
 
@@ -106,6 +178,16 @@ export interface KitchenRealtimeHandle {
   readonly resync: () => Promise<void>
   readonly stop: () => Promise<void>
 }
+
+export type KitchenReceiveResult =
+  | { readonly ok: true; readonly received: number }
+  | {
+    readonly ok: false
+    readonly error: {
+      readonly kind: 'operation-error' | 'concurrent-conflict'
+      readonly message: string
+    }
+  }
 
 export type KitchenTransitionResult =
   | { readonly ok: true }
@@ -185,7 +267,10 @@ export function createKitchenRealtimeService(
             ok: false,
             error: {
               kind: 'concurrent-conflict',
-              message: 'Este producto fue actualizado desde otro dispositivo. Se cargó la versión más reciente.',
+              // E7-D10: el mozo pudo cancelar el producto mientras cocina actuaba.
+              message: /cancelad/i.test(result.error.message ?? '')
+                ? 'El mozo canceló este producto. Se cargó la versión más reciente.'
+                : 'Este producto fue actualizado desde otro dispositivo. Se cargó la versión más reciente.',
             },
           }
         }
@@ -210,19 +295,41 @@ export function createKitchenRealtimeService(
       }
     },
 
+    /** E7-D09: recepción completa del pedido (sólo ENVIADO con cocina); 0 recibidos es éxito sin cambios. */
+    async receiveOrder(orderId: number): Promise<KitchenReceiveResult> {
+      try {
+        const result = await client.rpc('rpc_recibir_pedido_cocina', { p_pedido_id: orderId })
+        if (result.error?.code === 'PT409') {
+          return {
+            ok: false,
+            error: { kind: 'concurrent-conflict', message: 'Este pedido ya no está en cocina. Se cargó la versión más reciente.' },
+          }
+        }
+        if (result.error) {
+          return { ok: false, error: { kind: 'operation-error', message: 'No pudimos recibir el pedido. Intenta nuevamente.' } }
+        }
+        const row = (result.data as Array<{ detalles_recibidos: number }> | null)?.[0]
+        return { ok: true, received: Number(row?.detalles_recibidos ?? 0) }
+      } catch {
+        return { ok: false, error: { kind: 'operation-error', message: 'No pudimos recibir el pedido. Revisa tu conexión.' } }
+      }
+    },
+
     async start(callbacks: KitchenRealtimeCallbacks): Promise<KitchenRealtimeHandle> {
       let stopped = false
 
       const refresh = async (): Promise<void> => {
         if (stopped) return
         try {
-          const result = await client.rpc('obtener_tablero_cocina')
+          // E7-D08: una sola lectura autoritativa por refresco (detalles con cocina, comandas y cancelaciones).
+          const result = await client.rpc('rpc_obtener_tablero_cocina')
           if (stopped) return
-          if (result.error) {
+          const snapshot = result.error ? null : parseKitchenSnapshot(result.data)
+          if (!snapshot) {
             callbacks.onError('No pudimos sincronizar el tablero de cocina. Revisa tu conexión.')
             return
           }
-          callbacks.onSnapshot((result.data as KitchenBoardRow[] | null) ?? [])
+          callbacks.onSnapshot(snapshot.detalles, snapshot)
         } catch {
           if (stopped) return
           callbacks.onError('No pudimos sincronizar el tablero de cocina. Revisa tu conexión.')

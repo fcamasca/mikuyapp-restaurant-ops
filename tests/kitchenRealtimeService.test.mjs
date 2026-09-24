@@ -53,12 +53,13 @@ function createFixture(responses = [[row(1)], [row(1)], [row(2)]]) {
 
   const client = {
     async rpc(name) {
-      assert.equal(name, 'obtener_tablero_cocina')
+      // E7-D08: la lectura de cocina usa la RPC unificada con detalles/comandas/cancelaciones.
+      assert.equal(name, 'rpc_obtener_tablero_cocina')
       const data = responses[Math.min(rpcCalls, responses.length - 1)]
       rpcCalls += 1
       return data instanceof Error
         ? { data: null, error: { message: data.message } }
-        : { data, error: null }
+        : { data: { detalles: data, comandas: [], cancelaciones: [] }, error: null }
     },
     channel(name) {
       assert.equal(name, 'kitchen-board-signals')
@@ -239,7 +240,7 @@ test('T07 cleanup cancela canal y descarta snapshot o status tardíos', async ()
   const client = {
     async rpc() {
       rpcCalls += 1
-      if (rpcCalls === 1) return { data: [row(1)], error: null }
+      if (rpcCalls === 1) return { data: { detalles: [row(1)], comandas: [], cancelaciones: [] }, error: null }
       return deferred
     },
     channel() { return channel },
@@ -254,7 +255,7 @@ test('T07 cleanup cancela canal y descarta snapshot o status tardíos', async ()
 
   const lateRefresh = handle.resync()
   await handle.stop()
-  resolveDeferred({ data: [row(2)], error: null })
+  resolveDeferred({ data: { detalles: [row(2)], comandas: [], cancelaciones: [] }, error: null })
   await lateRefresh
   statusHandler('CHANNEL_ERROR')
   await new Promise((resolve) => setImmediate(resolve))
