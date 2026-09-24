@@ -34,6 +34,8 @@ export interface WaiterOrderDetail {
   readonly precio_unitario: number
   readonly observacion: string | null
   readonly estado: OrderDetailStatus
+  /** E7-D03: snapshot de la condición de cocina del producto al crear el detalle. */
+  readonly requiere_cocina?: boolean
   readonly creado_por?: string
   readonly creado_en?: string
   readonly modificado_por?: string
@@ -78,6 +80,34 @@ function concurrentConflict(): WaiterOrderResult<never> {
       recoverable: true,
     },
   }
+}
+
+/** E7-D13: línea cancelada de sólo lectura (snapshot en historial_detalle_pedido). */
+export interface WaiterCancelledDetail {
+  readonly detalle_id: number
+  readonly producto_id: string
+  readonly producto_nombre: string
+  readonly cantidad: number
+  readonly precio_unitario: number
+  readonly observacion: string | null
+  readonly estado_anterior: OrderDetailStatus
+  readonly motivo: string
+  readonly cancelado_en: string
+  readonly cancelado_por_nombre: string
+}
+
+export const cancellationReasons = ['Cliente cambió de opinión', 'Error al registrar', 'Demora', 'Producto no disponible'] as const
+export const maxCancellationReasonLength = 200
+
+/** E7-R12: sólo detalles con cocina en ENVIADO o RECIBIDO_COCINA (DH-03: sin cocina enviado está LISTO). */
+export function canCancelOrderDetail(detail: Pick<WaiterOrderDetail, 'estado' | 'requiere_cocina'>): boolean {
+  return detail.requiere_cocina !== false && (detail.estado === 'ENVIADO' || detail.estado === 'RECIBIDO_COCINA')
+}
+
+/** E7-R06: etiqueta visible del estado del detalle para el mozo. */
+export function describeWaiterDetailStatus(detail: Pick<WaiterOrderDetail, 'estado' | 'requiere_cocina'>): string {
+  if (detail.requiere_cocina === false && detail.estado === 'LISTO') return 'Listo para servir'
+  return detail.estado
 }
 
 export function combineOrderObservation(selected: readonly string[], freeText: string): string | null {
@@ -175,7 +205,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para consultar este pedido.')
       try {
         const result = await client.from('detalle_pedido')
-          .select('id,pedido_id,producto_id,cantidad,precio_unitario,observacion,estado,creado_por,creado_en,modificado_por,modificado_en')
+          .select('id,pedido_id,producto_id,cantidad,precio_unitario,observacion,estado,requiere_cocina,creado_por,creado_en,modificado_por,modificado_en')
           .eq('pedido_id', orderId).returns<WaiterOrderDetail[]>()
         if (result.error) return connectionError('No pudimos cargar los productos del pedido. Intenta nuevamente.')
         return { ok: true, data: result.data ?? [] }
@@ -255,6 +285,42 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         return { ok: true, data: null }
       } catch {
         return connectionError('No pudimos retirar el producto. Intenta nuevamente.')
+      }
+    },
+
+    async cancelOrderDetail(context: ValidatedProfileContext, detailId: number, reason: string): Promise<WaiterOrderResult<null>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para cancelar productos.')
+      const motivo = reason.trim()
+      if (!motivo) return connectionError('Indica el motivo de la cancelación.')
+      if (motivo.length > maxCancellationReasonLength) return connectionError(`El motivo admite como máximo ${maxCancellationReasonLength} caracteres.`)
+      try {
+        // E7-D10: la línea completa se cancela en PostgreSQL (locks pedido -> detalle -> mesa, idempotente).
+        const result = await client.rpc('rpc_cancelar_detalle_pedido', { p_detalle_id: detailId, p_motivo: motivo })
+        if (result.error?.code === 'PT409') {
+          return {
+            ok: false,
+            error: {
+              kind: 'concurrent-conflict',
+              message: 'Este producto ya no puede cancelarse (su preparación inició o cambió desde otro dispositivo). Se cargó la versión más reciente.',
+              recoverable: true,
+            },
+          }
+        }
+        if (result.error) return connectionError('No pudimos cancelar el producto. No se realizó ningún cambio.')
+        return { ok: true, data: null }
+      } catch {
+        return connectionError('No pudimos cancelar el producto. No se realizó ningún cambio.')
+      }
+    },
+
+    async getOrderCancellations(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<readonly WaiterCancelledDetail[]>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para consultar este pedido.')
+      try {
+        const result = await client.rpc('rpc_obtener_cancelaciones_pedido', { p_pedido_id: orderId })
+        if (result.error) return connectionError('No pudimos cargar los productos cancelados. Intenta nuevamente.')
+        return { ok: true, data: (result.data as WaiterCancelledDetail[] | null) ?? [] }
+      } catch {
+        return connectionError('No pudimos cargar los productos cancelados. Intenta nuevamente.')
       }
     },
 

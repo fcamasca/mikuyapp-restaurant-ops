@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { getWaiterOrderId, resolveApplicationRoute } from '../src/services/appRoutes.ts'
-import { combineOrderObservation, createWaiterOrderService, filterAndSortWaiterTables } from '../src/services/waiterOrderService.ts'
+import { canCancelOrderDetail, combineOrderObservation, createWaiterOrderService, describeWaiterDetailStatus, filterAndSortWaiterTables } from '../src/services/waiterOrderService.ts'
 
 const pageSource = readFileSync(new URL('../src/pages/WaiterTablesPage.tsx', import.meta.url), 'utf8')
 const orderPageSource = readFileSync(new URL('../src/pages/WaiterOrderPage.tsx', import.meta.url), 'utf8')
@@ -655,4 +655,95 @@ test('frontend lee auditoría persistida sin enviar UUID de autor en mutaciones'
   assert.match(serviceSource, /creado_por,creado_en,modificado_por,modificado_en/)
   assert.doesNotMatch(serviceSource, /p_(creado|modificado)_por/)
   assert.match(serviceSource, /const changes: \{ cantidad\?: number; observacion\?: string \| null \} = \{\}/)
+})
+
+
+// ===== E7-T07 — Flujo del mozo: productos sin cocina y cancelación (E7-R06, R12–R17)
+test('E7-T07 matriz de cancelación: sólo ENVIADO/RECIBIDO_COCINA con cocina', () => {
+  for (const estado of ['ENVIADO', 'RECIBIDO_COCINA']) {
+    assert.equal(canCancelOrderDetail({ estado, requiere_cocina: true }), true)
+    assert.equal(canCancelOrderDetail({ estado }), true) // snapshot ausente en datos previos = con cocina
+  }
+  for (const estado of ['ABIERTO', 'EN_PREPARACION', 'LISTO']) {
+    assert.equal(canCancelOrderDetail({ estado, requiere_cocina: true }), false)
+  }
+  // DH-03: sin cocina ya enviado (LISTO) no se cancela
+  assert.equal(canCancelOrderDetail({ estado: 'LISTO', requiere_cocina: false }), false)
+  assert.equal(canCancelOrderDetail({ estado: 'ABIERTO', requiere_cocina: false }), false)
+})
+
+test('E7-T07 productos sin cocina enviados se muestran como Listo para servir', () => {
+  assert.equal(describeWaiterDetailStatus({ estado: 'LISTO', requiere_cocina: false }), 'Listo para servir')
+  assert.equal(describeWaiterDetailStatus({ estado: 'LISTO', requiere_cocina: true }), 'LISTO')
+  assert.equal(describeWaiterDetailStatus({ estado: 'ENVIADO', requiere_cocina: true }), 'ENVIADO')
+})
+
+test('E7-T07 lee el snapshot requiere_cocina de cada detalle', async () => {
+  const fixture = createClient({ details: [] })
+  await createWaiterOrderService(fixture.client).getOrderDetails(context(), 12)
+  assert.match(fixture.calls[0].columns, /(^|,)requiere_cocina(,|$)/)
+})
+
+test('E7-T07 cancela la línea completa vía RPC con motivo recortado', async () => {
+  const fixture = createClient({ rpcData: [{ detalle_id: 41, pedido_id: 12, pedido_estado: 'ENVIADO', mesa_estado: 'OCUPADA', ya_cancelado: false }] })
+  const result = await createWaiterOrderService(fixture.client).cancelOrderDetail(context(), 41, '  Cliente cambió de opinión  ')
+  assert.equal(result.ok, true)
+  assert.deepEqual(fixture.rpcCalls, [{ name: 'rpc_cancelar_detalle_pedido', args: { p_detalle_id: 41, p_motivo: 'Cliente cambió de opinión' } }])
+  assert.equal('p_cantidad' in fixture.rpcCalls[0].args, false) // DH-04: siempre línea completa
+})
+
+test('E7-T07 motivo obligatorio y acotado sin llamar al servidor', async () => {
+  const fixture = createClient()
+  const service = createWaiterOrderService(fixture.client)
+  const empty = await service.cancelOrderDetail(context(), 41, '   ')
+  const tooLong = await service.cancelOrderDetail(context(), 41, 'x'.repeat(201))
+  assert.equal(empty.ok, false)
+  assert.equal(tooLong.ok, false)
+  assert.match(empty.error.message, /motivo/)
+  assert.deepEqual(fixture.rpcCalls, [])
+})
+
+test('E7-T07 PT409 de cancelación es conflicto recuperable; otros errores no muestran éxito', async () => {
+  const conflict = await createWaiterOrderService(createClient({ rpcData: null, rpcError: { code: 'PT409' } }).client).cancelOrderDetail(context(), 41, 'Demora')
+  assert.equal(conflict.ok, false)
+  assert.equal(conflict.error.kind, 'concurrent-conflict')
+  assert.match(conflict.error.message, /ya no puede cancelarse/)
+  const failure = await createWaiterOrderService(createClient({ rpcData: null, rpcError: { code: '42501', message: 'SQL secret' } }).client).cancelOrderDetail(context(), 41, 'Demora')
+  assert.equal(failure.error.kind, 'operation-error')
+  assert.doesNotMatch(failure.error.message, /SQL|secret/)
+  const role = await createWaiterOrderService(createClient().client).cancelOrderDetail(context('COCINA'), 41, 'Demora')
+  assert.equal(role.ok, false)
+})
+
+test('E7-T07 lee cancelaciones del pedido vía RPC de sólo lectura', async () => {
+  const rows = [{ detalle_id: 41, producto_id: 'p', producto_nombre: 'Ceviche', cantidad: 2, precio_unitario: 30, observacion: null, estado_anterior: 'ENVIADO', motivo: 'Demora', cancelado_en: '2026-09-24T15:00:00Z', cancelado_por_nombre: 'Mozo' }]
+  const fixture = createClient({ rpcData: rows })
+  const result = await createWaiterOrderService(fixture.client).getOrderCancellations(context(), 12)
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.data, rows)
+  assert.deepEqual(fixture.rpcCalls, [{ name: 'rpc_obtener_cancelaciones_pedido', args: { p_pedido_id: 12 } }])
+  const denied = await createWaiterOrderService(createClient().client).getOrderCancellations(context('CAJA'), 12)
+  assert.equal(denied.ok, false)
+})
+
+test('E7-T07 pantalla: indicador sin cocina, cancelación con motivo, guard y sección Cancelados', () => {
+  assert.match(orderPageSource, /product\.requiere_cocina === false && <span[^>]*>Sin cocina<\/span>/)
+  assert.match(orderPageSource, /detail\.requiere_cocina === false && <span[^>]*>Sin cocina<\/span>/)
+  assert.match(orderPageSource, /Estado: \$\{describeWaiterDetailStatus\(detail\)\}/)
+  assert.match(orderPageSource, /canCancelOrderDetail\(detail\) && confirmingCancel !== detail\.id && <button/)
+  assert.match(orderPageSource, />Cancelar producto</)
+  assert.match(orderPageSource, /Motivo \(obligatorio\)/)
+  assert.match(orderPageSource, /disabled=\{detailBusy \|\| !cancellationReason/)
+  assert.match(orderPageSource, /Se cancela la línea completa/)
+  assert.match(orderPageSource, /pendingDetailIds\.current\.has\(detail\.id\) \|\| !canCancelOrderDetail\(detail\)/)
+  assert.match(orderPageSource, /id="cancelled-details-title">Cancelados</)
+  assert.match(orderPageSource, /Solo lectura · no suman al total/)
+  assert.match(orderPageSource, /no puede cancelarse/)
+})
+
+test('E7-T07 éxito y conflicto resincronizan el snapshot autoritativo (incluidas cancelaciones)', () => {
+  assert.match(orderPageSource, /if \(result\.ok\) \{ closeCancellation\(\); await reloadOrderSnapshot\(\); return \}/)
+  assert.match(orderPageSource, /result\.error\.kind === 'concurrent-conflict'\) \{\s*closeCancellation\(\)\s*await reloadOrderSnapshot\(\)/)
+  assert.match(orderPageSource, /orders\.getOrderCancellations\(context, orderId\),\s*\]\)/)
+  assert.match(orderPageSource, /setCancellations\(cancellationResult\.data\)/)
 })

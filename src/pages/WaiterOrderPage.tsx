@@ -4,7 +4,7 @@ import { createCatalogService, type CatalogGroup } from '../services/catalogServ
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
 import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
-import { combineOrderObservation, createWaiterOrderService, type WaiterOrderDetail, type WaiterOrderReview } from '../services/waiterOrderService'
+import { canCancelOrderDetail, cancellationReasons, combineOrderObservation, createWaiterOrderService, describeWaiterDetailStatus, maxCancellationReasonLength, type WaiterCancelledDetail, type WaiterOrderDetail, type WaiterOrderReview } from '../services/waiterOrderService'
 
 interface Props { readonly context: ValidatedProfileContext; readonly orderId: number; readonly isSigningOut: boolean; readonly onBack: () => void; readonly onSignOut: () => void }
 const notes = ['Sin cebolla', 'Sin ají', 'Poco picante', 'Sin cancha'] as const
@@ -39,6 +39,10 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
   const [confirmingRelease, setConfirmingRelease] = useState(false)
   const [releasing, setReleasing] = useState(false)
   const releasingRef = useRef(false)
+  const [cancellations, setCancellations] = useState<readonly WaiterCancelledDetail[]>([])
+  const [confirmingCancel, setConfirmingCancel] = useState<number | null>(null)
+  const [cancelReason, setCancelReason] = useState<string | null>(null)
+  const [cancelFree, setCancelFree] = useState('')
 
   const reload = useCallback(async (): Promise<boolean> => {
     if (!orders) return false
@@ -48,15 +52,18 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
   }, [context, orderId, orders])
   const reloadOrderSnapshot = useCallback(async (isCurrent: () => boolean = () => true): Promise<void> => {
     if (!orders) return
-    const [detailResult, reviewResult] = await Promise.all([
+    const [detailResult, reviewResult, cancellationResult] = await Promise.all([
       orders.getOrderDetails(context, orderId),
       orders.getOrderReview(context, orderId),
+      orders.getOrderCancellations(context, orderId),
     ])
     if (!isCurrent()) return
     if (!detailResult.ok) { setError(detailResult.error.message); return }
     if (!reviewResult.ok) { setError(reviewResult.error.message); return }
+    if (!cancellationResult.ok) { setError(cancellationResult.error.message); return }
     setDetails(detailResult.data)
     setReview(reviewResult.data)
+    setCancellations(cancellationResult.data)
     setError(null)
   }, [context, orderId, orders])
   function resetDetailDraft(detailId: number) {
@@ -90,14 +97,15 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     async function load() {
       setLoading(true); setDetailConflicts({}); setError(null)
       if (!orders || !catalog) { setLoading(false); setError('No pudimos preparar el pedido. Intenta nuevamente.'); return }
-      const [catalogResult, detailResult, reviewResult] = await Promise.all([catalog.getOperationalCatalog(context), orders.getOrderDetails(context, orderId), orders.getOrderReview(context, orderId)])
+      const [catalogResult, detailResult, reviewResult, cancellationResult] = await Promise.all([catalog.getOperationalCatalog(context), orders.getOrderDetails(context, orderId), orders.getOrderReview(context, orderId), orders.getOrderCancellations(context, orderId)])
       if (cancelled) return
       setLoading(false)
       if (!catalogResult.ok) { setError(catalogResult.error.message); return }
       if (!detailResult.ok) { setError(detailResult.error.message); return }
       if (!reviewResult.ok) { setError(reviewResult.error.message); return }
+      if (!cancellationResult.ok) { setError(cancellationResult.error.message); return }
       setGroups(catalogResult.data.groups); setDetails(detailResult.data)
-      setReview(reviewResult.data)
+      setReview(reviewResult.data); setCancellations(cancellationResult.data)
       setMode(detailResult.data.length > 0 ? 'ORDER' : 'CATALOG')
     }
     void load(); return () => { cancelled = true }
@@ -120,6 +128,7 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
   const requestedDetails = details.filter((detail) => detail.estado !== 'ABIERTO')
   const openDetails = details.filter((detail) => detail.estado === 'ABIERTO')
   const orderedDetails = [...requestedDetails, ...openDetails]
+  const cancellationReason = combineOrderObservation(cancelReason ? [cancelReason] : [], cancelFree) ?? ''
   const total = details.reduce((sum, detail) => sum + detail.cantidad * Number(detail.precio_unitario), 0)
   const canDeliver = review?.estado === 'LISTO' && details.length > 0
     && details.every((detail) => detail.estado === 'LISTO')
@@ -182,6 +191,29 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     }
   }
 
+  function closeCancellation() {
+    setConfirmingCancel(null); setCancelReason(null); setCancelFree('')
+  }
+  async function cancelDetail(detail: WaiterOrderDetail) {
+    if (!orders || pendingDetailIds.current.has(detail.id) || !canCancelOrderDetail(detail) || !cancellationReason) return
+    pendingDetailIds.current.add(detail.id)
+    clearDetailConflict(detail.id)
+    setBusyDetails((ids) => [...ids, detail.id]); setError(null)
+    try {
+      const result = await orders.cancelOrderDetail(context, detail.id, cancellationReason)
+      if (result.ok) { closeCancellation(); await reloadOrderSnapshot(); return }
+      if (result.error.kind === 'concurrent-conflict') {
+        closeCancellation()
+        await reloadOrderSnapshot()
+        setDetailConflicts((current) => ({ ...current, [detail.id]: result.error.message }))
+        return
+      }
+      setError(result.error.message)
+    } finally {
+      pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
+    }
+  }
+
   async function sendToKitchen() {
     if (!orders || sendingRef.current || openDetails.length === 0) return
     sendingRef.current = true; setSending(true); setError(null)
@@ -236,14 +268,27 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     {deliveryMessage && <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-900" role="status">{deliveryMessage}</p>}
     {loading ? <p aria-busy="true" className="mt-8">Cargando pedido y productos…</p> : <div className="mt-8 min-w-0">
       {mode === 'CATALOG' && <section className="min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-bold">Agregar productos</h2>{details.length > 0 && <p className="mt-1 text-sm text-stone-600">{details.length} líneas · Total {money.format(total)}</p>}</div>{details.length > 0 && <button className="min-h-11 rounded-xl border border-stone-300 px-4 font-semibold" onClick={() => setMode('ORDER')} type="button">Volver al pedido</button>}</div><div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Filtrar por categoría"><button className={`min-h-11 shrink-0 rounded-full px-4 font-semibold ${category === 'TODAS' ? 'bg-emerald-800 text-white' : 'border'}`} onClick={() => setCategory('TODAS')} type="button">Todas</button>{groups.map((group) => <button className={`min-h-11 shrink-0 rounded-full px-4 font-semibold ${category === group.category.id ? 'bg-emerald-800 text-white' : 'border'}`} key={group.category.id} onClick={() => setCategory(group.category.id)} type="button">{group.category.nombre}</button>)}</div>
-        {visible.length === 0 ? <p className="mt-6">No hay productos disponibles.</p> : visible.map((group) => <div className="mt-6" key={group.category.id}><h3 className="font-bold">{group.category.nombre}</h3><ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">{group.products.map((product) => <li className="flex min-w-0 flex-col rounded-2xl border p-4" key={product.id}><strong className="break-words text-lg">{product.nombre}</strong><span className="mt-1 text-stone-600">{money.format(product.precio)}</span><button aria-busy={busy === `p-${product.id}`} className="mt-4 min-h-12 rounded-xl bg-emerald-800 px-4 font-bold text-white disabled:opacity-60" disabled={Boolean(busy)} onClick={() => { void add(product.id) }} type="button">{busy === `p-${product.id}` ? 'Agregando…' : 'Agregar'}</button></li>)}</ul></div>)}
+        {visible.length === 0 ? <p className="mt-6">No hay productos disponibles.</p> : visible.map((group) => <div className="mt-6" key={group.category.id}><h3 className="font-bold">{group.category.nombre}</h3><ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">{group.products.map((product) => <li className="flex min-w-0 flex-col rounded-2xl border p-4" key={product.id}><strong className="break-words text-lg">{product.nombre}</strong>{product.requiere_cocina === false && <span className="mt-1 w-fit rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900">Sin cocina</span>}<span className="mt-1 text-stone-600">{money.format(product.precio)}</span><button aria-busy={busy === `p-${product.id}`} className="mt-4 min-h-12 rounded-xl bg-emerald-800 px-4 font-bold text-white disabled:opacity-60" disabled={Boolean(busy)} onClick={() => { void add(product.id) }} type="button">{busy === `p-${product.id}` ? 'Agregando…' : 'Agregar'}</button></li>)}</ul></div>)}
       </section>}
-      {mode === 'ORDER' && <section className="min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-bold">Pedido actual</h2><p className="mt-1 text-2xl font-bold text-emerald-900">Total {money.format(total)}</p></div><div className="grid gap-2 sm:grid-cols-2"><button className="min-h-12 rounded-xl border border-emerald-700 px-5 font-bold text-emerald-900" disabled={sending} onClick={() => setMode('CATALOG')} type="button">+ Agregar productos</button>{openDetails.length > 0 && <button aria-busy={sending} className="min-h-12 rounded-xl bg-emerald-800 px-5 font-bold text-white disabled:opacity-60" disabled={sending} onClick={() => { void sendToKitchen() }} type="button">{sending ? 'Enviando…' : 'Enviar a cocina'}</button>}</div></div>{details.length === 0 ? <p className="mt-4 text-stone-600">Aún no agregaste productos.</p> : <ul className="mt-6 grid gap-4">{orderedDetails.map((detail, index) => { const open = detail.estado === 'ABIERTO'; const detailBusy = busyDetails.includes(detail.id); const detailConflict = detailConflicts[detail.id]; const removing = detailBusy && confirmingRemoval === detail.id; const productName = names.get(detail.producto_id) ?? 'Producto'; const detailAmount = detail.cantidad * Number(detail.precio_unitario); return <Fragment key={detail.id}>{index === 0 && requestedDetails.length > 0 && <li className="list-none"><h3 className="text-lg font-bold text-stone-700">Ya solicitado</h3><p className="text-sm text-stone-500">Solo lectura</p></li>}{index === requestedDetails.length && openDetails.length > 0 && <li className="mt-2 list-none"><h3 className="text-lg font-bold text-emerald-800">Por enviar</h3><p className="text-sm text-stone-500">Puedes ajustar estos productos</p></li>}<li aria-busy={detailBusy || sending} className="min-w-0 rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-bold">{productName}</h3><p className="mt-1 text-sm text-stone-600">{money.format(detail.precio_unitario)}{detail.cantidad > 1 && ` · Importe ${money.format(detailAmount)}`}{!open && ` · Estado: ${detail.estado}`}</p></div>{open ? <button aria-label={`Retirar ${productName}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-stone-200 bg-transparent text-stone-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100 disabled:opacity-50" disabled={detailBusy || sending} onClick={() => setConfirmingRemoval(detail.id)} type="button"><svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" /></svg></button> : <strong className="shrink-0">× {detail.cantidad}</strong>}</div>{detail.observacion && <p className="mt-3 break-words text-sm text-stone-700">{detail.observacion}</p>}{detailConflict && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="status">{detailConflict}</p>}
+      {mode === 'ORDER' && <section className="min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-bold">Pedido actual</h2><p className="mt-1 text-2xl font-bold text-emerald-900">Total {money.format(total)}</p></div><div className="grid gap-2 sm:grid-cols-2"><button className="min-h-12 rounded-xl border border-emerald-700 px-5 font-bold text-emerald-900" disabled={sending} onClick={() => setMode('CATALOG')} type="button">+ Agregar productos</button>{openDetails.length > 0 && <button aria-busy={sending} className="min-h-12 rounded-xl bg-emerald-800 px-5 font-bold text-white disabled:opacity-60" disabled={sending} onClick={() => { void sendToKitchen() }} type="button">{sending ? 'Enviando…' : 'Enviar a cocina'}</button>}</div></div>{details.length === 0 ? <p className="mt-4 text-stone-600">Aún no agregaste productos.</p> : <ul className="mt-6 grid gap-4">{orderedDetails.map((detail, index) => { const open = detail.estado === 'ABIERTO'; const detailBusy = busyDetails.includes(detail.id); const detailConflict = detailConflicts[detail.id]; const removing = detailBusy && confirmingRemoval === detail.id; const productName = names.get(detail.producto_id) ?? 'Producto'; const detailAmount = detail.cantidad * Number(detail.precio_unitario); return <Fragment key={detail.id}>{index === 0 && requestedDetails.length > 0 && <li className="list-none"><h3 className="text-lg font-bold text-stone-700">Ya solicitado</h3><p className="text-sm text-stone-500">Solo lectura</p></li>}{index === requestedDetails.length && openDetails.length > 0 && <li className="mt-2 list-none"><h3 className="text-lg font-bold text-emerald-800">Por enviar</h3><p className="text-sm text-stone-500">Puedes ajustar estos productos</p></li>}<li aria-busy={detailBusy || sending} className="min-w-0 rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-bold">{productName}</h3>{detail.requiere_cocina === false && <span className="mt-1 inline-block rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900">Sin cocina</span>}<p className="mt-1 text-sm text-stone-600">{money.format(detail.precio_unitario)}{detail.cantidad > 1 && ` · Importe ${money.format(detailAmount)}`}{!open && ` · Estado: ${describeWaiterDetailStatus(detail)}`}</p></div>{open ? <button aria-label={`Retirar ${productName}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-stone-200 bg-transparent text-stone-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100 disabled:opacity-50" disabled={detailBusy || sending} onClick={() => setConfirmingRemoval(detail.id)} type="button"><svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" /></svg></button> : <strong className="shrink-0">× {detail.cantidad}</strong>}</div>{detail.observacion && <p className="mt-3 break-words text-sm text-stone-700">{detail.observacion}</p>}{detailConflict && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="status">{detailConflict}</p>}
           {open ? <><div className="mt-4 grid grid-cols-3 gap-2"><button aria-label="Disminuir cantidad" className="min-h-11 rounded-xl border text-xl font-bold disabled:opacity-40" disabled={detailBusy || sending || detail.cantidad <= 1} onClick={() => { void quantity(detail, detail.cantidad - 1) }} type="button">−</button><span className="grid min-h-11 place-items-center rounded-xl bg-stone-100 font-bold">{detail.cantidad}</span><button aria-label="Aumentar cantidad" className="min-h-11 rounded-xl border text-xl font-bold" disabled={detailBusy || sending} onClick={() => { void quantity(detail, detail.cantidad + 1) }} type="button">+</button></div>
                 {editing === detail.id ? <div className="mt-4 rounded-xl bg-stone-50 p-3"><p className="text-sm font-bold">Observaciones frecuentes</p><div className="mt-2 grid grid-cols-2 gap-2">{notes.map((note) => { const active = selected.includes(note); return <button aria-pressed={active} className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${active ? 'border-emerald-700 bg-emerald-50' : ''}`} disabled={detailBusy} key={note} onClick={() => setSelected(active ? selected.filter((item) => item !== note) : [...selected, note])} type="button">{note}</button> })}</div><label className="mt-3 block text-sm font-bold">Otra…<textarea className="mt-1 min-h-24 w-full min-w-0 rounded-xl border p-3 text-base" disabled={detailBusy} onChange={(event) => setFree(event.target.value)} value={free} /></label><div className="mt-3 grid grid-cols-2 gap-2"><button className="min-h-11 rounded-xl border font-semibold" disabled={detailBusy} onClick={() => setEditing(null)} type="button">Cancelar</button><button className="min-h-11 rounded-xl bg-emerald-800 font-semibold text-white" disabled={detailBusy} onClick={() => { void saveObservation(detail) }} type="button">{detailBusy ? 'Actualizando…' : 'Guardar'}</button></div></div> : <button className="mt-3 min-h-11 rounded-xl border px-3 font-semibold" disabled={detailBusy} onClick={() => editObservation(detail)} type="button">{detail.observacion ? 'Editar observación' : 'Agregar observación'}</button>}
                 {detailBusy && !removing && <p className="mt-3 text-center text-sm font-semibold text-emerald-800" role="status">Actualizando…</p>}
-                {confirmingRemoval === detail.id && <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3"><p className="text-sm font-semibold text-rose-900">¿Retirar {productName}?</p><div className="mt-3 grid grid-cols-2 gap-2"><button className="min-h-11 rounded-xl border border-stone-300 font-semibold" disabled={detailBusy} onClick={() => setConfirmingRemoval(null)} type="button">Cancelar</button><button className="min-h-11 rounded-xl bg-rose-700 font-semibold text-white disabled:opacity-60" disabled={detailBusy} onClick={() => { void remove(detail) }} type="button">{removing ? '⏳ Retirando…' : 'Retirar'}</button></div></div>}</> : <p className="mt-4 rounded-xl bg-stone-100 p-3 text-sm font-semibold text-stone-600">Este detalle ya fue enviado y no se puede editar ni retirar.</p>}
-        </li></Fragment>})}</ul>}</section>}
+                {confirmingRemoval === detail.id && <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3"><p className="text-sm font-semibold text-rose-900">¿Retirar {productName}?</p><div className="mt-3 grid grid-cols-2 gap-2"><button className="min-h-11 rounded-xl border border-stone-300 font-semibold" disabled={detailBusy} onClick={() => setConfirmingRemoval(null)} type="button">Cancelar</button><button className="min-h-11 rounded-xl bg-rose-700 font-semibold text-white disabled:opacity-60" disabled={detailBusy} onClick={() => { void remove(detail) }} type="button">{removing ? '⏳ Retirando…' : 'Retirar'}</button></div></div>}</> : <>
+                <p className="mt-4 rounded-xl bg-stone-100 p-3 text-sm font-semibold text-stone-600">Este detalle ya fue enviado y no se puede editar ni retirar.{canCancelOrderDetail(detail) ? ' Puedes cancelarlo mientras cocina no inicie su preparación.' : detail.requiere_cocina === false ? ' Es un producto sin cocina ya enviado: no puede cancelarse.' : ' Su preparación ya inició: no puede cancelarse.'}</p>
+                {canCancelOrderDetail(detail) && confirmingCancel !== detail.id && <button className="mt-3 min-h-11 w-full rounded-xl border border-rose-300 px-3 font-semibold text-rose-800 disabled:opacity-60 sm:w-auto" disabled={detailBusy} onClick={() => { closeCancellation(); clearDetailConflict(detail.id); setConfirmingCancel(detail.id) }} type="button">Cancelar producto</button>}
+                {canCancelOrderDetail(detail) && confirmingCancel === detail.id && <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3" role="dialog" aria-modal="true" aria-labelledby={`cancel-detail-${detail.id}`}>
+                  <p className="text-sm font-semibold text-rose-950" id={`cancel-detail-${detail.id}`}>¿Cancelar {productName} × {detail.cantidad}?</p>
+                  <p className="mt-1 text-sm text-rose-900">Se cancela la línea completa ({money.format(detailAmount)}), estado actual {describeWaiterDetailStatus(detail)}. Cocina verá la cancelación.</p>
+                  <p className="mt-3 text-sm font-bold">Motivo (obligatorio)</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">{cancellationReasons.map((reason) => { const active = cancelReason === reason; return <button aria-pressed={active} className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${active ? 'border-rose-700 bg-white' : ''}`} disabled={detailBusy} key={reason} onClick={() => setCancelReason(active ? null : reason)} type="button">{reason}</button> })}</div>
+                  <label className="mt-3 block text-sm font-bold">Otro motivo…<textarea className="mt-1 min-h-20 w-full min-w-0 rounded-xl border p-3 text-base" disabled={detailBusy} maxLength={maxCancellationReasonLength} onChange={(event) => setCancelFree(event.target.value)} value={cancelFree} /></label>
+                  <div className="mt-3 grid grid-cols-2 gap-2"><button className="min-h-11 rounded-xl border border-stone-300 font-semibold" disabled={detailBusy} onClick={closeCancellation} type="button">Volver</button><button aria-busy={detailBusy} className="min-h-11 rounded-xl bg-rose-700 font-semibold text-white disabled:opacity-60" disabled={detailBusy || !cancellationReason || cancellationReason.length > maxCancellationReasonLength} onClick={() => { void cancelDetail(detail) }} type="button">{detailBusy ? 'Cancelando…' : 'Confirmar cancelación'}</button></div>
+                </div>}
+              </>}
+        </li></Fragment>})}</ul>}
+        {cancellations.length > 0 && <section aria-labelledby="cancelled-details-title" className="mt-8 border-t border-stone-200 pt-6"><h3 className="text-lg font-bold text-stone-700" id="cancelled-details-title">Cancelados</h3><p className="text-sm text-stone-500">Solo lectura · no suman al total</p><ul className="mt-3 grid gap-3">{cancellations.map((item) => <li className="min-w-0 rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-4 text-stone-600" key={item.detalle_id}><div className="flex items-start justify-between gap-3"><p className="min-w-0 break-words font-semibold line-through">{item.producto_nombre}</p><strong className="shrink-0">× {item.cantidad}</strong></div>{item.observacion && <p className="mt-1 break-words text-sm">{item.observacion}</p>}<p className="mt-2 break-words text-sm">Motivo: {item.motivo} · {item.cancelado_por_nombre} · {new Date(item.cancelado_en).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}</p></li>)}</ul></section>}
+      </section>}
     </div>}
   </div></main>
 }
