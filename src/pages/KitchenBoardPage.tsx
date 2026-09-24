@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
+import KitchenCommandDocument from '../components/KitchenCommandDocument'
+import { buildCommandDocument, commandPrintAction, createKitchenCommandService, type CommandDocument } from '../services/kitchenCommandService'
 import {
   countPendingReception,
   createKitchenRealtimeService,
@@ -74,6 +76,15 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
   const receivingOrders = useRef(new Set<number>())
   const [receivingIds, setReceivingIds] = useState<readonly number[]>([])
   const [orderMessages, setOrderMessages] = useState<Readonly<Record<number, string>>>({})
+  // E7-D12: comandas — guard por comanda y documento abierto tras registrar la solicitud.
+  const commandService = useMemo(
+    () => clientResult.ok ? createKitchenCommandService(clientResult.client) : null,
+    [clientResult],
+  )
+  const printingCommands = useRef(new Set<number>())
+  const [printingIds, setPrintingIds] = useState<readonly number[]>([])
+  const [commandMessages, setCommandMessages] = useState<Readonly<Record<number, string>>>({})
+  const [printDocument, setPrintDocument] = useState<CommandDocument | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -127,6 +138,40 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
     [cancellations, groups],
   )
 
+  const commandsByOrder = useMemo(() => {
+    const byOrder = new Map<number, KitchenCommand[]>()
+    for (const command of commands) byOrder.set(command.pedido_id, [...(byOrder.get(command.pedido_id) ?? []), command])
+    return byOrder
+  }, [commands])
+
+  useEffect(() => {
+    // La solicitud ya quedó registrada; se abre el diálogo estándar del navegador.
+    if (printDocument) window.print()
+  }, [printDocument])
+
+  async function printCommand(command: KitchenCommand): Promise<void> {
+    if (!commandService || printingCommands.current.has(command.comanda_id)) return
+    printingCommands.current.add(command.comanda_id)
+    setPrintingIds((current) => [...current, command.comanda_id])
+    setCommandMessages((current) => {
+      const next = { ...current }
+      delete next[command.comanda_id]
+      return next
+    })
+    try {
+      const result = await commandService.registerPrint(command.comanda_id, commandPrintAction(command) === 'Reimprimir')
+      if (result.ok) {
+        setPrintDocument(buildCommandDocument(command, cancellationsByOrder.get(command.pedido_id) ?? [], result.impresiones))
+      } else {
+        setCommandMessages((current) => ({ ...current, [command.comanda_id]: result.error.message }))
+      }
+    } finally {
+      printingCommands.current.delete(command.comanda_id)
+      setPrintingIds((current) => current.filter((id) => id !== command.comanda_id))
+    }
+    await handleRef.current?.resync()
+  }
+
   async function receiveOrder(pedidoId: number): Promise<void> {
     if (!service || receivingOrders.current.has(pedidoId)) return
     receivingOrders.current.add(pedidoId)
@@ -178,6 +223,7 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-stone-100 px-3 py-5 text-stone-900 sm:px-6 sm:py-8 lg:px-8">
+      {printDocument && <KitchenCommandDocument document={printDocument} onClose={() => setPrintDocument(null)} />}
       <div className="mx-auto min-w-0 max-w-7xl">
         <header className="flex min-w-0 items-start justify-between gap-4">
           <div className="min-w-0">
@@ -231,6 +277,7 @@ export default function KitchenBoardPage({ context, isSigningOut, onSignOut }: K
                         : <p className="mt-4 rounded-xl border border-emerald-300 bg-white/70 px-4 py-3 text-center font-semibold text-emerald-900">Preparación completada</p>}
                     </li>
                   })}</ul>
+                  {(commandsByOrder.get(group.pedidoId) ?? []).length > 0 && <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-3"><p className="text-sm font-bold text-stone-800">Comandas (opcional)</p><ul className="mt-2 grid gap-2">{(commandsByOrder.get(group.pedidoId) ?? []).map((command) => { const action = commandPrintAction(command); const printing = printingIds.includes(command.comanda_id); return <li className="flex flex-wrap items-center justify-between gap-2" key={command.comanda_id}><span className="text-sm text-stone-700">Comanda #{command.numero} · {command.lineas.length} {command.lineas.length === 1 ? 'línea' : 'líneas'} · {command.impresiones === 0 ? 'Sin imprimir' : `Solicitada ${command.impresiones} ${command.impresiones === 1 ? 'vez' : 'veces'}`}</span><button aria-busy={printing} className="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold disabled:opacity-60" disabled={printing} onClick={() => { void printCommand(command) }} type="button">{printing ? 'Registrando…' : action}</button>{commandMessages[command.comanda_id] && <p className="w-full rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900" role="status">{commandMessages[command.comanda_id]}</p>}</li> })}</ul></div>}
                   {(cancellationsByOrder.get(group.pedidoId) ?? []).length > 0 && <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-3"><p className="text-sm font-bold text-rose-900">Cancelado por el mozo · no preparar</p><ul className="mt-2 grid gap-1">{(cancellationsByOrder.get(group.pedidoId) ?? []).map((item) => <li className="break-words text-sm text-rose-900" key={item.detalle_id}><span className="font-semibold line-through">{item.producto_nombre} × {item.cantidad}</span>{item.observacion ? ` (${item.observacion})` : ''} · Motivo: {item.motivo}</li>)}</ul></div>}
                 </li></Fragment>
               ))}</ul></>}

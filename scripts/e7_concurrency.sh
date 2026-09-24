@@ -146,11 +146,22 @@ t05b() {
   check "R10–R14 sin deadlocks registrados" "$($PSQL -c "select deadlocks from pg_stat_database where datname=current_database()")" "0"
 }
 
+t09() {
+  echo "== T09 / E7-TP23 — primera solicitud de impresión concurrente"
+  local p c
+  p=$(new_order 3 1); c=$(q $C1 "select id from public.comanda where pedido_id=$p and numero=1")
+  race $C1 "select impresiones from public.rpc_registrar_impresion_comanda($c,false)" $C2 "select impresiones from public.rpc_registrar_impresion_comanda($c,false)"
+  check "R15 dos primeras solicitudes: B esperó" "$WAITED" "1"
+  check "R15 B perdedora PT409 (usar Reimprimir)" "$(grep -c 'usa Reimprimir' $TMP/b)" "1"
+  check "R15 una sola primera solicitud registrada" "$(q $C1 "select impresiones||'/'||(primera_impresion_por='$C1') from public.comanda where id=$c")" "1/true"
+}
+
 case "${1:-all}" in
   t04) setup; t04 ;;
   t05) setup; t05 ;;
   t05b) setup; t05b ;;
-  all) setup; t04; t05; t05b ;;
+  t09) setup; t09 ;;
+  all) setup; t04; t05; t05b; t09 ;;
   *) echo "escenario desconocido"; exit 2 ;;
 esac
 $PSQL -f "$DIR/supabase/tests/e7_concurrency_cleanup.sql" >/dev/null
