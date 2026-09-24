@@ -4,6 +4,7 @@
 # Requiere una base LOCAL aislada con las migraciones E7 aplicadas. Nunca usar contra DEV/PROD compartidos.
 set -uo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
+export PGAPPNAME=e7_concurrency
 PSQL="psql -X -At -v ON_ERROR_STOP=1 ${PSQL_CONN:?definir PSQL_CONN}"
 MOZO=00000000-0000-0000-0000-0000000e7c01; C1=00000000-0000-0000-0000-0000000e7c02; C2=00000000-0000-0000-0000-0000000e7c03
 ADMIN=00000000-0000-0000-0000-0000000e7c04
@@ -165,5 +166,7 @@ case "${1:-all}" in
   *) echo "escenario desconocido"; exit 2 ;;
 esac
 $PSQL -f "$DIR/supabase/tests/e7_concurrency_cleanup.sql" >/dev/null
-check "sin conexiones residuales" "$($PSQL -c "select count(*) from pg_stat_activity where datname=current_database() and pid<>pg_backend_pid() and backend_type='client backend'")" "0"
+# Sólo las sesiones de este script (application_name e7_concurrency): en Supabase real hay conexiones
+# propias de la plataforma (PostgREST, Auth, Realtime) que no son residuos de las carreras.
+check "sin conexiones residuales" "$($PSQL -c "select count(*) from pg_stat_activity where datname=current_database() and pid<>pg_backend_pid() and backend_type='client backend' and application_name='e7_concurrency'")" "0"
 rm -rf "$TMP"; echo "== fallos: $FAILS"; exit $((FAILS>0))

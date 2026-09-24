@@ -6,8 +6,11 @@
 //   node --experimental-strip-types scripts/e7_t10_validation.mjs
 // Guardia: se niega a ejecutar contra el proyecto de .env.local, supabase/.temp/project-ref o los refs
 // DEV/SHARED/PROD declarados (el proyecto compartido con Production nunca es destino de E7-T10).
+// Modo local (desviación de ambiente aprobada para T10): E7_VALIDATION_LOCAL=1 apunta al stack
+// Supabase local del repositorio (`supabase start`, http://127.0.0.1:54321); sólo acepta loopback.
 import assert from 'node:assert/strict'
 import { randomBytes, randomUUID } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { createClient } from '@supabase/supabase-js'
 import { createKitchenRealtimeService } from '../src/services/kitchenRealtimeService.ts'
@@ -32,6 +35,12 @@ async function readOptional(path) { try { return (await readFile(path, 'utf8')).
 
 async function guard() {
   if (!url || !publishableKey || !serviceRoleKey) throw new Error('Faltan variables E7_VALIDATION_*.')
+  if (process.env.E7_VALIDATION_LOCAL === '1') {
+    const host = new URL(url).hostname
+    if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('Guardia E7-T10: el modo local sólo acepta el stack Supabase en loopback.')
+    console.log(`Destino de validación: stack Supabase local (${new URL(url).host})`)
+    return
+  }
   const ref = refFromUrl(url)
   const envLocal = await readOptional(new URL('../.env.local', import.meta.url))
   const forbidden = new Set([await readOptional(new URL('../supabase/.temp/project-ref', import.meta.url))])
@@ -58,8 +67,42 @@ async function waitFor(label, predicate, timeoutMs = 15000) {
 }
 const must = (result, label) => { if (result.error) throw new Error(`${label}: ${result.error.code ?? ''} ${result.error.message}`); return result.data }
 
+// Modo local: las tablas base de la baseline no conceden privilegios a service_role en la imagen
+// Supabase local actual (sólo Auth admin los necesita). La fixture de tablas se crea con psql como
+// postgres dentro del contenedor de base local; nunca se usa en modo cloud.
+function localSql(sql) {
+  const container = process.env.E7_VALIDATION_DB_CONTAINER?.trim() || 'supabase_db_mikuyapp-restaurant-ops'
+  return execFileSync('docker', ['exec', '-i', '-e', 'PGPASSWORD=postgres', container, 'psql', '-h', '127.0.0.1', '-U', 'postgres',
+    '-d', 'postgres', '-X', '-At', '-v', 'ON_ERROR_STOP=1'], { input: sql, encoding: 'utf8' }).trim()
+}
+
+async function localFixture(admin, runId, password) {
+  const users = {}
+  for (const [key, code] of [['mozoA', 'MOZO'], ['mozoB', 'MOZO'], ['cocina1', 'COCINA'], ['cocina2', 'COCINA']]) {
+    const email = `e7-val-${runId}-${key.toLowerCase()}@example.invalid`
+    const created = await admin.auth.admin.createUser({ email, password, email_confirm: true })
+    if (created.error) throw new Error(`usuario ${key}: ${created.error.message}`)
+    users[key] = { id: created.data.user.id, email, code }
+  }
+  const perfiles = Object.entries(users).map(([key, u]) => `('${u.id}'::uuid, '${u.code}', '${key} ${runId}')`).join(', ')
+  const out = localSql(`with l as (insert into public.local (codigo, nombre) values ('E7-VAL-${runId}', 'Validación E7 ${runId}') returning id),
+  p as (insert into public.perfil_usuario (id, local_id, rol_id, nombre)
+        select u.id, l.id, r.id, u.nombre from l, (values ${perfiles}) as u(id, codigo, nombre) join public.rol r on r.codigo = u.codigo returning id),
+  m as (insert into public.mesa (local_id, codigo, nombre) select id, '${`V${runId}`.slice(0, 12)}', 'Mesa validación E7' from l returning id),
+  c as (insert into public.categoria (local_id, codigo, nombre) select id, '${`E7V${runId}`.slice(0, 12)}', 'Validación' from l returning id),
+  pr as (insert into public.producto (local_id, categoria_id, codigo, nombre, precio, requiere_cocina)
+         select l.id, c.id, v.codigo, v.nombre, v.precio, v.rc from l, c,
+         (values ('E7V-CEV', 'Ceviche validación', 30, true), ('E7V-CHI', 'Chicha validación', 8, false)) as v(codigo, nombre, precio, rc) returning id, codigo)
+select json_build_object('local', (select id from l), 'mesa', (select id from m), 'perfiles', (select count(*) from p),
+  'ceviche', (select id from pr where codigo = 'E7V-CEV'), 'chicha', (select id from pr where codigo = 'E7V-CHI'));`)
+  const row = JSON.parse(out.split(/\r?\n/).pop())
+  if (row.perfiles !== 4) throw new Error(`fixture local: perfiles=${row.perfiles}`)
+  return { password, local: row.local, mesa: row.mesa, users, ceviche: row.ceviche, chicha: row.chicha }
+}
+
 async function fixture(admin, runId) {
   const password = randomBytes(18).toString('base64url')
+  if (process.env.E7_VALIDATION_LOCAL === '1') return localFixture(admin, runId, password)
   const roles = must(await admin.from('rol').select('id,codigo'), 'roles')
   const roleId = (code) => roles.find((row) => row.codigo === code).id
   const local = must(await admin.from('local').insert({ codigo: `E7-VAL-${runId}`, nombre: `Validación E7 ${runId}` }).select('id').single(), 'local')

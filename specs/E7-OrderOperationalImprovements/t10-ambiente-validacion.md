@@ -1,5 +1,7 @@
 # E7-T10 — Procedimiento del ambiente Supabase aislado de validación
 
+> **No ejecutado.** El responsable decidió no crear un tercer proyecto cloud; T10 se cerró en el stack Supabase local real (`implementation-t10.md` §7). Este procedimiento queda como referencia para la futura revalidación cloud.
+
 Objetivo: cerrar T10 en Supabase real (PostgreSQL 17, PostgREST, Auth y Realtime) **sin tocar el proyecto compartido con Production** (PM-002 `TRANSITIONING`). Este ambiente es sólo de validación de E7: sin tráfico productivo, sin Cloudflare, sin cambios a PM-002.
 
 > Nunca ejecutar `supabase link` para este proyecto: cambiaría el enlace local que hoy apunta al proyecto compartido. Todos los comandos usan la URL de conexión explícita. Ningún valor secreto se guarda en `.env.local`, `.env.example`, el repositorio ni la evidencia.
