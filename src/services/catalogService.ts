@@ -17,6 +17,8 @@ export interface CatalogProduct {
   readonly nombre: string
   readonly precio: number
   readonly activo: boolean
+  /** E7-D02: indica si el producto requiere preparación en cocina (default true en PostgreSQL). */
+  readonly requiere_cocina: boolean
 }
 
 export interface CatalogTable {
@@ -78,6 +80,8 @@ export interface ProductInput {
   readonly nombre: string
   readonly precio: number
   readonly activo: boolean
+  /** E7-D02: opcional en la entrada; si se omite se aplica el default verdadero. */
+  readonly requiere_cocina?: boolean
 }
 
 export interface ProductMutation {
@@ -179,7 +183,7 @@ export interface CatalogService {
 type CatalogClient = Pick<SupabaseClient, 'from'>
 
 const categoryColumns = 'id,codigo,nombre,orden,activo'
-const productColumns = 'id,categoria_id,codigo,nombre,precio,activo'
+const productColumns = 'id,categoria_id,codigo,nombre,precio,activo,requiere_cocina'
 const tableColumns = 'id,codigo,nombre,estado,activo'
 const connectionErrorMessage =
   'No pudimos cargar el catálogo. Revisa tu conexión e intenta nuevamente.'
@@ -300,7 +304,7 @@ function validateProductInput(
   availableCategories: readonly CatalogCategory[],
 ): CatalogResult<ProductInput> {
   if (Object.keys(input).some((column) =>
-    !['categoria_id', 'codigo', 'nombre', 'precio', 'activo'].includes(column),
+    !['categoria_id', 'codigo', 'nombre', 'precio', 'activo', 'requiere_cocina'].includes(column),
   )) {
     return { ok: false, error: categoryAuthorizationError() }
   }
@@ -353,6 +357,17 @@ function validateProductInput(
     }
   }
 
+  if (input.requiere_cocina !== undefined && typeof input.requiere_cocina !== 'boolean') {
+    return {
+      ok: false,
+      error: {
+        kind: 'validation-error',
+        message: 'Indica si el producto requiere preparación en cocina.',
+        recoverable: true,
+      },
+    }
+  }
+
   if (!availableCategories.some((category) => category.id === categoryId)) {
     return {
       ok: false,
@@ -372,6 +387,7 @@ function validateProductInput(
       nombre,
       precio: input.precio,
       activo: input.activo,
+      ...(input.requiere_cocina === undefined ? {} : { requiere_cocina: input.requiere_cocina }),
     },
   }
 }
@@ -968,6 +984,8 @@ export function createCatalogService(client: CatalogClient): CatalogService {
           nombre: validated.data.nombre,
           precio: validated.data.precio,
           activo: validated.data.activo,
+          // E7-D02: default verdadero cuando el formulario no lo indica.
+          requiere_cocina: validated.data.requiere_cocina ?? true,
         }),
         'El producto se creó correctamente.',
       )
@@ -993,6 +1011,8 @@ export function createCatalogService(client: CatalogClient): CatalogService {
             nombre: validated.data.nombre,
             precio: validated.data.precio,
             activo: validated.data.activo,
+            // E7-D02: sólo se actualiza cuando se indica explícitamente (no se sobrescribe con el default).
+            ...(validated.data.requiere_cocina === undefined ? {} : { requiere_cocina: validated.data.requiere_cocina }),
           })
           .eq('id', productId)
           .eq('local_id', context.local.id),

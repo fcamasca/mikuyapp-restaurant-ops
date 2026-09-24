@@ -3,7 +3,8 @@ import { test } from 'node:test'
 import { createCatalogService } from '../src/services/catalogService.ts'
 
 const categoryColumns = 'id,codigo,nombre,orden,activo'
-const productColumns = 'id,categoria_id,codigo,nombre,precio,activo'
+// E7-D02: la carta incluye la condición de cocina del producto.
+const productColumns = 'id,categoria_id,codigo,nombre,precio,activo,requiere_cocina'
 
 function createContext(roleCode = 'ADMINISTRADOR') {
   return {

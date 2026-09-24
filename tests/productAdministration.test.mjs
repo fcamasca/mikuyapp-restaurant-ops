@@ -144,6 +144,8 @@ test('crea un producto válido con columnas exactas y conserva su capitalizació
   assert.deepEqual(findMutation(fixture.calls).payload, {
     local_id: 'test-local-own', categoria_id: 'category-main', codigo: 'Nuevo-Prod',
     nombre: 'Nuevo producto', precio: 18.5, activo: true,
+    // E7-D02: el alta envía requiere_cocina con default verdadero.
+    requiere_cocina: true,
   })
   assert.equal(result.data.catalog.products.length, 2)
   assert.match(result.data.message, /creó correctamente/)
@@ -599,4 +601,56 @@ test('conserva espacios interiores y mayúsculas originales en código y nombre'
   assert.equal(result.ok, true)
   assert.equal(findMutation(fixture.calls).payload.codigo, 'Mi Código')
   assert.equal(findMutation(fixture.calls).payload.nombre, 'Nombre Con Espacios')
+})
+
+
+// ===== E7-T06 — Condición de cocina del producto (E7-R01, E7-TP01 parte UI)
+const productPageSource = readFileSync(new URL('../src/pages/CategoryAdministrationPage.tsx', import.meta.url), 'utf8')
+
+test('E7-T06 crea un producto sin cocina cuando el administrador lo indica', async () => {
+  const fixture = createClient()
+  const result = await createCatalogService(fixture.client)
+    .createProduct(createContext(), createInput({ requiere_cocina: false }), fixture.categories)
+  assert.equal(result.ok, true)
+  assert.equal(findMutation(fixture.calls).payload.requiere_cocina, false)
+})
+
+test('E7-T06 edita la condición de cocina y no la sobrescribe cuando no se indica', async () => {
+  const explicit = createClient()
+  await createCatalogService(explicit.client)
+    .updateProduct(createContext(), 'product-main', createInput({ requiere_cocina: false }), explicit.categories)
+  assert.equal(findMutation(explicit.calls).payload.requiere_cocina, false)
+
+  const omitted = createClient()
+  await createCatalogService(omitted.client)
+    .updateProduct(createContext(), 'product-main', createInput(), omitted.categories)
+  assert.equal('requiere_cocina' in findMutation(omitted.calls).payload, false)
+})
+
+test('E7-T06 rechaza una condición de cocina no booleana sin tocar el servidor', async () => {
+  const fixture = createClient()
+  const result = await createCatalogService(fixture.client)
+    .createProduct(createContext(), createInput({ requiere_cocina: 'no' }), fixture.categories)
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'validation-error')
+  assert.equal(findMutation(fixture.calls), undefined)
+})
+
+test('E7-T06 roles distintos de ADMINISTRADOR no configuran la condición de cocina', async () => {
+  for (const role of ['MOZO', 'COCINA', 'CAJA']) {
+    const fixture = createClient()
+    const result = await createCatalogService(fixture.client)
+      .updateProduct(createContext(role), 'product-main', createInput({ requiere_cocina: false }), fixture.categories)
+    assert.equal(result.ok, false)
+    assert.equal(findMutation(fixture.calls), undefined)
+  }
+})
+
+test('E7-T06 formulario con default marcado e indicador visible de producto sin cocina', () => {
+  assert.match(productPageSource, /requiere_cocina: true,\n\};|requiere_cocina: true,\r?\n\};/)
+  assert.match(productPageSource, /Requiere preparación en cocina/)
+  assert.match(productPageSource, /checked=\{productForm\.requiere_cocina\}/)
+  assert.match(productPageSource, /requiere_cocina: product\.requiere_cocina !== false/)
+  assert.match(productPageSource, /product\.requiere_cocina === false && \(/)
+  assert.match(productPageSource, /Sin cocina/)
 })

@@ -39,6 +39,7 @@ interface ProductFormState {
   readonly nombre: string;
   readonly precio: string;
   readonly activo: boolean;
+  readonly requiere_cocina: boolean;
 }
 
 interface TableFormState {
@@ -60,6 +61,7 @@ const emptyProductForm: ProductFormState = {
   nombre: "",
   precio: "0",
   activo: true,
+  requiere_cocina: true,
 };
 
 const emptyTableForm: TableFormState = {
@@ -218,6 +220,7 @@ export default function CategoryAdministrationPage({
       nombre: product.nombre,
       precio: String(product.precio),
       activo: product.activo,
+      requiere_cocina: product.requiere_cocina !== false,
     });
     setProductError(null);
     setProductMessage(null);
@@ -395,6 +398,7 @@ export default function CategoryAdministrationPage({
       nombre: productForm.nombre,
       precio: Number(productForm.precio),
       activo: productForm.activo,
+      requiere_cocina: productForm.requiere_cocina,
     };
     const categories = catalog?.categories ?? [];
 
@@ -928,6 +932,27 @@ export default function CategoryAdministrationPage({
                 Producto activo
               </label>
 
+              <label className="flex items-start gap-3 text-sm font-medium text-stone-800">
+                <input
+                  checked={productForm.requiere_cocina}
+                  className="mt-0.5 size-4 rounded border-stone-300 accent-emerald-700"
+                  disabled={productSaving}
+                  onChange={(event) =>
+                    setProductForm((current) => ({
+                      ...current,
+                      requiere_cocina: event.target.checked,
+                    }))
+                  }
+                  type="checkbox"
+                />
+                <span>
+                  Requiere preparación en cocina
+                  <span className="mt-1 block text-xs font-normal text-stone-600">
+                    Desmárcalo para productos de entrega inmediata (por ejemplo, bebidas): no pasan por cocina y quedan listos al enviarse.
+                  </span>
+                </span>
+              </label>
+
               <div className="grid gap-3 sm:flex sm:flex-wrap">
                 <button
                   aria-busy={productSaving}
@@ -1031,6 +1056,11 @@ export default function CategoryAdministrationPage({
                             >
                               {product.activo ? "Activo" : "Inactivo"}
                             </span>
+                            {product.requiere_cocina === false && (
+                              <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900">
+                                Sin cocina
+                              </span>
+                            )}
                           </div>
                           <p className="mt-2 text-sm text-stone-600">
                             Código: {product.codigo} · Categoría:{" "}
