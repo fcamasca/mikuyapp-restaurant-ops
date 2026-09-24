@@ -2,7 +2,7 @@
 
 Fecha: 24/09/2026. Rama `feature/E7-OrderOperationalImprovements`, desde el checkpoint T09 `ea37539` (árbol limpio). No constituye aceptación. T11 y T12 **no iniciadas**.
 
-**Estado de T10: PARCIAL — integración local completada; aplicación y recorrido en DEV/Preview BLOQUEADOS** por los dos motivos de la sección 4, que requieren decisión humana. No se tocó ningún proyecto Supabase ni Cloudflare.
+**Estado de T10: PARCIAL.** Integración local (PostgreSQL 16) completada. Decisión del responsable (24/09/2026): **no aplicar E7 sobre el proyecto compartido con Production**; T10 se cerrará en un **proyecto Supabase aislado de validación** (§7). No se tocó ningún proyecto Supabase ni Cloudflare.
 
 ## 1. Baseline real del ambiente (verificación sin conexión)
 
@@ -71,6 +71,16 @@ Opciones para decidir (sin ejecutar ninguna):
 | PostgREST | Firmas y nombres de argumentos coinciden con las llamadas del frontend (13/13). `PT409` → HTTP 409 requiere PostgREST ≥ 12; el proyecto usa v14.5 (mismo mecanismo que E1-T18). No ejecutado contra PostgREST real. |
 | Tipos | `bigint` (IDs) llega como número; `numeric` como texto/número y el frontend ya aplica `Number(...)`; `jsonb` del tablero se valida con `parseKitchenSnapshot`. Sin incompatibilidades detectadas en revisión. |
 | Realtime | Publicación sin cambios; visibilidad RLS de señales verificada localmente; entrega efectiva pendiente de DEV. |
+
+## 7. Cierre en proyecto Supabase aislado (PostgreSQL 17 real)
+
+Estado: **procedimiento y herramientas preparados; ejecución pendiente del responsable.** Esta sesión no puede alcanzar Supabase (política de red, §1) ni dispone de credenciales administrativas, por lo que la creación del proyecto y la aplicación de migraciones se solicitan al responsable.
+
+- Procedimiento: `specs/E7-OrderOperationalImprovements/t10-ambiente-validacion.md` (cuota, creación sin `supabase link`, `supabase db push --db-url` de las 57 migraciones —49 de baseline hasta E1-T18 + 8 de E7—, verificación de publicación Realtime, SQL focales + integración + carreras con `psql` del contenedor `supabase/postgres:17.6.1.166`, y recorrido vía API).
+- Herramienta: `scripts/e7_t10_validation.mjs` — recorrido integrado con los servicios reales del frontend contra PostgREST/Auth/Realtime del proyecto aislado (dos mozos, dos cocinas): pedido mixto, edición/retiro, `PT409` vía PostgREST, envío con bebida `LISTO`, **Realtime** de envío, recepción completa y cancelación (señal `UPDATE` de `pedido`), resincronización del mozo B, comanda (primera solicitud concurrente con `PT409`, reimpresión, documento con `COPIA 1` y línea `CANCELADO`), avance individual hasta `LISTO`.
+- Guardia del script verificada en esta sesión: aborta con la URL del proyecto de `.env.local` (DEV/compartido) y sólo continúa con un ref distinto; sintaxis verificada (`node --check`). No se ejecutó contra ningún proyecto real.
+- Riesgo de cuota: la organización ya tiene dos proyectos (`mikuyapp`, `mikuyapp-prod`); si el plan no permite un tercero, T10-DEV queda detenido y se reporta sin sustituirlo por Production.
+- Evidencia Supabase/PostgreSQL 17 y Realtime real: **pendiente** (se registrará aquí al recibir las salidas del procedimiento).
 
 ## 6. Pendiente
 
