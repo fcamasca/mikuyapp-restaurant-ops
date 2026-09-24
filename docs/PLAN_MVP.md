@@ -616,13 +616,20 @@ El MVP se considerará terminado si:
 
 ### Evolución 7 — Mejoras operativas de pedidos
 
-- Cocina puede recibir un pedido completo en una sola acción, manteniendo el tratamiento individual por producto cuando corresponda.
-- Mozo puede cancelar un producto mientras todavía no haya iniciado preparación.
+**Estado: SPEC MODE — pendiente de aprobación humana (23/09/2026).** Spec en [`specs/E7-OrderOperationalImprovements/`](../specs/E7-OrderOperationalImprovements/). La construcción no ha iniciado.
+
+- El administrador define si cada producto requiere preparación en cocina; por defecto todo producto la requiere.
+- Cada detalle conserva como snapshot la condición de cocina del producto al registrarse; cambios posteriores del catálogo no alteran pedidos ya registrados.
+- Un producto que no requiere cocina (por ejemplo, bebidas de entrega inmediata) no genera trabajo ni comanda para cocina y no aparece en su tablero; al enviarse queda listo usando los estados existentes, sin crear estados nuevos.
+- Un pedido puede combinar productos con y sin cocina; el pedido y la mesa sólo quedan listos cuando todos los detalles están listos.
+- Cocina puede recibir un pedido completo en una sola acción, que procesa sólo sus productos de cocina pendientes de recepción, manteniendo el tratamiento individual por producto y siendo segura ante doble clic, reintentos y concurrencia.
+- Mozo puede cancelar un producto mientras todavía no haya iniciado preparación (enviado o recibido por cocina), por línea completa y con motivo, recalculando total, pedido y mesa; los productos sin cocina ya enviados no se cancelan.
 - Trazabilidad de cancelaciones y cambios de estado.
-- Consistencia entre estado de detalle y estado general del pedido.
+- Consistencia entre estado de detalle y estado general del pedido, incluida la corrección de la edición y el retiro de productos aún no enviados para que recalculen el pedido y la mesa con el mismo orden transaccional, sin cambiar las capacidades aprobadas en H3.
 - Impresión opcional de comandas como apoyo al flujo digital de cocina.
 - La impresión no reemplaza el uso de la tablet ni la actualización de estados.
-- El momento exacto de impresión, deduplicación, reimpresión y mecanismo técnico se definirán en el Spec Mode de Evolución 7.
+- El momento exacto de impresión, deduplicación, reimpresión y mecanismo técnico quedan definidos en el Spec de Evolución 7.
+- Fuera de E7: solicitud de cuenta del mozo a caja y su atención por caja, nuevos mecanismos de división de cuenta, inventario, recetas y facturación electrónica.
 
 ### Evolución 8 — Métricas operativas y analítica
 
