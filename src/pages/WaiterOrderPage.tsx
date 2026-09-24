@@ -143,7 +143,7 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     clearDetailConflict(detail.id)
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
     try {
-      const result = await orders.updateOpenDetail(context, detail.id, { cantidad: value }, { cantidad: detail.cantidad })
+      const result = await orders.updateOpenDetail(context, detail.id, { cantidad: value }, { cantidad: detail.cantidad, observacion: detail.observacion })
       if (!result.ok) await recoverDetailMutation(detail.id, result.error); else await reload()
     } finally {
       pendingDetailIds.current.delete(detail.id); setBusyDetails((ids) => ids.filter((id) => id !== detail.id))
@@ -161,7 +161,7 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
     clearDetailConflict(detail.id)
     setBusyDetails((ids) => [...ids, detail.id]); setError(null)
     try {
-      const result = await orders.updateOpenDetail(context, detail.id, { observacion: combineOrderObservation(selected, free) }, { observacion: detail.observacion })
+      const result = await orders.updateOpenDetail(context, detail.id, { observacion: combineOrderObservation(selected, free) }, { cantidad: detail.cantidad, observacion: detail.observacion })
       if (!result.ok) await recoverDetailMutation(detail.id, result.error)
       else if (await reload()) { setEditing(null); setSelected([]); setFree('') }
     } finally {

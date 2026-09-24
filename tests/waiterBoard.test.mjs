@@ -217,18 +217,22 @@ test('T07 agrega exclusivamente mediante RPC sin precio ni estado del cliente', 
 test('T07 limita cambios a cantidad/observación y retiro de ABIERTO (vía RPC E7-D15)', async () => {
   const fixture = createClient({ rpcData: [] })
   const service = createWaiterOrderService(fixture.client)
-  assert.equal((await service.updateOpenDetail(context(), 31, { cantidad: 2 })).ok, true)
+  const snapshot = { cantidad: 1, observacion: null }
+  assert.equal((await service.updateOpenDetail(context(), 31, { cantidad: 2 }, snapshot)).ok, true)
   assert.deepEqual(fixture.rpcCalls[0], { name: 'rpc_modificar_detalle_pedido', args: {
-    p_detalle_id: 31, p_cantidad: 2, p_observacion: null, p_cantidad_esperada: null, p_observacion_esperada: null,
+    p_detalle_id: 31, p_cantidad: 2, p_observacion: null, p_cantidad_esperada: 1, p_observacion_esperada: null,
   } })
-  assert.equal((await service.updateOpenDetail(context(), 31, { observacion: '  Sin ají  ' })).ok, true)
-  assert.equal(fixture.rpcCalls[1].args.p_observacion, 'Sin ají')
-  assert.equal(fixture.rpcCalls[1].args.p_cantidad, null)
-  assert.equal((await service.updateOpenDetail(context(), 31, { observacion: '   ' })).ok, true)
-  assert.equal(fixture.rpcCalls[2].args.p_observacion, '')
+  assert.equal((await service.updateOpenDetail(context(), 31, { observacion: '  Sin ají  ' }, snapshot)).ok, true)
+  assert.deepEqual(fixture.rpcCalls[1].args, {
+    p_detalle_id: 31, p_cantidad: 1, p_observacion: 'Sin ají', p_cantidad_esperada: 1, p_observacion_esperada: null,
+  })
+  assert.equal((await service.updateOpenDetail(context(), 31, { observacion: '   ' }, { cantidad: 1, observacion: 'Sin ají' })).ok, true)
+  assert.deepEqual(fixture.rpcCalls[2].args, {
+    p_detalle_id: 31, p_cantidad: 1, p_observacion: null, p_cantidad_esperada: 1, p_observacion_esperada: 'Sin ají',
+  })
   assert.equal((await service.removeOpenDetail(context(), 31)).ok, true)
   assert.deepEqual(fixture.rpcCalls[3], { name: 'rpc_retirar_detalle_pedido', args: { p_detalle_id: 31 } })
-  assert.equal((await service.updateOpenDetail(context(), 31, { cantidad: 0 })).ok, false)
+  assert.equal((await service.updateOpenDetail(context(), 31, { cantidad: 0 }, snapshot)).ok, false)
   assert.equal(fixture.rpcCalls.length, 4)
   assert.deepEqual(fixture.calls, [])
   assert.doesNotMatch(serviceSource, /from\('detalle_pedido'\)\.(update|delete)/)
@@ -237,8 +241,8 @@ test('T07 limita cambios a cantidad/observación y retiro de ABIERTO (vía RPC E
 test('T09 detecta actualización obsoleta y compara el valor confirmado anterior (PT409 vía RPC E7-D15)', async () => {
   const fixture = createClient({ rpcData: null, rpcError: { code: 'PT409' } })
   const service = createWaiterOrderService(fixture.client)
-  const quantity = await service.updateOpenDetail(context(), 31, { cantidad: 3 }, { cantidad: 2 })
-  const observation = await service.updateOpenDetail(context(), 32, { observacion: 'Sin ají' }, { observacion: null })
+  const quantity = await service.updateOpenDetail(context(), 31, { cantidad: 3 }, { cantidad: 2, observacion: 'Sin cebolla' })
+  const observation = await service.updateOpenDetail(context(), 32, { observacion: 'Sin ají' }, { cantidad: 1, observacion: null })
   const removal = await service.removeOpenDetail(context(), 33)
   assert.equal(quantity.ok, false)
   assert.equal(observation.ok, false)
@@ -248,10 +252,10 @@ test('T09 detecta actualización obsoleta y compara el valor confirmado anterior
   assert.equal(removal.error.kind, 'concurrent-conflict')
   assert.match(quantity.error.message, /otro dispositivo/)
   assert.deepEqual(fixture.rpcCalls[0].args, {
-    p_detalle_id: 31, p_cantidad: 3, p_observacion: null, p_cantidad_esperada: 2, p_observacion_esperada: null,
+    p_detalle_id: 31, p_cantidad: 3, p_observacion: 'Sin cebolla', p_cantidad_esperada: 2, p_observacion_esperada: 'Sin cebolla',
   })
   assert.deepEqual(fixture.rpcCalls[1].args, {
-    p_detalle_id: 32, p_cantidad: null, p_observacion: 'Sin ají', p_cantidad_esperada: null, p_observacion_esperada: '',
+    p_detalle_id: 32, p_cantidad: 1, p_observacion: 'Sin ají', p_cantidad_esperada: 1, p_observacion_esperada: null,
   })
   assert.deepEqual(fixture.rpcCalls[2], { name: 'rpc_retirar_detalle_pedido', args: { p_detalle_id: 33 } })
 })
@@ -266,8 +270,11 @@ test('T09 observaciones concurrentes conservan al ganador y la sesión perdedora
   const winnerService = createWaiterOrderService(winner.client)
   const loserService = createWaiterOrderService(loser.client)
 
-  const persisted = await winnerService.updateOpenDetail(context(), 31, { observacion: 'Sin cebolla' }, { observacion: null })
-  const rejected = await loserService.updateOpenDetail(context(), 31, { observacion: 'Poco picante' }, { observacion: null })
+  const persisted = await winnerService.updateOpenDetail(context(), 31, { observacion: 'Sin cebolla' }, { cantidad: 1, observacion: null })
+  const rejected = await loserService.updateOpenDetail(context(), 31, { observacion: 'Poco picante' }, { cantidad: 1, observacion: null })
+  // E7-R33: el perdedor envía su snapshot con observación esperada NULL real, no "sin verificar".
+  assert.equal(loser.rpcCalls[0].args.p_observacion_esperada, null)
+  assert.equal(loser.rpcCalls[0].args.p_cantidad_esperada, 1)
   const recovered = await loserService.getOrderDetails(context(), 12)
 
   assert.equal(persisted.ok, true)
@@ -319,7 +326,7 @@ test('T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controle
 test('T07 conserva estado persistido cuando PostgreSQL rechaza una mutación', async () => {
   const fixture = createClient({ rpcData: null, rpcError: { code: '42501' } })
   const service = createWaiterOrderService(fixture.client)
-  const update = await service.updateOpenDetail(context(), 31, { observacion: 'Sin ají' })
+  const update = await service.updateOpenDetail(context(), 31, { observacion: 'Sin ají' }, { cantidad: 1, observacion: null })
   const removal = await service.removeOpenDetail(context(), 31)
   assert.equal(update.ok, false)
   assert.equal(removal.ok, false)

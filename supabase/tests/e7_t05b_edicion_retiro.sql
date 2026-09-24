@@ -45,23 +45,46 @@ begin
   insert into public.producto (id, local_id, categoria_id, codigo, nombre, precio, requiere_cocina) values
     (v_cev, v_local, v_cat, 'CEV', 'Ceviche', 30, true), (v_chi, v_local, v_cat, 'CHI', 'Chicha', 8, false);
 
-  -- ===== TP11: edición parcial con semántica H3
+  -- ===== TP11: edición con verificación optimista completa (valores finales + ambos esperados)
   perform pg_temp.e7_set_user(v_mozo);
   select pedido_id into strict v_p from public.crear_o_recuperar_pedido_mesa(v_m1);
   select detalle_id into strict v_a from public.agregar_detalle_pedido(v_p, v_cev, 1, null);
   select detalle_id into strict v_b from public.agregar_detalle_pedido(v_p, v_cev, 1, 'sin ají');
   select creado_por, modificado_en into v_creado, v_mod from public.pedido where id = v_p;
-  -- sólo cantidad, con esperado
+  -- cambio de cantidad: finales (3, NULL), esperados (1, NULL)
   select * into strict r from public.rpc_modificar_detalle_pedido(v_a, 3, null, 1, null);
   if r.cantidad <> 3 or r.observacion is not null then raise exception 'E7-TP11: cantidad %', r; end if;
-  -- sólo observación (trim), con esperado "sin observación" ('')
-  select * into strict r from public.rpc_modificar_detalle_pedido(v_a, null, '  Sin cebolla ', null, '');
+  -- cambio de observación (trim): finales (3, 'Sin cebolla'), esperados (3, NULL)
+  select * into strict r from public.rpc_modificar_detalle_pedido(v_a, 3, '  Sin cebolla ', 3, null);
   if r.observacion <> 'Sin cebolla' or r.cantidad <> 3 then raise exception 'E7-TP11: observación %', r; end if;
   -- observación vacía => sin observación
-  select * into strict r from public.rpc_modificar_detalle_pedido(v_a, null, '   ', null, 'Sin cebolla');
+  select * into strict r from public.rpc_modificar_detalle_pedido(v_a, 3, '   ', 3, 'Sin cebolla');
   if r.observacion is not null then raise exception 'E7-TP11: observación vacía no eliminó'; end if;
+
+  -- CASO EXPLÍCITO: observación esperada NULL; otra sesión la modifica; snapshot antiguo => PT409
+  -- (sesión B cambia la observación de NULL a 'Poco picante')
+  perform public.rpc_modificar_detalle_pedido(v_a, 3, 'Poco picante', 3, null);
+  -- (sesión A, con snapshot antiguo cantidad 3 / observación NULL, intenta cambiar cantidad)
+  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 4, null, 3, null)', v_a)) <> 'PT409' then
+    raise exception 'E7-TP11: esperado NULL no verificado contra observación modificada';
+  end if;
+  if (select cantidad from public.detalle_pedido where id = v_a) <> 3
+    or (select observacion from public.detalle_pedido where id = v_a) <> 'Poco picante' then
+    raise exception 'E7-TP11: la edición rechazada modificó el detalle';
+  end if;
+  -- simétrico: cantidad esperada obsoleta aunque la observación coincida => PT409
+  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 5, %L, 2, %L)', v_a, 'Poco picante', 'Poco picante')) <> 'PT409' then
+    raise exception 'E7-TP11: cantidad esperada obsoleta no detectada';
+  end if;
+  -- observación esperada no NULL obsoleta => PT409
+  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 3, %L, 3, %L)', v_a, 'x', 'otra')) <> 'PT409' then
+    raise exception 'E7-TP11: observación esperada obsoleta no detectada';
+  end if;
+  -- snapshot vigente => aplica ambos valores finales
+  select * into strict r from public.rpc_modificar_detalle_pedido(v_a, 3, null, 3, 'Poco picante');
+  if r.observacion is not null or r.cantidad <> 3 then raise exception 'E7-TP11: snapshot vigente no aplicado'; end if;
   -- no consolida con otra línea igual ('sin ají')
-  perform public.rpc_modificar_detalle_pedido(v_a, null, 'sin ají', null, null);
+  perform public.rpc_modificar_detalle_pedido(v_a, 3, 'sin ají', 3, null);
   if (select count(*) from public.detalle_pedido where pedido_id = v_p) <> 2 then raise exception 'E7-TP11: consolidó por edición'; end if;
   -- auditoría igual que H3: modificación comercial del pedido, creador intacto
   if (select modificado_en from public.pedido where id = v_p) <= v_mod
@@ -69,16 +92,12 @@ begin
     or (select modificado_por from public.detalle_pedido where id = v_a) <> v_mozo then
     raise exception 'E7-TP11: auditoría distinta de H3';
   end if;
-  -- validaciones
-  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 0, null, null, null)', v_a)) <> '22023'
-    or pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, -2, null, null, null)', v_a)) <> '22023' then
-    raise exception 'E7-TP11: cantidad inválida aceptada';
-  end if;
-  -- esperado obsoleto => PT409 sin cambios
-  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 5, null, 1, null)', v_a)) <> 'PT409'
-    or pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, null, %L, null, %L)', v_a, 'x', 'otra')) <> 'PT409'
-    or (select cantidad from public.detalle_pedido where id = v_a) <> 3 then
-    raise exception 'E7-TP11: conflicto optimista no detectado';
+  -- validaciones: finales y esperados obligatorios
+  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 0, null, 3, %L)', v_a, 'sin ají')) <> '22023'
+    or pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, -2, null, 3, %L)', v_a, 'sin ají')) <> '22023'
+    or pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, null, null, 3, %L)', v_a, 'sin ají')) <> '22023'
+    or pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 2, null, null, %L)', v_a, 'sin ají')) <> '22023' then
+    raise exception 'E7-TP11: cantidad final/esperada inválida aceptada';
   end if;
   -- total recalculado desde persistencia
   if (select sum(cantidad * precio_unitario) from public.detalle_pedido where pedido_id = v_p) <> 120 then
@@ -86,18 +105,18 @@ begin
   end if;
   -- detalle enviado no editable ni retirable
   perform public.enviar_pedido_cocina(v_p);
-  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 4, null, null, null)', v_a)) <> 'PT409'
+  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 4, %L, 3, %L)', v_a, 'sin ají', 'sin ají')) <> 'PT409'
     or pg_temp.e7_sqlstate(format('select public.rpc_retirar_detalle_pedido(%s)', v_a)) <> 'PT409' then
     raise exception 'E7-TP11/TP12: detalle enviado editable o retirable';
   end if;
   -- otro local / otro rol
   perform pg_temp.e7_set_user(v_mozo2);
-  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 2, null, null, null)', v_a)) <> '42501'
+  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 2, null, 3, %L)', v_a, 'sin ají')) <> '42501'
     or pg_temp.e7_sqlstate(format('select public.rpc_retirar_detalle_pedido(%s)', v_a)) <> '42501' then
     raise exception 'E7-TP25: otro local pudo editar/retirar';
   end if;
   perform pg_temp.e7_set_user(v_cocina);
-  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 2, null, null, null)', v_a)) <> '42501'
+  if pg_temp.e7_sqlstate(format('select public.rpc_modificar_detalle_pedido(%s, 2, null, 3, %L)', v_a, 'sin ají')) <> '42501'
     or pg_temp.e7_sqlstate(format('select public.rpc_retirar_detalle_pedido(%s)', v_a)) <> '42501' then
     raise exception 'E7-TP25: COCINA pudo editar/retirar';
   end if;

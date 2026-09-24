@@ -47,8 +47,8 @@ Fecha: 24/09/2026. Rama `feature/E7-OrderOperationalImprovements`, sobre el base
 
 - Reproducción previa: `supabase/tests/e7_t05b_hz01_reproduccion_baseline.sql` sobre la baseline → `NOTICE: HZ-01 REPRODUCIDO: pedido ABIERTO, mesa OCUPADA, todos los detalles LISTO`. Sobre E7 el mismo `DELETE` directo es rechazado (`permission denied for table detalle_pedido`).
 - Migración: `20260924000500_e7_t05b_edicion_retiro_abierto.sql` (`rpc_modificar_detalle_pedido`, `rpc_retirar_detalle_pedido`; eliminación de `detalle_pedido_update_abierto_mozo` y `detalle_pedido_delete_abierto_mozo`; `REVOKE UPDATE (cantidad, observacion)` y `REVOKE DELETE` a `authenticated`).
-- Frontend: `src/services/waiterOrderService.ts` (`updateOpenDetail`/`removeOpenDetail` usan las RPC; interfaz pública y mensajes sin cambios; `PT409` → conflicto concurrente existente). `WaiterOrderPage` sin cambios.
-- Focal: `e7_t05b_edicion_retiro.sql` → **PASS** (TP11, TP12 incluida la corrección HZ-01 y re-entrega, retiro del último detalle + liberar mesa, privilegios sustituidos). Node: `node --experimental-strip-types --test tests/waiterBoard.test.mjs` → **51/51 PASS**. Carrera real TP13 → **R10–R13 OK, 0 deadlocks**.
+- Frontend: `src/services/waiterOrderService.ts` (`updateOpenDetail`/`removeOpenDetail` usan las RPC; mensajes sin cambios; `PT409` → conflicto concurrente existente). Tras la corrección C-1, `updateOpenDetail` exige el snapshot completo `{cantidad, observacion}` como esperado y `WaiterOrderPage` lo pasa en sus dos llamadas (cambio de argumentos, sin cambio de UX).
+- Focal (re-ejecutado tras C-1): `e7_t05b_edicion_retiro.sql` → **PASS** (TP11 con verificación optimista completa, incluido el caso explícito de observación esperada `NULL` modificada por otra sesión → `PT409`; TP12 incluida la corrección HZ-01 y re-entrega, retiro del último detalle + liberar mesa, privilegios sustituidos). Node: `node --experimental-strip-types --test tests/waiterBoard.test.mjs` → **51/51 PASS**. Carrera real TP13 → **R10–R14 OK, 0 deadlocks** (R14 agregada en C-1).
 - Pruebas históricas superadas expresamente por E7-D15 (se documentan, no se silencian; su cobertura funcional queda en `e7_t05b_edicion_retiro.sql` y en el retiro/edición E7):
   - `tests/waiterBoard.test.mjs`: 4 pruebas T07/T09 aseguraban la cadena `from('detalle_pedido').update()/delete()`; se reemplazaron por el contrato RPC equivalente (mismos campos, mismos conflictos y errores), con comentario E7-D15.
   - `supabase/tests/h3_t04_open_order_detail_mutations.sql`: falla en su matriz de grants/políticas y sus mutaciones directas como `authenticated` (ahora denegadas por diseño).
@@ -74,6 +74,7 @@ Fecha: 24/09/2026. Rama `feature/E7-OrderOperationalImprovements`, sobre el base
 | R11 | envío (A) vs retiro (B) | B espera; `PT409` |
 | R12 | envío (A) vs edición (B) | B espera; `PT409`; cantidad intacta |
 | R13 | edición (A) vs envío (B) | B espera; se envía con la cantidad editada |
+| R14 | edición de observación `NULL → 'Poco picante'` (A) vs edición con snapshot antiguo `(1, NULL)` (B) | B espera y pierde con `PT409`; queda la edición de A (C-1) |
 
 Ningún resultado contuvo `40001`, `40P01` ni *deadlock*; `pg_stat_database.deadlocks = 0`. Orden de locks único en todas las mutaciones de detalle: `pedido → detalle → mesa`.
 
@@ -83,10 +84,17 @@ Ningún resultado contuvo `40001`, `40P01` ni *deadlock*; `pg_stat_database.dead
 |---|---|---|
 | D-1 | Se modificó `registrar_auditoria_detalle_pedido` (no listado en E7-D01) para admitir `enviado_en` en `ABIERTO→LISTO` sin cocina. | El trigger H4 lo impedía; sin el ajuste E7-D05 era imposible. Cambio mínimo; el resto de la auditoría no cambia. |
 | D-2 | `GRANT SELECT (requiere_cocina)` sobre `producto`. | E7-D02 asumía que la política SELECT bastaba, pero `authenticated` tiene SELECT por columna. |
-| D-3 | `rpc_modificar_detalle_pedido` mantiene la firma del diseño con semántica parcial: `NULL` = sin cambio/sin verificación, `''` = sin observación. | Replica exactamente el `UPDATE` parcial H3 sin cambiar la interfaz del servicio ni la página (E7-D15 suponía enviar ambos valores). |
+| D-3 | **Retirada por la corrección C-1.** La primera versión usaba semántica parcial (`NULL` = sin cambio/sin verificación), no aprobada por E7-D15/E7-R33. | Sustituida: ahora se cumple exactamente el contrato del diseño. |
 | D-4 | `actualizar_estado_detalle_cocina` responde `PT409` sólo si existe el evento de cancelación; un ID inexistente sigue en `42501`. | Mantiene la semántica H4 de autorización y cumple E7-D10. |
 | D-5 | `enviar_pedido_cocina` usa dos `UPDATE` en vez de uno con `CASE`. | Mismo comportamiento; conserva los contratos textuales H3/H4 que siguen pasando. |
 | D-6 | Validación SQL en PostgreSQL 16 con *shim* en lugar de la imagen Supabase PG17. | Red bloqueada para registros de contenedores; revalidar en T10/T11. |
+
+## Corrección C-1 — verificación optimista de `rpc_modificar_detalle_pedido` (24/09/2026)
+
+- Hallazgo de revisión: la semántica parcial de la primera versión permitía omitir la verificación y trataba `NULL` en `p_observacion_esperada` como “no verificar”, contra E7-D15/E7-R33.
+- Migración nueva `20260924000600_e7_t05b_correccion_verificacion_optimista.sql` (`create or replace`; no se editó la migración `…500` ya comprometida): valores finales y esperados obligatorios; ambos esperados se comparan siempre con la fila persistida mediante `is distinct from` (`NULL` es un valor real); cualquier diferencia → `PT409` sin cambios; observación vacía/espacios → `NULL` (final y esperada); orden de locks `pedido → detalle` sin cambios; firma, permisos y SECURITY DEFINER sin cambios.
+- Servicio/página: el servicio envía siempre finales (el campo no editado toma el valor del snapshot) y el snapshot completo como esperado; la página pasa `{ cantidad: detail.cantidad, observacion: detail.observacion }`.
+- Verificación focal re-ejecutada: `e7_t05b_edicion_retiro.sql` PASS; `scripts/e7_concurrency.sh t05b` 0 fallos (incluida R14); `tests/waiterBoard.test.mjs` 51/51 PASS (pruebas T07/T09 ajustadas a finales + snapshot completo, incluida la aserción de esperado `NULL` real). No se ejecutó `typecheck` por la política por tarea; queda para T11 (cambio de firma verificado por búsqueda: sólo `WaiterOrderPage` y `waiterBoard.test.mjs` invocan `updateOpenDetail`).
 
 ## Pendiente (no iniciado por indicación)
 

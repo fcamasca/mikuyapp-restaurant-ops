@@ -125,18 +125,25 @@ t05b() {
   check "R11 detalle enviado intacto" "$(q $MOZO "select estado from public.detalle_pedido where id=$d")" "ENVIADO"
 
   read p d < <(open_order 12)
-  race $MOZO "select 1 from public.enviar_pedido_cocina($p)" $MOZO "select cantidad from public.rpc_modificar_detalle_pedido($d,5,null,1,null)"
+  race $MOZO "select 1 from public.enviar_pedido_cocina($p)" $MOZO "select cantidad from public.rpc_modificar_detalle_pedido($d,5,'borrador',1,'borrador')"
   check "R12 envío primero: edición esperó" "$WAITED" "1"
   check "R12 edición perdedora PT409" "$(grep -c 'ya fue enviado' $TMP/b)" "1"
   check "R12 cantidad sin cambios" "$(q $MOZO "select cantidad from public.detalle_pedido where id=$d")" "1"
 
   $PSQL -f "$DIR/supabase/tests/e7_concurrency_cleanup.sql" >/dev/null; $PSQL -f "$DIR/supabase/tests/e7_concurrency_setup.sql" >/dev/null
   read p d < <(open_order 1)
-  race $MOZO "select cantidad from public.rpc_modificar_detalle_pedido($d,5,null,1,null)" $MOZO "select detalles_enviados from public.enviar_pedido_cocina($p)"
+  race $MOZO "select cantidad from public.rpc_modificar_detalle_pedido($d,5,'borrador',1,'borrador')" $MOZO "select detalles_enviados from public.enviar_pedido_cocina($p)"
   check "R13 edición primero: envío esperó" "$WAITED" "1"
   check "R13 envío con la cantidad editada" "$(q $MOZO "select estado||'/'||cantidad from public.detalle_pedido where id=$d")" "ENVIADO/5"
-  check "R10–R13 sin interbloqueos (40P01) ni 40001" "$(cat $TMP/a $TMP/b | grep -cE '40P01|40001|deadlock')" "0"
-  check "R10–R13 sin deadlocks registrados" "$($PSQL -c "select deadlocks from pg_stat_database where datname=current_database()")" "0"
+  # R14: observación esperada NULL real; otra sesión la modifica; snapshot antiguo => PT409
+  p=$(q $MOZO "select pedido_id from public.crear_o_recuperar_pedido_mesa('$(mesa 2)')")
+  d=$(q $MOZO "select detalle_id from public.agregar_detalle_pedido($p,'$CEV',1,null)")
+  race $MOZO "select observacion from public.rpc_modificar_detalle_pedido($d,1,'Poco picante',1,null)" $MOZO "select cantidad from public.rpc_modificar_detalle_pedido($d,4,null,1,null)"
+  check "R14 esperado NULL: B esperó" "$WAITED" "1"
+  check "R14 B con snapshot antiguo (1, NULL) pierde PT409" "$(grep -c 'El producto cambió o ya fue enviado' $TMP/b)" "1"
+  check "R14 detalle conserva la edición ganadora" "$(q $MOZO "select cantidad||'/'||observacion from public.detalle_pedido where id=$d")" "1/Poco picante"
+  check "R10–R14 sin interbloqueos (40P01) ni 40001" "$(cat $TMP/a $TMP/b | grep -cE '40P01|40001|deadlock')" "0"
+  check "R10–R14 sin deadlocks registrados" "$($PSQL -c "select deadlocks from pg_stat_database where datname=current_database()")" "0"
 }
 
 case "${1:-all}" in

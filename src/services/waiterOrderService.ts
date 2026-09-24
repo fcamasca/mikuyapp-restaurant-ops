@@ -218,7 +218,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       }
     },
 
-    async updateOpenDetail(context: ValidatedProfileContext, detailId: number, input: { readonly cantidad?: number; readonly observacion?: string | null }, expected?: { readonly cantidad?: number; readonly observacion?: string | null }): Promise<WaiterOrderResult<null>> {
+    async updateOpenDetail(context: ValidatedProfileContext, detailId: number, input: { readonly cantidad?: number; readonly observacion?: string | null }, expected: { readonly cantidad: number; readonly observacion: string | null }): Promise<WaiterOrderResult<null>> {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para modificar productos.')
       if (input.cantidad !== undefined && (!Number.isInteger(input.cantidad) || input.cantidad < 1)) {
         return connectionError('La cantidad debe ser un entero mayor o igual a 1.')
@@ -228,14 +228,14 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       if (input.observacion !== undefined) changes.observacion = input.observacion?.trim() || null
       if (Object.keys(changes).length === 0) return { ok: true, data: null }
       try {
-        // E7-D15: la edición H3 se ejecuta vía RPC con orden de locks pedido -> detalle.
-        // NULL = campo sin cambio / sin verificación; '' = sin observación (misma semántica que el UPDATE directo previo).
+        // E7-D15 / E7-R33: la edición H3 se ejecuta vía RPC (locks pedido -> detalle) enviando siempre los
+        // valores finales y los valores esperados (snapshot que ve el mozo); PostgreSQL verifica ambos.
         const result = await client.rpc('rpc_modificar_detalle_pedido', {
           p_detalle_id: detailId,
-          p_cantidad: changes.cantidad ?? null,
-          p_observacion: 'observacion' in changes ? changes.observacion ?? '' : null,
-          p_cantidad_esperada: expected?.cantidad ?? null,
-          p_observacion_esperada: expected && 'observacion' in expected ? expected.observacion ?? '' : null,
+          p_cantidad: changes.cantidad ?? expected.cantidad,
+          p_observacion: 'observacion' in changes ? changes.observacion ?? null : expected.observacion,
+          p_cantidad_esperada: expected.cantidad,
+          p_observacion_esperada: expected.observacion,
         })
         if (result.error?.code === 'PT409') return concurrentConflict()
         if (result.error) return connectionError('No pudimos guardar el cambio. Los datos anteriores se mantienen.')
