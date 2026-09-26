@@ -17,6 +17,15 @@ interface OperationsRealtimeOptions {
 type OperationsRealtimeClient = Pick<SupabaseClient, 'channel' | 'removeChannel'>
 
 const signalTables = ['detalle_pedido', 'pedido', 'mesa'] as const
+// E7-T12/TH06: supabase-js reutiliza un canal existente con el mismo topic (client.channel). Si una vista se desmonta
+// y se vuelve a montar (StrictMode, recarga del perfil tras SIGNED_IN/TOKEN_REFRESHED) antes de que Realtime confirme
+// la salida del canal anterior, la vista nueva recibiría ese canal saliente y quedaría sin señales al cerrarse. Cada
+// suscripción usa por eso un topic propio: `<channelName>:<n>`.
+let subscriptionSequence = 0
+export function subscriptionTopic(channelName: string): string {
+  subscriptionSequence += 1
+  return `${channelName}:${subscriptionSequence}`
+}
 const signalEvents = ['INSERT', 'UPDATE'] as const
 
 export async function subscribeToOperationsChanges(
@@ -63,8 +72,9 @@ export async function subscribeToOperationsChanges(
   }
 
   if (options.initialRefresh !== false) await refresh()
-  rtLog(options.channelName, `suscribiendo (${rtDescribeTopic(client, options.channelName)})`)
-  const channel = client.channel(options.channelName)
+  const topic = subscriptionTopic(options.channelName)
+  rtLog(options.channelName, `suscribiendo topic ${topic} (${rtDescribeTopic(client, topic)})`)
+  const channel = client.channel(topic)
   for (const table of signalTables) {
     for (const event of signalEvents) {
       channel.on('postgres_changes', { event, schema: 'public', table }, (signal: unknown) => {
@@ -91,7 +101,7 @@ export async function subscribeToOperationsChanges(
     async stop(): Promise<void> {
       if (stopped) return
       stopped = true
-      rtLog(options.channelName, `stop (${rtDescribeTopic(client, options.channelName)})`)
+      rtLog(options.channelName, `stop topic ${topic} (${rtDescribeTopic(client, topic)})`)
       refreshAgain = false
       if (refreshTimer !== null) {
         cancelTimeout(refreshTimer)

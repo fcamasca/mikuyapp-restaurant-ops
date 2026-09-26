@@ -62,7 +62,7 @@ function createFixture(responses = [[row(1)], [row(1)], [row(2)]]) {
         : { data: { detalles: data, comandas: [], cancelaciones: [] }, error: null }
     },
     channel(name) {
-      assert.equal(name, 'kitchen-board-signals')
+      assert.match(name, /^kitchen-board-signals:\d+$/)
       return channel
     },
     async removeChannel(received) {

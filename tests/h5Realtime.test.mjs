@@ -18,7 +18,7 @@ function fixture() {
     subscribe(callback) { statusHandler = callback; return channel },
   }
   return {
-    client: { channel(name) { assert.equal(name, 'h5-convergence-signals'); return channel }, async removeChannel(received) { assert.equal(received, channel); removed = true } },
+    client: { channel(name) { assert.match(name, /^h5-convergence-signals:\d+$/); return channel }, async removeChannel(received) { assert.equal(received, channel); removed = true } },
     options: { channelName: 'h5-convergence-signals', debounceMs: 10, setTimeoutFn(callback) { const id = ++timerId; timers.set(id, callback); return id }, clearTimeoutFn(id) { timers.delete(id) } },
     emit(table, event = 'UPDATE') { handlers.filter((handler) => handler.filter.table === table && handler.filter.event === event).forEach((handler) => handler.callback({ new: { ignored: true } })) },
     status(value) { statusHandler(value) },
