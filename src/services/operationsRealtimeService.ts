@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { rtDescribeTopic, rtLog, rtLogSignal } from './realtimeDebug.ts'
 
 export interface OperationsRealtimeHandle {
   readonly resync: () => Promise<void>
@@ -33,14 +34,16 @@ export async function subscribeToOperationsChanges(
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
   const refresh = async (): Promise<void> => {
-    if (stopped) return
+    if (stopped) { rtLog(options.channelName, 'refetch descartado: handle detenido'); return }
     if (refreshInFlight) {
       refreshAgain = true
       return refreshInFlight
     }
+    rtLog(options.channelName, 'refetch iniciado')
     refreshInFlight = refreshSnapshot()
     try {
       await refreshInFlight
+      rtLog(options.channelName, 'refetch terminado')
     } finally {
       refreshInFlight = null
       if (refreshAgain && !stopped) {
@@ -60,13 +63,18 @@ export async function subscribeToOperationsChanges(
   }
 
   if (options.initialRefresh !== false) await refresh()
+  rtLog(options.channelName, `suscribiendo (${rtDescribeTopic(client, options.channelName)})`)
   const channel = client.channel(options.channelName)
   for (const table of signalTables) {
     for (const event of signalEvents) {
-      channel.on('postgres_changes', { event, schema: 'public', table }, scheduleRefresh)
+      channel.on('postgres_changes', { event, schema: 'public', table }, (signal: unknown) => {
+        rtLogSignal(options.channelName, table, event, signal)
+        scheduleRefresh()
+      })
     }
   }
   channel.subscribe((status) => {
+    rtLog(options.channelName, `estado ${status}${stopped ? ' (handle detenido, ignorado)' : ''}`)
     if (stopped) return
     if (status === 'SUBSCRIBED') {
       void refresh()
@@ -83,6 +91,7 @@ export async function subscribeToOperationsChanges(
     async stop(): Promise<void> {
       if (stopped) return
       stopped = true
+      rtLog(options.channelName, `stop (${rtDescribeTopic(client, options.channelName)})`)
       refreshAgain = false
       if (refreshTimer !== null) {
         cancelTimeout(refreshTimer)

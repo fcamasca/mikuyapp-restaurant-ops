@@ -13,6 +13,7 @@ import AdminHomePage from './pages/AdminHomePage'
 import AdminPendingPage from './pages/AdminPendingPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
 import AdminShell from './components/AdminShell'
+import RealtimeDebugPanel from './components/RealtimeDebugPanel'
 import { getRoleDestination, getWaiterOrderId, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
 
 function LoadingScreen({ context = false }: { readonly context?: boolean }) {
@@ -228,6 +229,7 @@ function App() {
   return (
     <AuthProvider>
       <ApplicationRouter />
+      <RealtimeDebugPanel />
     </AuthProvider>
   )
 }

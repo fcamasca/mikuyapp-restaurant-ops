@@ -1,5 +1,6 @@
 ﻿# E7-T12 / TH06 — Reproducción/verificación del defecto posterior al cobro total en el stack Supabase LOCAL.
 # Uso: doble clic en scripts\e7_t12_th06.cmd. Registro: e7-t12-th06.log (ignorado por git). Nunca link/--linked/db push.
+param([string]$Script = 'scripts/e7_t12_th06_repro.mjs')
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -26,7 +27,7 @@ $env:E7_VALIDATION_SUPABASE_URL = $vars['API_URL']
 $env:E7_VALIDATION_PUBLISHABLE_KEY = $(if ($vars['ANON_KEY']) { $vars['ANON_KEY'] } else { $vars['PUBLISHABLE_KEY'] })
 $env:E7_VALIDATION_SERVICE_ROLE_KEY = $(if ($vars['SERVICE_ROLE_KEY']) { $vars['SERVICE_ROLE_KEY'] } else { $vars['SECRET_KEY'] })
 Start-Sleep -Seconds 15
-Step 'TH06 recorrido mozo -> cocina -> entrega -> cobro TOTAL' { node --experimental-strip-types scripts/e7_t12_th06_repro.mjs } | Out-Null
+Step "TH06 $Script" { node --experimental-strip-types $Script } | Out-Null
 Remove-Item Env:E7_VALIDATION_SERVICE_ROLE_KEY, Env:E7_VALIDATION_PUBLISHABLE_KEY, Env:E7_VALIDATION_SUPABASE_URL -ErrorAction SilentlyContinue
 Step 'db reset (limpia la fixture)' { npx supabase db reset --local } | Out-Null
 Step 'supabase stop' { npx supabase stop } | Out-Null

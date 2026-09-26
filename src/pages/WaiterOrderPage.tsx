@@ -4,6 +4,7 @@ import { createCatalogService, type CatalogGroup } from '../services/catalogServ
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
 import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
+import { rtLog } from '../services/realtimeDebug.ts'
 import { canCancelOrderDetail, cancellationReasons, combineOrderObservation, createWaiterOrderService, describeWaiterDetailStatus, maxCancellationReasonLength, type WaiterCancelledDetail, type WaiterOrderDetail, type WaiterOrderReview } from '../services/waiterOrderService'
 
 interface Props { readonly context: ValidatedProfileContext; readonly orderId: number; readonly isSigningOut: boolean; readonly onBack: () => void; readonly onSignOut: () => void }
@@ -61,7 +62,9 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
       orders.getOrderReview(context, orderId),
       orders.getOrderCancellations(context, orderId),
     ])
+    rtLog(`pedido ${orderId}`, `resync revisión=${reviewResult.ok ? `${reviewResult.data.estado}/${reviewResult.data.mesa.estado}` : reviewResult.error.kind}${isCurrent() ? '' : ' (vista obsoleta, se ignora)'}`)
     if (!isCurrent()) return
+    if (!reviewResult.ok && reviewResult.error.kind === 'order-not-current') rtLog(`pedido ${orderId}`, 'navegación a mesas (pedido ya no vigente)')
     if (!reviewResult.ok && reviewResult.error.kind === 'order-not-current') { onBackRef.current(); return }
     if (!detailResult.ok) { setError(detailResult.error.message); return }
     if (!reviewResult.ok) { setError(reviewResult.error.message); return }

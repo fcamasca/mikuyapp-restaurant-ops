@@ -3,6 +3,7 @@ import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
 import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
+import { rtLog } from '../services/realtimeDebug.ts'
 import {
   createWaiterOrderService,
   filterAndSortWaiterTables,
@@ -65,6 +66,7 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
     const result = await service.getTableBoard(context)
     if (!isCurrent()) return
     setLoading(false)
+    rtLog('mesas', result.ok ? `tablero ${result.data.map((table) => `${table.codigo}:${table.estado}${table.pedido ? `#${table.pedido.id}` : ''}`).join(' ')}` : `tablero error ${result.error.message}`)
     if (!result.ok) { setError(result.error.message); return }
     setTables(result.data)
     setError(null)

@@ -1,3 +1,4 @@
+import { rtLog } from './realtimeDebug.ts'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import type { RoleCode } from '../types/operations'
 
@@ -151,6 +152,7 @@ export function createProfileContextController(client: ProfileClient): ProfileCo
   }
 
   async function load(session: Session | null): Promise<void> {
+    rtLog('perfil', `recarga del contexto (${session ? 'con sesión' : 'sin sesión'}): la vista operativa se desmonta hasta validar`)
     currentSession = session
     const requestGeneration = ++generation
 
