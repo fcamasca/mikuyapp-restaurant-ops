@@ -52,6 +52,13 @@ export type WaiterOrderResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly error: { readonly kind: 'operation-error' | 'concurrent-conflict'; readonly message: string; readonly recoverable: true } }
 
+// E7-T12/TH06: el pedido dejó de ser vigente (p. ej. PAGADO tras el cobro total, o ANULADO). No es un error de
+// carga: la RLS de MOZO y el filtro de estados vigentes ya no lo devuelven y la vista debe volver a mesas.
+export const orderNoLongerCurrentMessage = 'Este pedido ya no está vigente. La mesa se actualizó.'
+export type WaiterOrderReviewResult =
+  | WaiterOrderResult<WaiterOrderReview>
+  | { readonly ok: false; readonly error: { readonly kind: 'order-not-current'; readonly message: string; readonly recoverable: false } }
+
 interface TableRow extends Omit<WaiterTableBoardItem, 'pedido'> { readonly activo: boolean }
 interface OrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode; readonly creado_por: string }
 interface DetailRow { readonly pedido_id: number; readonly cantidad: number; readonly precio_unitario: number }
@@ -214,13 +221,14 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       }
     },
 
-    async getOrderReview(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<WaiterOrderReview>> {
+    async getOrderReview(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderReviewResult> {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para consultar este pedido.')
       try {
         const orderResult = await client.from('pedido').select('id,mesa_id,estado')
           .eq('id', orderId).eq('local_id', context.local.id).in('estado', currentOrderStatuses).returns<ReviewOrderRow[]>()
         const order = orderResult.data?.[0]
-        if (orderResult.error || !order) return connectionError('No pudimos cargar el pedido vigente. Intenta nuevamente.')
+        if (orderResult.error) return connectionError('No pudimos cargar el pedido vigente. Intenta nuevamente.')
+        if (!order) return { ok: false, error: { kind: 'order-not-current', message: orderNoLongerCurrentMessage, recoverable: false } }
         const tableResult = await client.from('mesa').select('id,codigo,nombre,estado')
           .eq('id', order.mesa_id).eq('local_id', context.local.id).eq('activo', true).returns<ReviewTableRow[]>()
         const table = tableResult.data?.[0]

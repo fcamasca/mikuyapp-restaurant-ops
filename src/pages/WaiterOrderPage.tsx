@@ -44,6 +44,10 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
   const [cancelReason, setCancelReason] = useState<string | null>(null)
   const [cancelFree, setCancelFree] = useState('')
 
+  // E7-T12/TH06: si el pedido dejó de ser vigente (cobro total, anulación) se vuelve a mesas, como tras liberar la mesa.
+  // Se usa una referencia para no recrear la suscripción Realtime cuando App entrega un onBack nuevo en cada render.
+  const onBackRef = useRef(onBack)
+  useEffect(() => { onBackRef.current = onBack }, [onBack])
   const reload = useCallback(async (): Promise<boolean> => {
     if (!orders) return false
     const result = await orders.getOrderDetails(context, orderId)
@@ -58,6 +62,7 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
       orders.getOrderCancellations(context, orderId),
     ])
     if (!isCurrent()) return
+    if (!reviewResult.ok && reviewResult.error.kind === 'order-not-current') { onBackRef.current(); return }
     if (!detailResult.ok) { setError(detailResult.error.message); return }
     if (!reviewResult.ok) { setError(reviewResult.error.message); return }
     if (!cancellationResult.ok) { setError(cancellationResult.error.message); return }
@@ -100,6 +105,7 @@ export default function WaiterOrderPage({ context, orderId, isSigningOut, onBack
       const [catalogResult, detailResult, reviewResult, cancellationResult] = await Promise.all([catalog.getOperationalCatalog(context), orders.getOrderDetails(context, orderId), orders.getOrderReview(context, orderId), orders.getOrderCancellations(context, orderId)])
       if (cancelled) return
       setLoading(false)
+      if (!reviewResult.ok && reviewResult.error.kind === 'order-not-current') { onBackRef.current(); return }
       if (!catalogResult.ok) { setError(catalogResult.error.message); return }
       if (!detailResult.ok) { setError(detailResult.error.message); return }
       if (!reviewResult.ok) { setError(reviewResult.error.message); return }

@@ -747,3 +747,39 @@ test('E7-T07 éxito y conflicto resincronizan el snapshot autoritativo (incluida
   assert.match(orderPageSource, /orders\.getOrderCancellations\(context, orderId\),\s*\]\)/)
   assert.match(orderPageSource, /setCancellations\(cancellationResult\.data\)/)
 })
+
+test('E7-T12/TH06 pedido que pasó a PAGADO tras el cobro total ya no es vigente (no es error de carga)', async () => {
+  // La RLS de MOZO y el filtro de estados vigentes no devuelven el pedido PAGADO/ANULADO: consulta sin filas.
+  const fixture = createClient({ tables: [], orders: [] })
+  const result = await createWaiterOrderService(fixture.client).getOrderReview(context(), 43)
+  assert.equal(result.ok, false)
+  assert.equal(result.error.kind, 'order-not-current')
+  assert.equal(result.error.recoverable, false)
+  assert.notEqual(result.error.message, 'No pudimos cargar el pedido vigente. Intenta nuevamente.')
+  assert.deepEqual(fixture.calls[0].inFilters[0].values, ['ABIERTO', 'ENVIADO', 'RECIBIDO_COCINA', 'EN_PREPARACION', 'LISTO', 'ENTREGADO'])
+  assert.equal(fixture.calls.length, 1)
+})
+
+test('E7-T12/TH06 un fallo real de lectura del pedido sigue siendo error recuperable', async () => {
+  const fixture = createClient({ errors: { pedido: { message: 'network' } } })
+  const result = await createWaiterOrderService(fixture.client).getOrderReview(context(), 43)
+  assert.deepEqual(result, { ok: false, error: { kind: 'operation-error', message: 'No pudimos cargar el pedido vigente. Intenta nuevamente.', recoverable: true } })
+})
+
+test('E7-T12/TH06 la vista del mozo vuelve a mesas al resincronizar o reintentar un pedido que dejó de ser vigente', () => {
+  const snapshot = orderPageSource.slice(orderPageSource.indexOf('const reloadOrderSnapshot'), orderPageSource.indexOf('function resetDetailDraft'))
+  const notCurrent = /if \(!reviewResult\.ok && reviewResult\.error\.kind === 'order-not-current'\) \{ onBackRef\.current\(\); return \}/
+  // Señal Realtime (reloadOrderSnapshot): se evalúa antes de mostrar cualquier error de la resincronización.
+  assert.match(snapshot, notCurrent)
+  assert.ok(snapshot.search(notCurrent) < snapshot.indexOf('setError(detailResult.error.message)'))
+  // Carga inicial y botón Reintentar (setAttempt -> load): mismo tratamiento.
+  const load = orderPageSource.slice(orderPageSource.indexOf('async function load()'), orderPageSource.indexOf('void load()'))
+  assert.match(load, notCurrent)
+  assert.ok(load.search(notCurrent) < load.indexOf('setError(catalogResult.error.message)'))
+  assert.match(orderPageSource, /onClick=\{\(\) => setAttempt\(\(n\) => n \+ 1\)\}/)
+  // onBack vía referencia: la suscripción Realtime no se recrea en cada render de App.
+  assert.match(orderPageSource, /const onBackRef = useRef\(onBack\)/)
+  assert.match(orderPageSource, /useEffect\(\(\) => \{ onBackRef\.current = onBack \}, \[onBack\]\)/)
+  assert.match(orderPageSource, /\}, \[context, orderId, orders\]\)\r?\n  function resetDetailDraft/)
+  assert.match(appSource, /<WaiterOrderPage [^>]*onBack=\{\(\) => navigate\('\/mozo\/mesas'\)\}/)
+})
