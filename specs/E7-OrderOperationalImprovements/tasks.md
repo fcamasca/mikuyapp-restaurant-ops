@@ -2,7 +2,16 @@
 
 ## 1. Estado
 
-**E7-T01 (Spec Mode) elaborada y ajustada con las decisiones DH-01–DH-04 — pendiente de aprobación humana del Spec.** E7-T02 en adelante **no se han iniciado**. No existen migraciones, RPC, componentes ni pruebas de E7 en el repositorio. No quedan decisiones funcionales pendientes: la construcción comienza sólo tras aprobar los cuatro documentos.
+**E7 CERRADA, VALIDADA Y ACEPTADA (30/09/2026).** Todas las tareas completadas; aceptación en [`acceptance.md`](acceptance.md).
+
+| Tarea | Estado | Evidencia |
+|---|---|---|
+| E7-T01 | Completada — Spec aprobado 23/09/2026 | `requirements.md`, `design.md`, `tasks.md`, `test-plan.md` |
+| E7-T02–E7-T05B | Completadas | `implementation-t02-t05b.md` |
+| E7-T06–E7-T09 | Completadas | `implementation-t06-t09.md` |
+| E7-T10 | Técnicamente completa (desviación de ambiente aprobada: Supabase local real) | `implementation-t10.md` |
+| E7-T11 | Técnicamente completa | `implementation-t11.md` |
+| E7-T12 | Completada — TH01–TH07 aprobadas; dos defectos de TH06 corregidos (`94f98ee`, `bbf9edd`) | `implementation-t12.md` |
 
 ## 2. Tareas
 

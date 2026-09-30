@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 7 — Mejoras operativas de pedidos: diseño
 
-**Estado: SPEC MODE — BORRADOR PENDIENTE DE APROBACIÓN.** Este documento define contratos y decisiones; no autoriza migraciones ni cambios de código hasta la aprobación humana.
+**Estado: CERRADO, VALIDADO Y ACEPTADO (30/09/2026).** Diseño aprobado el 23/09/2026 e implementado en T02–T10 (migraciones `20260924000100`–`20260924000800`). Las decisiones aprobadas se conservan sin cambios; las desviaciones y correcciones de construcción/validación se registran en `implementation-t02-t05b.md`, `implementation-t06-t09.md`, `implementation-t10.md`, `implementation-t11.md` e `implementation-t12.md`. Aceptación en [`acceptance.md`](acceptance.md).
 
 ## E7-D01 — Principios y cambio mínimo
 

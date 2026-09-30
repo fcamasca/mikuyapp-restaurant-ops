@@ -11,6 +11,7 @@ Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedid
 - **Baseline MVP v1.0.0:** H1–H6 está cerrado, validado y aceptado. Esta baseline conserva el flujo histórico de cobro único y el modelo inicial de 10 tablas.
 - **Producción actual:** <https://mikuyapp.pages.dev/> continúa sobre la versión desplegada del MVP y los cambios post-MVP ya publicados, como PM-001.
 - **E1 — Operación de caja:** implementada, validada, aceptada y cerrada documentalmente el **21/09/2026**. Su despliegue a producción continúa pendiente del proceso de liberación correspondiente.
+- **E7 — Mejoras operativas de pedidos:** implementada, validada, aceptada y cerrada documentalmente el **30/09/2026** (productos sin cocina, recepción completa en cocina, cancelación de productos por el mozo, trazabilidad y comandas imprimibles opcionales). Su despliegue a producción continúa pendiente del proceso de liberación correspondiente.
 
 E1 reemplaza funcionalmente el cobro único de la baseline por actos de cobro totales o parciales, con uno o varios medios y propinas separadas. También amplía el modelo de caja; por ello, las cifras históricas de H1 no describen la arquitectura vigente de E1.
 
@@ -38,6 +39,7 @@ H1 establece la base técnica verificable, H2 incorpora autenticación, roles, c
 | H6 | MVP liberado | Cerrado, validado y aceptado |
 | PM-001 | DB Standardization | Aceptado y desplegado |
 | E1 | Operación de caja e Inicio ADMIN | Implementada, cerrada y aceptada; pendiente de despliegue |
+| E7 | Mejoras operativas de pedidos | Implementada, cerrada y aceptada; pendiente de despliegue |
 
 El plan base fue de **24 h**. La referencia de planificación vigente es **40.5 h**, incluida la reestimación aprobada de H5 de 4 h a 12 h; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
 
@@ -396,10 +398,11 @@ H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, 
 - [Resumen funcional de E1](docs/E1_RESUMEN_FUNCIONAL.md)
 - [Presentación de E1 para usuarios](docs/E1_PRESENTACION_USUARIO.md)
 - [Notas de entrega de E1](docs/E1_RELEASE_NOTES.md)
+- [Aceptación de E7](specs/E7-OrderOperationalImprovements/acceptance.md)
 
 ## Estado de liberación
 
-MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado, aceptado y constituye la baseline productiva. PM-001 — DB Standardization está aceptado y desplegado. E1 — Operación de caja está implementada, cerrada, validada y aceptada, pero todavía no debe considerarse disponible en producción hasta completar su proceso de despliegue.
+MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado, aceptado y constituye la baseline productiva. PM-001 — DB Standardization está aceptado y desplegado. E1 — Operación de caja y E7 — Mejoras operativas de pedidos están implementadas, cerradas, validadas y aceptadas, pero todavía no deben considerarse disponibles en producción hasta completar su proceso de despliegue.
 
 ## Licencia
 

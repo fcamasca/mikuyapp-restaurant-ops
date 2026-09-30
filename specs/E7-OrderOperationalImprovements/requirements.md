@@ -2,7 +2,9 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-**Estado: SPEC MODE — BORRADOR PENDIENTE DE APROBACIÓN HUMANA (23/09/2026).** No se ha iniciado la construcción. Este paquete no contiene `acceptance.md`, no autoriza migraciones, cambios de RPC productivas, cambios de componentes React ni despliegues. Las decisiones DH-01–DH-04 fueron tomadas y se registran en la sección 10. La construcción sólo podrá comenzar después de la aprobación explícita de `requirements.md`, `design.md`, `tasks.md` y `test-plan.md`.
+**Estado: CERRADA, VALIDADA Y ACEPTADA (30/09/2026).** Spec aprobado el 23/09/2026; construcción T02–T10, validación técnica integral T11 y validación humana T12 (TH01–TH07) completadas. Aceptación formal en [`acceptance.md`](acceptance.md). El cierre no implica despliegue a producción. Las decisiones DH-01–DH-04 se registran en la sección 10.
+
+> Nota histórica: este documento se redactó en Spec Mode; los requisitos aprobados se conservan sin cambios.
 
 Fuente principal de alcance: `docs/PLAN_MVP.md`, sección 15, **Evolución 7 — Mejoras operativas de pedidos**. Baseline verificada en la rama `main` (`d1f0517`), sin cambios locales al iniciar el Spec Mode, con H1–H6, PM-001 y E1 (incluido el correctivo E1-T18) cerrados y aceptados. PM-002 permanece `TRANSITIONING`: construcción y verificación se realizan en local/DEV; este spec no toca PROD.
 

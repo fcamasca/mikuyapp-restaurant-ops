@@ -1,6 +1,8 @@
 # E7 — Evidencia de validación humana: T12
 
-Rama `feature/E7-OrderOperationalImprovements`, sobre `9cdba08` (T11 técnicamente completa). No constituye aceptación; no existe `acceptance.md`. T12 **en curso**.
+Rama `feature/E7-OrderOperationalImprovements`, sobre `9cdba08` (T11 técnicamente completa).
+
+**Estado de T12: COMPLETADA (30/09/2026).** TH01–TH07 aprobadas por el responsable. Durante TH06 se detectaron y corrigieron dos defectos (§2 y §5). La aceptación formal se registra en [`acceptance.md`](acceptance.md).
 
 ## 1. Estado de las pruebas humanas
 
@@ -12,9 +14,11 @@ Rama `feature/E7-OrderOperationalImprovements`, sobre `9cdba08` (T11 técnicamen
 | E7-TH04 | Aprobada (responsable) | — |
 | E7-TH05 | Aprobada (responsable) | Impresión física de comandas |
 | E7-TH06 | **Aprobada (responsable, 30/09/2026) tras dos fallas humanas corregidas** | 1ª: respuesta vacía tratada como error (§2). 2ª: la vista del mozo no se resincronizaba por Realtime tras el cobro (§5) |
-| E7-TH07 | No ejecutada | Pendiente |
+| E7-TH07 | Aprobada (responsable, 30/09/2026) | Uso táctil y responsive |
 
-Mejora UX registrada aparte y **no resuelta** en esta corrección: texto “1 línea” → “1 producto”.
+Pendiente menor aceptado como **no bloqueante** en el cierre de E7 y no implementado: texto “1 línea” → “1 producto”.
+
+TH01–TH05 y TH07 se aprobaron por decisión humana del responsable; TH06 se aprobó tras la revalidación posterior a las correcciones. Esta evidencia no registra ejecuciones humanas adicionales a las informadas por el responsable.
 
 ## 2. Defecto TH06 — vista del mozo tras el cobro total
 
@@ -44,12 +48,12 @@ Mejora UX registrada aparte y **no resuelta** en esta corrección: texto “1 l�
 
 No se ejecutó SQL: la corrección no toca la base de datos. La fixture del stack local se eliminó (`db reset`) y el stack se apagó.
 
-## 4. Pendiente (tras la primera falla)
+## 4. Pendientes registrados tras la primera falla (histórico)
 
-- **Revalidación humana de TH06** en dispositivos reales (no se marca aprobada aquí).
-- TH07.
-- Mejora UX “1 línea” → “1 producto” (registrada aparte).
-- Revalidación cloud segura por PM-002.
+- Revalidación humana de TH06 → resuelta (§5, §6).
+- TH07 → aprobada (§6).
+- Mejora UX “1 línea” → “1 producto” → aceptada como pendiente menor no bloqueante.
+- Revalidación cloud segura por PM-002 → proceso independiente de E7 (ver `acceptance.md`).
 
 ## 5. Segunda falla humana de TH06 — sincronización Realtime del mozo
 
@@ -71,18 +75,30 @@ No se ejecutó SQL: la corrección no toca la base de datos. La fixture del stac
 |---|---|
 | Nueva regresión en `tests/waiterRealtime.test.mjs` con un cliente que reproduce la semántica de `supabase-js` (reutilización por topic, salida asíncrona): remontaje antes de la salida sigue recibiendo la señal `mesa` `LIBRE` y dispara el refetch; topics únicos por suscripción | **Falla sin la corrección, pasa con ella** |
 | Focales Realtime/mozo/cocina/caja (`waiterRealtime`, `h5Realtime`, `kitchenRealtimeService`, `kitchenBoard`, `waiterBoard`, `cashierService`, `cashierPage`, `cashierPrint`) | 144/144 PASS |
-| Suite Node completa | 391/391 PASS |
+| Suite Node completa | 391/391 PASS (Windows y Linux) |
 | `tsc --noEmit` | PASS |
 | Cloud (localhost contra `ibfr…uinf`, instrumentación activa), pedidos #46 y #47 | Cada montaje: topic nuevo, `mismo_topic=ninguno`, `SUBSCRIBED`; señales de detalle/pedido/mesa recibidas y refetch en todo el flujo (envío, cocina, entrega). Con el mozo en mesas, los dos cobros totales produjeron `SEÑAL mesa UPDATE … estado=LIBRE` (#47 y #46) y el tablero pasó a `LIBRE` **sin refresh manual** |
-
 | Cloud, cobro total con el MOZO **dentro de la pantalla del pedido** #48 | `SEÑAL mesa UPDATE … estado=LIBRE` → refetch → `resync revisión=order-not-current` → navegación a mesas → nuevo canal de mesas `SUBSCRIBED` → tablero con todas las mesas `LIBRE`, **sin refresh manual** (≈330 ms desde la señal hasta la navegación) |
 
 Cobertura de la verificación en cloud: tres cobros totales (#46, #47 desde mesas; #48 desde la pantalla del pedido), todos resincronizados automáticamente. `Reintentar` no se pudo ejercitar manualmente en el último recorrido porque la vista volvió sola a mesas; su camino (carga → `order-not-current` → mesas) queda cubierto por la verificación en stack local de §3 y por las pruebas de `waiterBoard.test.mjs`.
 
 **Instrumentación temporal retirada** después de la verificación: se eliminaron `src/services/realtimeDebug.ts`, `src/components/RealtimeDebugPanel.tsx` y los registros agregados en `App.tsx`, `WaiterOrderPage.tsx`, `WaiterTablesPage.tsx`, `authSession.ts`, `profileContext.ts`, `vite.config.ts` y `vite-env.d.ts` (idénticos a `94f98ee`). En `src/` sólo queda la corrección de `operationsRealtimeService.ts`. Tras el retiro: suite Node 391/391 y `tsc --noEmit` PASS. Se conservan como herramientas de diagnóstico `scripts/e7_t12_th06_cloud_monitor.mjs` (monitor de sólo lectura) y `scripts/e7_t12_th06_race_local.mjs` (no ejecutados en esta verificación).
 
-**Estado:** correcciones `94f98ee` y `bbf9edd` verificadas técnicamente (local y cloud DEV desde `localhost`). **TH06 continúa pendiente de revalidación humana**; no se marca aprobada. `npm run build` y el despliegue a Preview quedan a cargo del responsable (la rama no se ha subido).
+**Estado al registrar esta sección:** correcciones `94f98ee` y `bbf9edd` verificadas técnicamente (local y cloud DEV desde `localhost`); TH06 quedaba pendiente de revalidación humana (resuelta en §6).
 
-## 6. Revalidación humana de TH06
+## 6. Aprobación humana final
 
-El responsable **aprobó E7-TH06** (30/09/2026) tras las correcciones `94f98ee` (pedido que deja de ser vigente → vuelta a mesas) y `bbf9edd` (topic Realtime propio por suscripción). T12 continúa: **E7-TH07 no ejecutada**. Mejora UX “1 línea” → “1 producto” registrada aparte, sin resolver. No se crea `acceptance.md`.
+- **E7-TH06:** aprobada por el responsable el 30/09/2026 tras las correcciones `94f98ee` (pedido que deja de ser vigente → vuelta a mesas) y `bbf9edd` (topic Realtime propio por suscripción).
+- **E7-TH07:** aprobada por el responsable el 30/09/2026.
+- El responsable aprobó humanamente la Evolución 7 y autorizó su cierre y la preparación de la rama para integración a `main` el 30/09/2026.
+
+## 7. Evidencia técnica final (cierre)
+
+| Verificación | Resultado |
+|---|---|
+| Suite Node completa | 391/391 PASS (Windows y Linux) |
+| `npm run typecheck` | PASS (Windows y Linux) |
+| `npm run build` | PASS en Windows (30/09/2026; 88 módulos, sólo aviso de chunk > 500 kB). En el entorno Linux de verificación no es ejecutable por ausencia del binario nativo de rolldown (limitación ambiental ya registrada en E1-T18) |
+| Cloud DEV (`ibfr…uinf`) | #46 y #47 resincronizados con el mozo en mesas; #48 desde la pantalla del pedido con retorno a mesas ≈330 ms |
+| Base de datos | Sin cambios desde T11 (última migración `20260924000800`); las correcciones de T12 son sólo frontend, por lo que no se repitió la campaña SQL |
+| Instrumentación temporal | Retirada (`3ad50a0`) |

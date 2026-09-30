@@ -616,7 +616,7 @@ El MVP se considerará terminado si:
 
 ### Evolución 7 — Mejoras operativas de pedidos
 
-**Estado: SPEC MODE — pendiente de aprobación humana (23/09/2026).** Spec en [`specs/E7-OrderOperationalImprovements/`](../specs/E7-OrderOperationalImprovements/). La construcción no ha iniciado.
+**Estado: CERRADA, VALIDADA Y ACEPTADA — 30/09/2026.** Spec, evidencias y [aceptación](../specs/E7-OrderOperationalImprovements/acceptance.md) en [`specs/E7-OrderOperationalImprovements/`](../specs/E7-OrderOperationalImprovements/). El cierre no implica despliegue a producción; PM-002 continúa como proceso independiente. Pendiente menor aceptado como no bloqueante: texto “1 línea” → “1 producto”.
 
 - El administrador define si cada producto requiere preparación en cocina; por defecto todo producto la requiere.
 - Cada detalle conserva como snapshot la condición de cocina del producto al registrarse; cambios posteriores del catálogo no alteran pedidos ya registrados.

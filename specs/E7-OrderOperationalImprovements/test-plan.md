@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 7 — Mejoras operativas de pedidos: plan de pruebas
 
-**Estado: SPEC MODE — BORRADOR PENDIENTE DE APROBACIÓN.** Ninguna prueba de este plan se ha ejecutado. No se crea `acceptance.md`.
+**Estado: EJECUTADO Y APROBADO (30/09/2026).** Plan aprobado el 23/09/2026. Verificaciones focalizadas en T02–T10; TP01–TP31 aprobados en T11 (`implementation-t11.md` §8); TH01–TH07 aprobadas por el responsable en T12 (`implementation-t12.md`). Aceptación en [`acceptance.md`](acceptance.md).
 
 ## 1. Estrategia
 
