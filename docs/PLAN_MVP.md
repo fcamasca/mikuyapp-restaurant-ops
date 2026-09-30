@@ -639,11 +639,14 @@ El MVP se considerará terminado si:
 - Tiempo hasta recepción en cocina.
 - Tiempo de preparación.
 - Tiempo desde listo hasta entrega.
-- Tiempo desde entrega hasta pago.
+- Tiempo desde entrega hasta solicitud de cuenta (`ENTREGADO → SOLICITUD_CUENTA`): tiempo del cliente, no atribuible a Caja.
+- Tiempo desde solicitud de cuenta hasta pago (`SOLICITUD_CUENTA → PAGADO`): tiempo atribuible al proceso de Caja.
+- Los pedidos pagados sin solicitud registrada (anteriores a E10 o cobrados directamente en caja) sólo permiten medir entrega → pago y se reportan por separado, sin atribuirlos a Caja.
 - Tiempo total de atención.
 - Métricas por producto, pedido, mozo, cocina, mesa, local y franja horaria.
 - Evaluación de almacenamiento orientado a eventos/analítica, incluyendo NoSQL como alternativa, no como decisión cerrada.
 - Base para tableros, detección de cuellos de botella y análisis histórico.
+- Dependencia conceptual con Evolución 10: la separación entre tiempo del cliente y tiempo de Caja usa la solicitud de cuenta y su cierre registrados por E10. E8 no crea esos eventos; si se ejecuta antes que E10, sólo podrá medir entrega → pago como intervalo único.
 
 ### Evolución 9 — Jornada operativa del local
 
@@ -656,6 +659,17 @@ El MVP se considerará terminado si:
 - La apertura de sesión de caja requiere una jornada operativa abierta.
 - El cierre de jornada deberá considerar las condiciones operativas pendientes que se definan en su futuro Spec Mode.
 - Historial y trazabilidad de aperturas y cierres.
+
+### Evolución 10 — Solicitud de cuenta y atención en caja
+
+**Estado: SPEC APROBADO — 30/09/2026.** Spec en [`specs/E10-AccountRequest/`](../specs/E10-AccountRequest/) (`requirements.md`, `design.md`, `tasks.md`, `test-plan.md`). Construcción habilitada, no iniciada. Estimación de referencia: 18 h, no tiempo real consumido.
+
+- El mozo solicita a caja la cuenta total de un pedido entregado; sin selección de productos o cantidades, sin nueva división de cuenta ni propinas y sin cambios en el modelo financiero de E1.
+- La solicitud es una entidad operativa propia (pendiente, atendida o sin efecto); no se agregan estados a pedido, detalle ni mesa.
+- Caja recibe la solicitud en tiempo real (Realtime como señal y recarga autoritativa desde PostgreSQL, sin polling) y la atiende con el flujo de cobro existente de E1.
+- La solicitud queda atendida automáticamente cuando el pedido pasa a pagado y sin efecto si el pedido se reabre antes del primer pago o se anula.
+- Registra pedido, local, mozo y fecha/hora de la solicitud y de su cierre, para que Evolución 8 distinga el tiempo del cliente (entrega → solicitud) del tiempo atribuible a Caja (solicitud → pago). E10 no implementa métricas ni tableros.
+- Decisiones aprobadas: DH-01 = A (el cobro no exige solicitud previa) y DH-02 = B (una solicitud de otra mesa no descarta el cobro en curso en Caja).
 
 ### Validación técnica pendiente — Concurrencia transaccional
 
