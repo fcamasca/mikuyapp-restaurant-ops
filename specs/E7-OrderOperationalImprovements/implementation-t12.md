@@ -11,7 +11,7 @@ Rama `feature/E7-OrderOperationalImprovements`, sobre `9cdba08` (T11 técnicamen
 | E7-TH03 | Aprobada (responsable) | — |
 | E7-TH04 | Aprobada (responsable) | — |
 | E7-TH05 | Aprobada (responsable) | Impresión física de comandas |
-| E7-TH06 | **FALLIDA (dos fallas humanas) — correcciones aplicadas, pendiente de revalidación humana** | 1ª: respuesta vacía tratada como error (§2). 2ª: la vista del mozo no se resincronizaba por Realtime tras el cobro (§5) |
+| E7-TH06 | **Aprobada (responsable, 30/09/2026) tras dos fallas humanas corregidas** | 1ª: respuesta vacía tratada como error (§2). 2ª: la vista del mozo no se resincronizaba por Realtime tras el cobro (§5) |
 | E7-TH07 | No ejecutada | Pendiente |
 
 Mejora UX registrada aparte y **no resuelta** en esta corrección: texto “1 línea” → “1 producto”.
@@ -82,3 +82,7 @@ Cobertura de la verificación en cloud: tres cobros totales (#46, #47 desde mesa
 **Instrumentación temporal retirada** después de la verificación: se eliminaron `src/services/realtimeDebug.ts`, `src/components/RealtimeDebugPanel.tsx` y los registros agregados en `App.tsx`, `WaiterOrderPage.tsx`, `WaiterTablesPage.tsx`, `authSession.ts`, `profileContext.ts`, `vite.config.ts` y `vite-env.d.ts` (idénticos a `94f98ee`). En `src/` sólo queda la corrección de `operationsRealtimeService.ts`. Tras el retiro: suite Node 391/391 y `tsc --noEmit` PASS. Se conservan como herramientas de diagnóstico `scripts/e7_t12_th06_cloud_monitor.mjs` (monitor de sólo lectura) y `scripts/e7_t12_th06_race_local.mjs` (no ejecutados en esta verificación).
 
 **Estado:** correcciones `94f98ee` y `bbf9edd` verificadas técnicamente (local y cloud DEV desde `localhost`). **TH06 continúa pendiente de revalidación humana**; no se marca aprobada. `npm run build` y el despliegue a Preview quedan a cargo del responsable (la rama no se ha subido).
+
+## 6. Revalidación humana de TH06
+
+El responsable **aprobó E7-TH06** (30/09/2026) tras las correcciones `94f98ee` (pedido que deja de ser vigente → vuelta a mesas) y `bbf9edd` (topic Realtime propio por suscripción). T12 continúa: **E7-TH07 no ejecutada**. Mejora UX “1 línea” → “1 producto” registrada aparte, sin resolver. No se crea `acceptance.md`.
