@@ -1,6 +1,6 @@
 # E10 — Evidencia de construcción (T02–T07)
 
-Rama `feature/E10-AccountRequest`, creada desde `9c71685` (spec aprobado, DH-01 A y DH-02 B). Esta evidencia no constituye aceptación: E10-T08 (validación humana) no se inició y no existe `acceptance.md`.
+Rama `feature/E10-AccountRequest`, creada desde `9c71685` (spec aprobado, DH-01 A y DH-02 B). **E10-T02–E10-T07 completadas** (§11). Esta evidencia no constituye aceptación: E10-T08 (validación humana) no se inició y no existe `acceptance.md`.
 
 ## 1. Ambiente de construcción y desviación
 
@@ -194,6 +194,8 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 
 ### 8.3 Matriz TP01–TP21
 
+**TP01–TP21 técnicamente completadas** según la evidencia acumulada de T02–T07 y de la verificación real en DEV (§10). En TP20 la suite histórica no pasa completa: el resultado de E10 reproduce exactamente la línea base conocida (sin regresión).
+
 | TP | Resultado | Evidencia |
 |---|---|---|
 | TP01 | Aprobada | `e10_t02_modelo`; §8.1 seguridad/publicación |
@@ -208,26 +210,55 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 | TP10 | Aprobada | Carreras reales (ambos órdenes) |
 | TP11 | Aprobada | Carreras reales (reapertura y anulación en ambos órdenes; dos cajas) |
 | TP12 | Aprobada | `e10_t03_solicitud`; `h5_t03`, `e1_t10`, `e1_delta_t10` sin homologar |
-| TP13 | Aprobada (Node); **PostgREST real pendiente** | `e10AccountRequest` (petición embebida y filtro); verificación con Supabase real en §9 |
+| TP13 | Aprobada | `e10AccountRequest` (Node) y **PostgREST real en DEV** (§10): lectura embebida en pedido y tablero |
 | TP14 | Aprobada | `e10_t02`, `e10_t03`, `e10_t07`; §8.1 |
-| TP15 | Aprobada con desviación; **Realtime real pendiente** | `e10_t06` (autorización RLS emulada por suscriptor) y WAL de la publicación; entrega a clientes reales en §9 |
-| TP16 | Aprobada (Node); **red real pendiente** | `e10AccountRequest` (topic único, 8/6 enlaces, coalescencia, sin polling), `waiterRealtime`/`h5Realtime`/`kitchenRealtimeService` (duplicados, reconexión, remontaje E7-T12) |
+| TP15 | Aprobada | `e10_t06` (autorización RLS emulada, WAL) y **Realtime real en DEV** (§10): alta, repetición sin evento, cierre `ATENDIDA`, `SIN_EFECTO`, dos cajas, segundo dispositivo del mozo, cocina sin eventos |
+| TP16 | Aprobada | `e10AccountRequest`, `waiterRealtime`/`h5Realtime`/`kitchenRealtimeService` (Node) y **DEV real** (§10): remontaje con topic único, 0 peticiones REST en 10 s sin señales, reconexión |
 | TP17 | Aprobada | `e10AccountRequest` |
 | TP18 | Aprobada | `e10AccountRequest` |
 | TP19 | Aprobada | `e10_t06_integracion` |
 | TP20 | Aprobada (sin regresión; la suite histórica **no** pasa completa) | El resultado de E10 reproduce exactamente la línea base conocida (los mismos 12 fallos preexistentes/superados, §8.1), por lo que E10 no introduce regresión. Las únicas diferencias sin homologar (`h4_t05`, `h5_t06`) se deben al cambio deliberado de la publicación (E10-D07) y se tratan con la homologación H3 en copias temporales, prevista por TP20; no se ocultan fallos ni se cambia evidencia antigua. Node 409/409 |
 | TP21 | Aprobada | Replay limpio, SQL, suite Node 409/409, `typecheck` y `npm run build` en Windows (PASS, §8.1) |
 
-## 9. Pendientes antes de E10-T08 (validación humana)
+## 9. Pendientes previos a E10-T08 — resueltos
 
-Ninguno es un defecto abierto de E10. Estado al 30/09/2026:
+| Pendiente | Resolución (evidencia del responsable, 30/09/2026) |
+|---|---|
+| `npm run build` en Windows | PASS sobre `c94940d` (§8.1, TP21) |
+| Aplicar en DEV compartido (`ibfr…uinf`) `20260930000100_e10_t02_solicitud_cuenta.sql` y `20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql` | Aplicadas correctamente por el responsable. `mikuyapp-prod` no se tocó |
+| Verificación con Supabase real (TP13, TP15, TP16, HZ-02) | `scripts/e10_dev_verificacion.mjs`: **12/12 PASS** (§10) |
+| PM-002 | Sin cambios. La próxima revalidación debe esperar cuatro tablas publicadas (HZ-03) |
 
-1. ~~`npm run build` en Windows~~ — **hecho (PASS)**, registrado en TP21.
-2. **Push** de `feature/E10-AccountRequest` (y de `feature/E10-AccountRequest-spec` como checkpoint): lo realiza el responsable; desde las sesiones de construcción GitHub rechaza la escritura (403 / cuenta no enlazada). Los commits conservan su autor original con `Co-Authored-By: Claude` (decisión del responsable: no se reescriben hashes).
-3. **Aplicar en DEV compartido** (`ibfr…uinf`, nunca `mikuyapp-prod`) sólo `20260930000100_e10_t02_solicitud_cuenta.sql` y `20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql`. Ni la máquina enlazada ni el entorno de construcción alcanzan `*.supabase.co` (política de red), por lo que lo ejecuta el responsable. Recomendado: `npx supabase db push --dry-run` (debe listar exactamente esas dos migraciones) y luego `npx supabase db push`; alternativa: ejecutar ambos archivos en orden en el editor SQL del proyecto DEV.
-4. **Verificación con Supabase real** (TP13, TP15, TP16 y HZ-02): `scripts/e10_dev_verificacion.mjs`, con una caja abierta en DEV y dos mesas libres:
-   `node --env-file=.env.local --experimental-strip-types scripts/e10_dev_verificacion.mjs`
-   Exige ambiente lógico DEV y el ref DEV esperado; usa los usuarios de prueba de `.env.local` y los servicios reales del frontend con dos dispositivos de mozo, dos de caja y cocina; crea y cobra dos pedidos de prueba (observación `E10-DEV`) dejando las mesas libres; escribe `e10-dev-verificacion.log` (ignorado por git). Verifica: lectura embebida real (TP13), entrega Realtime de alta/cierre/`SIN_EFECTO` a ambas cajas y al segundo mozo, idempotencia sin evento, cocina sin eventos (TP15), remontaje antes de la salida del canal, reconexión y 0 peticiones REST en 10 s sin señales (TP16), y HZ-02 real (reapertura sin solicitud no llega a Caja; con solicitud llega `SIN_EFECTO`). Su resultado se registra en esta evidencia antes de T08.
-5. **PM-002:** la próxima revalidación debe esperar cuatro tablas publicadas (HZ-03).
+## 10. Verificación con Supabase real (DEV)
 
-**Estado:** E10-T02–E10-T07 técnicamente completas; TP13, TP15 y TP16 quedan aprobados con cobertura local y pendientes de su confirmación con Supabase real (punto 4). E10-T08 no iniciada; no existe `acceptance.md`; E10 no está cerrada.
+Ejecutada por el responsable en Windows con `scripts/e10_dev_verificacion.mjs` (servicios reales del frontend; dos dispositivos de mozo, dos de caja y cocina; usuarios de prueba de `.env.local`). Datos tomados de `e10-dev-verificacion.log` (no versionado), sin agregar información.
+
+- Ambiente: `state=TRANSITIONING logical=DEV ref=ibfr…uinf`; ejecución 2026-09-30 23:38:44–23:39:20 UTC.
+- Precondiciones: caja `CAJA-01` con sesión abierta; mesas `M01`, `M02`; producto `Gaseosa personal` (sin cocina).
+- Resultado: **12/12 PASS**; 118 eventos Realtime registrados.
+
+| Verificación | Resultado del log |
+|---|---|
+| TP15 — solicitud llega a caja 1, caja 2 y al segundo dispositivo del mozo | PASS: caja 1 100 ms, caja 2 0 ms, mozo 2 0 ms¹ |
+| TP15 — vista de Caja con refetch autoritativo muestra la solicitud | PASS: 333 ms; 3 refetches |
+| TP15 — cocina no recibe eventos de `solicitud_cuenta` | PASS |
+| TP13 — lectura embebida por PostgREST real (revisión del pedido y tablero del segundo dispositivo) | PASS: ambas devuelven `2026-09-30T23:38:51.813725+00:00` |
+| TP15 — repetición idempotente desde el segundo dispositivo sin evento nuevo | PASS: `ya_existia = true` |
+| TP12 — lectura de Caja real | PASS: mozo `Mozo de prueba`, `servidor_ahora` `2026-09-30T23:38:52.210739+00:00` |
+| TP15 — cobro total: `ATENDIDA` a caja 2, mesa `LIBRE` al mozo, retiro de la vista de Caja | PASS: `ATENDIDA` 206 ms, mesa 0 ms¹, vista 337 ms |
+| HZ-02 — reapertura sin solicitud | PASS: Caja no recibe señal de `pedido` ni de `mesa`; el mozo sí recibe la de `pedido` |
+| HZ-02 — mitigación: reapertura con solicitud pendiente | PASS: Caja recibe `SIN_EFECTO` en 440 ms y retira el pedido de su vista en 327 ms |
+| TP16 — remontaje con el mismo nombre de canal antes de confirmar la salida (topic único) | PASS: 657 ms; 3 refetches |
+| TP16 — sin polling: 10 s sin señales | PASS: 0 peticiones REST |
+| TP16 — reconexión resincroniza el snapshot autoritativo | PASS: 335 ms. La línea `caja1 remontada: error de conexión` corresponde a la desconexión provocada por la propia prueba |
+
+¹ Las esperas se miden de forma secuencial desde el primer receptor; 0 ms indica que el evento ya había llegado cuando se inició esa espera.
+
+**HZ-02 — confirmado en entorno real y documentado, no corregido.** Una reapertura de un pedido `ENTREGADO` sin solicitud no produce señal visible para Caja (comportamiento heredado de H5 por la RLS de `pedido`/`mesa` para `CAJA`); con solicitud pendiente, el cierre `SIN_EFECTO` proporciona la señal de mitigación prevista por E10-D07. La corrección general queda fuera del alcance aprobado de E10.
+
+## 11. Estado
+
+- **E10-T02–E10-T07: completadas.** E10-T07 incluye la validación integral local y la verificación real en DEV.
+- **TP01–TP21: técnicamente completadas** según la evidencia acumulada.
+- **E10-T08 (validación humana TH01–TH07): no iniciada.**
+- No existe `acceptance.md`. **E10 no está cerrada ni aceptada.**

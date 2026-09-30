@@ -2,12 +2,14 @@
 
 ## 1. Estado
 
-**SPEC APROBADO (30/09/2026)** con DH-01 A y DH-02 B aprobadas. Pasa a preparación de construcción a partir de E10-T02; ninguna tarea de construcción se inició.
+**SPEC APROBADO (30/09/2026)** con DH-01 A y DH-02 B aprobadas. Construcción T02–T07 completada; E10 no está cerrada ni aceptada.
 
-| Tarea | Estado |
-|---|---|
-| E10-T01 | Completada — Spec aprobado 30/09/2026 |
-| E10-T02–E10-T08 | Pendientes (habilitadas, no iniciadas) |
+| Tarea | Estado | Evidencia |
+|---|---|---|
+| E10-T01 | Completada — Spec aprobado 30/09/2026 | `requirements.md`, `design.md`, `tasks.md`, `test-plan.md` |
+| E10-T02–E10-T06 | Completadas | `implementation.md` §3–§7 |
+| E10-T07 | Completada — validación integral local y verificación real en DEV (12/12); build Windows PASS | `implementation.md` §8–§10 |
+| E10-T08 | No iniciada | — |
 
 ## 2. Tareas
 

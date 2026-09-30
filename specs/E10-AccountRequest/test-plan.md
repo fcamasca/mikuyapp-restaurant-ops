@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 10 — Solicitud de cuenta y atención en caja: plan de pruebas
 
-**Estado: PLAN APROBADO (30/09/2026)**, con DH-01 A y DH-02 B aprobadas. Todavía no se ejecutó ninguna prueba; las verificaciones focalizadas comienzan con E10-T02.
+**Estado: PLAN APROBADO (30/09/2026)**, con DH-01 A y DH-02 B aprobadas. Verificaciones focalizadas T02–T06 y fase final T07 ejecutadas: **TP01–TP21 técnicamente completadas** (`implementation.md` §8.3 y §10; en TP20 la suite histórica reproduce la línea base, sin regresión). **TH01–TH07 (E10-T08) no iniciadas.**
 
 ## 1. Estrategia
 
