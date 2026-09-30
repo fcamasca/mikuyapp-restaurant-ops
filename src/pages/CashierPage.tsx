@@ -397,12 +397,13 @@ export default function CashierPage({
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
-  // E10-D14: sólo reloj de pantalla para “hace N min”; no consulta la base (la sincronización es Realtime).
+  // E10-D14: sólo reloj de pantalla para “hace N min” (un temporizador que se rearma al renderizar);
+  // no consulta la base: la sincronización de datos sigue siendo Realtime -> refetch.
   useEffect(() => {
     if (requestedBills === 0) return;
-    const timer = setInterval(() => setDisplayNowMs(Date.now()), 30000);
-    return () => clearInterval(timer);
-  }, [requestedBills]);
+    const timer = setTimeout(() => setDisplayNowMs(Date.now()), 30000);
+    return () => clearTimeout(timer);
+  }, [requestedBills, displayNowMs]);
   const billElapsed = (requestedAt: string) =>
     `hace ${billRequestElapsedMinutes(requestedAt, serverOffsetMs, displayNowMs)} min`;
   const clearPaymentOptions = useCallback(() => {
@@ -428,10 +429,13 @@ export default function CashierPage({
   };
   const refresh = useCallback(async (
     showLoading = true,
-    isCurrent: () => boolean = () => true,
-    // E10-D14 / DH-02 B: una señal Realtime conserva el borrador si el pedido seleccionado no cambió.
-    preserveDraft = false,
+    currentGuard?: () => boolean,
   ) => {
+    // E10-D14 / DH-02 B: sólo la suscripción Realtime pasa un guard de vigencia. Esas recargas conservan el
+    // borrador si la huella del pedido seleccionado no cambió; cargas, reintentos y refrescos tras una
+    // mutación propia (sin guard) conservan la invalidación E1.
+    const isCurrent = currentGuard ?? (() => true);
+    const preserveDraft = currentGuard !== undefined;
     if (!service) return;
     if (showLoading) setLoading(true);
     const boxes = await service.getCashboxes(context);
@@ -511,7 +515,7 @@ export default function CashierPage({
     let handle: Awaited<ReturnType<typeof subscribeToOperationsChanges>> | null = null;
     void subscribeToOperationsChanges(
       cr.client,
-      () => refresh(false, () => !disposed, true),
+      () => refresh(false, () => !disposed),
       () => {
         if (disposed) return;
         setError("La conexión en tiempo real se interrumpió. Estamos recuperando Caja.");

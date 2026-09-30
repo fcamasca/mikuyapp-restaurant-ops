@@ -271,10 +271,13 @@ test('E10-T05 aviso sólo para solicitudes nuevas y tiempo transcurrido con relo
 })
 
 test('E10-T05 CashierPage: Realtime con solicitud_cuenta conserva el borrador salvo cambio del seleccionado', () => {
-  assert.match(cashierPage, /\(\) => refresh\(false, \(\) => !disposed, true\)/)
+  assert.match(cashierPage, /\(\) => refresh\(false, \(\) => !disposed\)/)
   assert.match(cashierPage, /channelName: "cashier-orders-signals", initialRefresh: false, additionalSignalTables: \["solicitud_cuenta"\]/)
   const refreshBody = cashierPage.slice(cashierPage.indexOf('const refresh = useCallback'), cashierPage.indexOf('useEffect(() => {\n    void refresh();'))
-  assert.match(refreshBody, /preserveDraft = false/)
+  assert.match(refreshBody, /const preserveDraft = currentGuard !== undefined;/)
+  assert.match(refreshBody, /const isCurrent = currentGuard \?\? \(\(\) => true\);/)
+  // Cargas, Reintentar y refrescos tras mutaciones propias no pasan guard: conservan la invalidación E1.
+  assert.doesNotMatch(cashierPage, /void refresh\(false, |await refresh\(false, |void refresh\(true, /)
   assert.match(refreshBody, /cashierDraftFingerprint\(previousOrders, selectedIdRef\.current\) ===\s*cashierDraftFingerprint\(o\.data, selectedIdRef\.current\)/)
   assert.match(refreshBody, /preserveDraft &&\s*o\.ok &&\s*previousOrders !== null/)
   assert.match(refreshBody, /if \(!draftUnchanged\) clearPaymentOptions\(\);/)
@@ -291,7 +294,7 @@ test('E10-T05 CashierPage: prioridad visible, tiempo, mozo, contador y aviso acc
   assert.match(cashierPage, /Mesa \$\{x\.tableCode\} pidió la cuenta\./)
   assert.match(cashierPage, /order\.billRequestedAt && <span aria-hidden="true"/)
   // Reloj de pantalla: no llama al servicio ni a Supabase.
-  const tick = cashierPage.slice(cashierPage.indexOf('const timer = setInterval'), cashierPage.indexOf('return () => clearInterval(timer)'))
+  const tick = cashierPage.slice(cashierPage.indexOf('const timer = setTimeout'), cashierPage.indexOf('return () => clearTimeout(timer)'))
   assert.match(tick, /setDisplayNowMs\(Date\.now\(\)\)/)
   assert.doesNotMatch(tick, /service|refresh|rpc/)
   assert.doesNotMatch(cashierPage, /rpc_solicitar_cuenta_pedido|Tomar solicitud|Atender solicitud/)
