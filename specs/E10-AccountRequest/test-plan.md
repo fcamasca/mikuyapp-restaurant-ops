@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 10 — Solicitud de cuenta y atención en caja: plan de pruebas
 
-**Estado: PLAN APROBADO (30/09/2026).** Todavía no se ejecutó ninguna prueba; las verificaciones focalizadas comienzan con E10-T02.
+**Estado: PLAN APROBADO (30/09/2026)**, con DH-01 A y DH-02 B aprobadas. Todavía no se ejecutó ninguna prueba; las verificaciones focalizadas comienzan con E10-T02.
 
 ## 1. Estrategia
 
@@ -90,7 +90,7 @@ Reglas:
 | ID | Requisitos | Escenario | Validaciones |
 |---|---|---|---|
 | E10-TP17 | R01, R04, R18, R20 | UI del mozo (Node). | Botón sólo en `ENTREGADO`; confirmación; guard ante doble toque (una sola llamada); estados “Cuenta solicitada · hh:mm” y “ya estaba solicitada”; `PT409` → resync y, si no vigente, vuelta a mesas; aviso de reapertura con solicitud pendiente; etiqueta en la tarjeta de mesa; objetivos ≥ 44 px. |
-| E10-TP18 | R06, R19, R20, R22 | UI de Caja (Node). | Orden: solicitudes primero por antigüedad y luego el orden E1; etiqueta con tiempo desde `servidor_ahora`; contador; línea en el panel; `aria-live` sólo para solicitudes nuevas; ninguna acción nueva de cobro; **DH-02 B:** una señal que agrega o cierra la solicitud de otro pedido conserva medios, importes y confirmación del pedido seleccionado; un cambio de saldo, estado o la desaparición del seleccionado los invalida con el aviso E1. |
+| E10-TP18 | R06, R19, R20, R22 | UI de Caja (Node). | Orden: solicitudes primero por antigüedad y luego el orden E1; etiqueta con tiempo desde `servidor_ahora`; contador; línea en el panel; `aria-live` sólo para solicitudes nuevas; ninguna acción nueva de cobro; **DH-02 B (aprobada):** una señal que agrega o cierra la solicitud de otro pedido conserva medios, importes y confirmación del pedido seleccionado; un cambio de saldo, estado o la desaparición del seleccionado los invalida con el aviso E1. |
 
 ### 3.8 Datos para E8
 
@@ -113,7 +113,7 @@ Reglas:
 | E10-TH02 | Doble toque, segundo celular del mismo mozo y otro mozo sobre la misma mesa. | Dos celulares + PC | Una sola solicitud; ambos celulares muestran “Cuenta solicitada” con la misma hora. |
 | E10-TH03 | Solicitud seguida de cobro parcial y luego total, con descuento autorizado. | Celular + PC | La solicitud sigue visible tras el parcial y se cierra con el total; documentos E1 idénticos. |
 | E10-TH04 | Reapertura tras la solicitud: agregar un producto. | Celular + PC | Aviso previo en el celular; la solicitud desaparece de Caja; tras la nueva entrega se puede solicitar otra vez. |
-| E10-TH05 | Caja cobra la mesa A mientras la mesa B pide la cuenta. | Celular + PC | Aviso de B visible; el borrador de cobro de A se conserva (DH-02 B). |
+| E10-TH05 | Caja cobra la mesa A mientras la mesa B pide la cuenta. | Celular + PC | Aviso de B visible; el borrador de cobro de A se conserva (DH-02 B, aprobada). |
 | E10-TH06 | Cliente paga directamente en caja sin solicitud. | PC | Cobro idéntico al actual. |
 | E10-TH07 | Uso táctil y responsive. | Celular, tablet vertical/horizontal, PC | Objetivos ≥ 44 px; sin desplazamiento horizontal; etiquetas legibles. |
 

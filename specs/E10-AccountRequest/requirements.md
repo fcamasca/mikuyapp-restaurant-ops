@@ -2,7 +2,7 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-**Estado: SPEC APROBADO (30/09/2026).** El responsable aprobó `requirements.md`, `design.md`, `tasks.md` y `test-plan.md`, con DH-01 = A y DH-02 = B (sección 10). La construcción (E10-T02 en adelante) queda habilitada y todavía no se inició. No existe `acceptance.md`.
+**Estado: SPEC APROBADO (30/09/2026).** El responsable aprobó `requirements.md`, `design.md`, `tasks.md` y `test-plan.md`, con las decisiones DH-01 (opción A) y DH-02 (opción B) aprobadas (sección 10). El spec pasa a preparación de construcción; la construcción (E10-T02 en adelante) todavía no se inició. No existe `acceptance.md`.
 
 > Nota: este documento se redactó en Spec Mode; los requisitos aprobados se conservan sin cambios.
 
@@ -62,7 +62,7 @@ PostgreSQL permanece como autoridad de estados, permisos y trazabilidad. E10 **n
 |---|---|---|
 | E10-R06 | `CAJA` verá, sin refrescar manualmente, las solicitudes pendientes de su local: mesa, pedido, hora de la solicitud, mozo solicitante y tiempo transcurrido. Los pedidos con solicitud pendiente se distinguirán visualmente y se priorizarán en la lista de pendientes por antigüedad de la solicitud; se mostrará el número de cuentas solicitadas. | Must |
 | E10-R07 | Caja atenderá la solicitud con el flujo de cobro E1 vigente (precuenta, descuento autorizado, cobro total o parcial, N medios, propina, documentos). E10 no agrega una nueva operación de cobro, ni un paso “tomar/atender solicitud”, ni duplica lógica de pagos. | Must |
-| E10-R08 | Un pedido `ENTREGADO` sin solicitud podrá cobrarse exactamente como hoy (DH-01, recomendada). La solicitud es un aviso y un dato de trazabilidad, no una precondición del cobro. | Must |
+| E10-R08 | Un pedido `ENTREGADO` sin solicitud podrá cobrarse exactamente como hoy (DH-01 A, aprobada), y quedará identificable como “sin solicitud registrada”. La solicitud es un aviso y un dato de trazabilidad, no una precondición del cobro. | Must |
 
 ### 4.3 Ciclo de vida de la solicitud
 
@@ -91,7 +91,7 @@ PostgreSQL permanece como autoridad de estados, permisos y trazabilidad. E10 **n
 | E10-R19 | **UI de Caja (PC/tablet):** indicador y prioridad de solicitudes pendientes (E10-R06) y datos de la solicitud en el panel del pedido seleccionado, sin nuevas acciones de cobro; anuncio accesible no intrusivo al llegar una solicitud nueva. | Must |
 | E10-R20 | Objetivos táctiles ≥ 44 px y sin desplazamiento horizontal en celular, tablet vertical/horizontal y PC. | Must |
 | E10-R21 | Los flujos aprobados de H3, H4, H5, H6, E1 y E7 continuarán funcionando exactamente como fueron aceptados, salvo las adiciones declaradas en este spec. | Must |
-| E10-R22 | **(DH-02 = B, aprobada.)** La llegada o el cierre de una solicitud de **otro** pedido no descartará el borrador ni la confirmación de cobro en curso en Caja; un cambio del pedido seleccionado sí la invalida, como exige E1-R22. | Should |
+| E10-R22 | La llegada o el cierre de una solicitud de **otro** pedido no descartará el borrador ni la confirmación de cobro en curso en Caja; un cambio del pedido seleccionado sí la invalida, como exige E1-R22. Decisión DH-02 B. | Must |
 
 ## 5. Estados propios de la solicitud
 
@@ -148,26 +148,26 @@ Solicitud ATENDIDA (cerrada_en/por)              (misma transacción del cobro)
 
 ## 9. Alcance y fuera de alcance
 
-**Dentro:** E10-R01–E10-R22 (R22 por DH-02 = B); ajuste documental de E8 en `PLAN_MVP.md`.
+**Dentro:** E10-R01–E10-R22; ajuste documental de E8 en `PLAN_MVP.md`.
 
 **Fuera:** solicitud parcial o por comensal; división de cuenta nueva; propinas nuevas; retiro o cancelación manual de una solicitud por el mozo (una solicitud por error se resuelve con el cobro o la reapertura); acción “Caja toma la solicitud” (ver `design.md` E10-D10); avisos sonoros o notificaciones push; reasignación o traslado de mesa; métricas, tableros e históricos (E8); jornada operativa (E9); multirol/multilocal (E6); lectura de solicitudes por `ADMINISTRADOR` (E8); corrección general de la señal de Caja ante reaperturas (HZ-02); cambios de PM-002.
 
-## 10. Decisiones humanas (resueltas)
+## 10. Decisiones humanas aprobadas
 
-Resueltas por el responsable el 30/09/2026 al aprobar el spec: **DH-01 = A** (el cobro no exige solicitud previa) y **DH-02 = B** (invalidación acotada al pedido seleccionado). No quedan decisiones pendientes para construir.
+Aprobadas por el responsable el 30/09/2026. No quedan decisiones humanas pendientes.
 
-| ID | Decisión | Opciones | Recomendación e impacto |
-|---|---|---|---|
-| DH-01 | ¿El cobro exige una solicitud previa? | **A. No (recomendada):** la solicitud es aviso y traza; el cobro E1 no cambia. **B. Sí:** Caja sólo cobra pedidos con solicitud pendiente. | **A.** No toca ninguna RPC de cobro ni las vías históricas; no bloquea al cliente que paga directamente en caja. B obligaría a modificar `rpc_registrar_cobro_pedido` y las vías históricas de pago (lógica E1), agregaría un paso obligatorio al mozo y un nuevo conflicto funcional en Caja (+2–3 h y regresión E1 ampliada). Con A, E8 trata los pedidos pagados sin solicitud como no desagregables (E10-R14). |
-| DH-02 | ¿Una señal de otro pedido debe descartar el borrador de cobro en curso? (HZ-01) | **A. Mantener E1:** todo refresco descarta borrador y confirmación. **B. Acotar (recomendada):** sólo se invalida si cambió el snapshot autoritativo del pedido seleccionado (estado, total, descuento, pagado o saldo) o si desapareció. | **B.** E10 agrega una señal frecuente (una por mesa que pide la cuenta), justo mientras Caja cobra otras mesas; con A cada solicitud borraría medios e importes que el cajero está digitando. B conserva la regla E1-R22 (una confirmación obsoleta se invalida) y sólo cambia `CashierPage` (+0.75 h). Con A, E10-R22 se elimina. |
+| ID | Decisión aprobada | Comportamiento cerrado |
+|---|---|---|
+| DH-01 | **Opción A:** el cobro no exige una solicitud previa. | La solicitud de cuenta es un aviso operativo y un dato de trazabilidad para separar posteriormente el tiempo del cliente del tiempo atribuible al proceso de Caja. El cliente puede seguir pagando directamente en Caja mediante el flujo E1 vigente. E10 no modifica las RPC ni las reglas financieras de E1 por este punto. Los pedidos pagados sin solicitud quedan identificables como “sin solicitud registrada” para que E8 no les atribuya un tiempo de Caja inexistente (E10-R08, E10-R14). |
+| DH-02 | **Opción B:** la llegada o el cierre de una solicitud de otro pedido no borra el borrador de cobro en curso en Caja. | El borrador sólo se invalida cuando cambia el snapshot autoritativo del pedido seleccionado —estado, total, descuento, pagado o saldo— o cuando dicho pedido desaparece. Se conserva la protección de E1 contra cobrar con información obsoleta, evitando que una señal Realtime de otra mesa borre medios o importes ya digitados (E10-R22). |
 
-Decisión analizada y **no** pendiente: no se registra un “comienzo de atención” de Caja; `solicitada_en → pago` basta para la métrica objetivo (`design.md` E10-D10).
+Decisión técnica adicional: no se registra un “comienzo de atención” de Caja; `solicitada_en → pago` basta para la métrica objetivo (`design.md` E10-D10).
 
 ## 11. Hallazgos y contradicciones detectados en la inspección
 
 | ID | Hallazgo | Tratamiento |
 |---|---|---|
-| HZ-01 | `CashierPage.refresh` ejecuta `clearPaymentOptions()` en cada refresco, incluido el disparado por Realtime: cualquier señal visible para Caja (hoy, la entrega o el cobro de **otro** pedido) descarta medios, importes y confirmación en curso. E10 agrega una nueva fuente de señales. | Decisión DH-02. Recomendado: acotar la invalidación al pedido seleccionado. |
+| HZ-01 | `CashierPage.refresh` ejecuta `clearPaymentOptions()` en cada refresco, incluido el disparado por Realtime: cualquier señal visible para Caja (hoy, la entrega o el cobro de **otro** pedido) descarta medios, importes y confirmación en curso. E10 agrega una nueva fuente de señales. | Resuelto por DH-02 B (aprobada): invalidación acotada al pedido seleccionado (E10-R22). |
 | HZ-02 | Inspección estática: la política `pedido_select_caja_local_cobro` sólo expone a `CAJA` pedidos `ENTREGADO`/`PAGADO` y `CAJA` no tiene política sobre `mesa`. Cuando un pedido `ENTREGADO` se reabre (`→ ABIERTO`), la fila nueva no es visible para Caja y, según la semántica de Realtime (evaluación RLS del registro nuevo), Caja no recibiría señal: su lista queda desactualizada hasta la siguiente señal; si intenta cobrar recibe el `PT409` E1 vigente. | Comportamiento heredado de H5, fuera de alcance. E10 lo mitiga sólo para pedidos con solicitud pendiente (la solicitud `SIN_EFECTO` es visible para Caja y produce señal). Confirmar en E10-T06 y registrar; no se corrige en E10. |
 | HZ-03 | `PLAN_MVP.md` §4.8 (MVP histórico) declara que Realtime usa `detalle_pedido`, `pedido` y `mesa`; PM-002 (`PM002_T10_EXECUTION.md`) y la prueba `supabase/tests/h4_t05_realtime_publication_rls.sql` esperan exactamente esas tres tablas. | No contradice una decisión vigente: §4 es histórica y E1-D11 ya previó publicar tablas con RLS sin importes. E10 publica `solicitud_cuenta` (sin datos financieros). La aserción de `h4_t05` queda superada y se homologa sin editar evidencia histórica; PM-002 deberá esperar cuatro tablas en su próxima revalidación (dependencia, sin modificar PM-002). |
 | HZ-04 | `pedido.modificado_en/por` tiene semántica “pendiente de decisión” (comentario DBSTD) y alimenta `ultima_actualizacion_en` de E1-T17. | Por eso E10 no usa esas columnas como señal (alternativa descartada en E10-D07). |
@@ -176,7 +176,7 @@ Decisión analizada y **no** pendiente: no se registra un “comienzo de atenci�
 
 ## 12. Condición de construcción y cierre
 
-- Spec y DH-01/DH-02 aprobados el 30/09/2026; la construcción puede iniciar en E10-T02.
+- Spec aprobado el 30/09/2026 con DH-01 A y DH-02 B; pasa a preparación de construcción a partir de E10-T02.
 - Construcción con pruebas focalizadas por tarea y validación integral única en la fase final (mismo modelo de E7).
 - E10 sólo podrá cerrarse después de construcción, ejecución completa del plan de pruebas, pruebas humanas y creación/aprobación posterior de `acceptance.md`.
 

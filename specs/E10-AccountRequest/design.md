@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 10 — Solicitud de cuenta y atención en caja: diseño
 
-**Estado: DISEÑO APROBADO (30/09/2026).** Diseño derivado de la inspección de `main` en `ee3c94c`, aprobado con DH-01 = A (cobro sin solicitud permitido) y DH-02 = B (invalidación acotada del borrador de Caja); ver `requirements.md` §10. Construcción habilitada, no iniciada.
+**Estado: DISEÑO APROBADO (30/09/2026).** Diseño derivado de la inspección de `main` en `ee3c94c`, con las decisiones aprobadas DH-01 A (el cobro no exige solicitud previa) y DH-02 B (invalidación del borrador de Caja acotada al pedido seleccionado); ver `requirements.md` §10. Construcción habilitada, no iniciada.
 
 ## E10-D01 — Principios y cambio mínimo
 
@@ -17,7 +17,7 @@ Se conserva la arquitectura vigente: React + TypeScript, Supabase/PostgreSQL, RL
 | `obtener_pedidos_pendientes_pago_caja()` | Agrega al final `solicitud_cuenta_id`, `cuenta_solicitada_en`, `cuenta_solicitada_por_nombre`, `servidor_ahora`. Columnas y filtros existentes sin cambios. | Lectura extendida |
 | `operationsRealtimeService` | Opción para escuchar tablas de señal adicionales; por defecto sin cambios. | Frontend aditivo |
 | `waiterOrderService`, `WaiterOrderPage`, `WaiterTablesPage` | Solicitar cuenta, estado e indicador. | Frontend |
-| `cashierService`, `CashierPage` | Indicador, prioridad, contador, datos de la solicitud; invalidación acotada (DH-02). | Frontend |
+| `cashierService`, `CashierPage` | Indicador, prioridad, contador, datos de la solicitud; invalidación acotada del borrador (DH-02 B). | Frontend |
 
 **No se modifican:** `rpc_registrar_cobro_pedido` ni las demás vías de pago, `fn_resolver_total_pedido`, `cobro`, `pago`, `descuento_pedido`, `auditoria_caja`, `entregar_pedido`, `sincronizar_estado_operativo_pedido`, `agregar_detalle_pedido`, `anular_pedido_supervisado`, `historial_estado`, las RPC de E7 ni las políticas RLS vigentes.
 
@@ -199,7 +199,7 @@ Si E8 llegara a requerir esa división, podrá agregarse de forma aditiva (colum
 - Caja selecciona el pedido como hoy y usa precuenta, descuento autorizado, `Cobrar` o `Cobrar una parte`, N medios y propina sin cambios (`rpc_registrar_cobro_pedido`).
 - La solicitud no participa en la validación financiera ni en el orden `sesion_caja → pedido → mesa`; sólo es cerrada por el trigger después del `UPDATE` a `PAGADO`.
 - Un cobro parcial no cierra la solicitud y el pedido sigue listado con el indicador.
-- Sin solicitud, el cobro funciona igual (DH-01 A). Con DH-01 B se tendría que agregar una validación en todas las vías de pago; no se diseña.
+- Sin solicitud, el cobro funciona igual (DH-01 A, aprobada): no se agrega ninguna validación en las vías de pago y el pedido queda como “sin solicitud registrada”.
 - Documentos internos (precuenta, recibo, ticket) no cambian.
 
 ## E10-D12 — Concurrencia e idempotencia
@@ -241,10 +241,8 @@ Sin nuevas rutas, sin almacenamiento del navegador y sin estados locales que ree
 | Cabecera de la lista | Contador “N cuentas solicitadas” cuando N > 0. |
 | Panel del pedido | Línea informativa “Cuenta solicitada por {mozo} a las hh:mm”. Sin botones nuevos: se usa el cobro existente. |
 | Aviso | Región `aria-live="polite"` que anuncia “Mesa X pidió la cuenta” sólo para solicitudes nuevas respecto del snapshot anterior. Sin sonido ni notificaciones del sistema. |
-| Invalidación del borrador (DH-02 B) | `refresh` deja de llamar incondicionalmente a `clearPaymentOptions()`: compara la huella autoritativa del pedido seleccionado (`orderId`, estado, `netTotal`, `discount`, `paid`, `balance`) antes y después; sólo si cambió o desapareció limpia el borrador y muestra el aviso E1 “El saldo o el pedido cambió…”. Refrescos manuales y posteriores a una mutación propia conservan el comportamiento actual. |
+| Invalidación del borrador (DH-02 B, aprobada) | `refresh` deja de llamar incondicionalmente a `clearPaymentOptions()`: compara la huella autoritativa del pedido seleccionado (`orderId`, estado, `netTotal`, `discount`, `paid`, `balance`) antes y después; sólo si cambió o desapareció limpia el borrador y muestra el aviso E1 “El saldo o el pedido cambió…”. Refrescos manuales y posteriores a una mutación propia conservan el comportamiento actual. |
 | Responsive | Sin columnas nuevas; etiqueta con truncado; sin desplazamiento horizontal en tablet y PC. |
-
-Con DH-02 A, la fila “Invalidación del borrador” no se implementa y E10-R22 se elimina.
 
 ## E10-D15 — Preparación de datos para E8 (sin implementar métricas)
 
@@ -272,7 +270,7 @@ E10 no crea vistas, funciones de agregación, tableros ni almacenamiento analít
 ## E10-D16 — Compatibilidad con PM-002, E1 y E7
 
 - **PM-002 `TRANSITIONING`:** el proyecto actual es DEV y a la vez sirve Production hasta el cutover. Todas las migraciones de E10 son aditivas y compatibles hacia atrás con el frontend ya desplegado: la tabla nueva no afecta pantallas antiguas; `obtener_pedidos_pendientes_pago_caja` conserva sus columnas y el `DROP/CREATE` es atómico; la publicación agrega una tabla que el frontend antiguo no escucha. `mikuyapp-prod` no se toca. La próxima revalidación de PM-002 deberá esperar cuatro tablas publicadas (HZ-03); este spec no modifica PM-002.
-- **E1:** sin cambios en RPC financieras, auditoría, reportes ni documentos. Sólo se extiende la lectura de pendientes y, con DH-02 B, la regla de invalidación del borrador en la UI.
+- **E1:** sin cambios en RPC financieras, auditoría, reportes ni documentos. Sólo se extiende la lectura de pendientes y la regla de invalidación del borrador en la UI (DH-02 B).
 - **E7:** la corrección de Realtime (topic único) se conserva; el trigger nuevo sobre `pedido` no interfiere con los triggers de detalle; las RPC de mozo/cocina no cambian.
 
 ## E10-D17 — Migración prevista (construcción futura)
@@ -293,7 +291,7 @@ Igual que E7: cada tarea ejecuta sólo sus verificaciones focalizadas; la suite 
 | Solicitud pendiente que nunca se cierra | Cierre por trigger en toda salida de `ENTREGADO`; sin otra ruta de salida posible. |
 | Carrera entre solicitud y cobro/reapertura/anulación | Serialización por pedido; orden único de locks; `PT409` sin efectos. |
 | Intervalo de Caja negativo o incoherente | `clock_timestamp()` tras el lock y `greatest(…)` en el cierre. |
-| Borrador de cobro descartado por solicitudes de otras mesas | DH-02 B. |
+| Borrador de cobro descartado por solicitudes de otras mesas | Invalidación acotada al pedido seleccionado (DH-02 B, E10-R22). |
 | Mayor carga Realtime | Tabla de bajo volumen, mismo canal, mismo debounce; cocina sin cambios. |
 | Pruebas históricas que fijan la publicación o firmas | Homologación documentada en la fase final. |
 | Solicitud por error del mozo | Sin anulación manual (fuera de alcance); queda `ATENDIDA` al cobrar o `SIN_EFECTO` al reabrir; E8 puede identificar atenciones anómalas por su duración. |
