@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # E10 — Suite SQL histórica local (misma selección, orden y carreras que scripts/e7_t11_sql_campaign.sh).
-# Uso: scripts/e10_local_sql_suite.sh <db> <supabase/tests>
+# Uso: scripts/e10_local_sql_suite.sh <db> <supabase/tests> [pre-e10]   (pre-e10 omite las pruebas e10_*)
 set -uo pipefail
-DB=$1; T=$2; FAILS=0
+DB=$1; T=$2; PRE=${3:-}; FAILS=0
 PSQL="psql -h /tmp -p ${PGPORT:-54329} -X -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -U postgres"
 result(){ local name=$1 out=$2 code=$3; if [[ $code -eq 0 ]]; then echo "RESULT PASS $name"; else echo "RESULT FAIL $name (exit $code)"; grep -v "^\s*$" "$out" | grep -i "error\|exception" | head -3 | sed 's/^/    /'; FAILS=$((FAILS+1)); fi; }
 runf(){ local db=$1 f=$2 name=${3:-$(basename "$2" .sql)} out; out=$(mktemp); (cd "$(dirname "$f")" && $PSQL -d "$db" -q -f "$(basename "$f")") >"$out" 2>&1; result "$name" "$out" $?; rm -f "$out"; }
@@ -20,7 +20,8 @@ race(){ local db=$1 name=$2 setup=$3 a=$4 b=$5 verify=$6 cleanup=$7 oa ob
   runf "$db" "$T/$cleanup" "$name cleanup"; rm -f "$oa" "$ob"; }
 echo "== B1 suite SQL (standalone, orden alfabético)"
 for f in $(ls $T/*.sql | xargs -n1 basename | sort); do
-  case $f in *_setup.sql|*_call.sql|*_verify.sql|*_cleanup.sql|*_fixture.sql|*_add.sql|*_pay.sql|dbstd_t09_*|e7_t05b_hz01_*|e1_t03_caja_sesion.sql|e1_t04_apertura_sesion.sql|e1_t05_movimientos_cierre.sql|e1_t06_descuento_pedido.sql|e1_t07_anulacion_administrativa.sql|e1_t08_pago_sesion.sql) continue;; esac
+  [[ -n "$PRE" && $f == e10_* ]] && continue
+  case $f in *_setup.sql|*_call.sql|*_verify.sql|e10_concurrency_*|*_cleanup.sql|*_fixture.sql|*_add.sql|*_pay.sql|dbstd_t09_*|e7_t05b_hz01_*|e1_t03_caja_sesion.sql|e1_t04_apertura_sesion.sql|e1_t05_movimientos_cierre.sql|e1_t06_descuento_pedido.sql|e1_t07_anulacion_administrativa.sql|e1_t08_pago_sesion.sql) continue;; esac
   runf $DB "$T/$f"
 done
 echo "== B2 E1 con fixtures"

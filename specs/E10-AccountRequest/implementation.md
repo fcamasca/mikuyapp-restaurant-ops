@@ -155,3 +155,74 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 **HZ-02 — confirmado a nivel de RLS.** Tras la reapertura de un pedido `ENTREGADO`, la fila nueva de `pedido` (`ABIERTO`) no es legible por `CAJA` (`pedido_select_caja_local_cobro` sólo cubre `ENTREGADO`/`PAGADO`) y `CAJA` no tiene política sobre `mesa`; como Supabase Realtime entrega un cambio sólo si el suscriptor puede leer el registro nuevo, Caja **no** recibe señal de esa reapertura (comportamiento heredado de H5). En pedidos con solicitud, la fila `SIN_EFECTO` sí es legible por Caja y produce la señal de E10 (mitigación prevista). Pendiente: observarlo con Realtime real en DEV durante T08. No se corrige en E10 (fuera de alcance).
 
 **Defectos:** ninguno. **Pendientes no bloqueantes:** verificación con Supabase real (§9).
+
+## 8. E10-T07 — Validación final (ejecución única)
+
+**Commits:** `fix(e10): T07 …` (corrección) y `test(e10): T07 …` (campaña y evidencia).
+
+**Runner:** `scripts/e10_t07_campaign.sh` (replay limpio, SQL E10, suite histórica sin homologar y homologada sobre línea base y E10, seguridad/catálogo, carreras reales, integración/WAL, residuos). Nueva prueba complementaria: `supabase/tests/e10_t07_complementos.sql`. `scripts/e10_local_sql_suite.sh` admite `pre-e10` para omitir las pruebas E10 en la línea base.
+
+### 8.1 Resultados
+
+| Verificación | Resultado |
+|---|---|
+| Replay limpio total | 59 migraciones en orden estricto + seed: OK (línea base 57 + seed: OK) |
+| SQL E10 (`e10_t02_modelo`, `e10_t03_solicitud`, `e10_t06_integracion`, `e10_t07_complementos`) | 4/4 PASS |
+| Suite histórica sin homologar | Línea base: 44 PASS / 21 FAIL. E10: 46 PASS / 23 FAIL (+2 PASS por las pruebas E10 en B1). Únicas diferencias: `h4_t05_realtime_publication_rls` y `h5_t06_realtime_cashier_signal`, que fijan la publicación exacta de tres tablas |
+| Suite histórica homologada (H1 y H2 de E7-T11 en ambas bases; **H3** de E10 sólo en E10: arreglo esperado de la publicación ampliado con `public.solicitud_cuenta` en `h4_t05` y `h5_t06`, en copias temporales) | Línea base 53/12 y E10 57/12: **mismo conjunto de 12 fallos preexistentes** (clasificados en E7-T11 §5.4); `h4_t05` y `h5_t06` pasan completos con H3 |
+| Carreras H4/H5 históricas | Idénticas a la línea base (H4-T03, H5-T02 ×2 correctas; H5-T04 preexistente) |
+| Carreras E10 reales (TP05, TP10 ×2, TP11 ×5) | 8/8 PASS; sin `40001`, `40P01` ni deadlocks; 0 conexiones residuales |
+| Integración y señal WAL (T06) | PASS (incremental, recorrido, 3 `INSERT` + 3 `UPDATE`, 0 `DELETE`) |
+| Seguridad | `40001` manual en funciones: 0. `SECURITY DEFINER` inseguras: 0. Tablas sin RLS: 0. Escritura de `anon`: 0. Funciones ejecutables por `anon`: sólo `h3_abrir_o_recuperar_pedido(uuid)` (preexistente, E7-T11 §7). RPC y lectura E10: `EXECUTE` sólo `authenticated`; funciones de trigger sin `EXECUTE`. `solicitud_cuenta`: `authenticated` sólo `SELECT`; `anon` y `service_role` sin privilegios |
+| Estados | `pedido`, `mesa` y `detalle_pedido` conservan exactamente sus dominios (sin estados nuevos) |
+| Publicación | `detalle_pedido, mesa, pedido, solicitud_cuenta` |
+| Suite Node completa (26 archivos) | Primera ejecución: 408/409 (1 fallo, D-1). Tras la corrección: **409/409 PASS** |
+| `npm run typecheck` | PASS |
+| `npm run build` | **No ejecutable en este entorno**: la guardia de ambiente exige `.env.local`/variables del proyecto y `rolldown` sólo tiene el binario nativo de Windows en `node_modules` (misma limitación que E1-T18/E7). Pendiente en Windows (§9) |
+| `git diff --check` (`9c71685..HEAD`) | OK |
+| Revisión de secretos | Sin claves, tokens ni contraseñas; sólo referencias de proyecto ya redactadas (`ibfr…uinf`) |
+| Residuos | 0 bases efímeras, 0 slots de replicación, 0 conexiones; sin archivos sin versionar |
+
+### 8.2 Defectos de T07
+
+| ID | Defecto | Clasificación | Corrección |
+|---|---|---|---|
+| D-1 | `tests/h5Realtime.test.mjs` (H5-T06) exige la llamada `refresh(false, () => !disposed)` y prohíbe `setInterval` en `CashierPage`; T05 había agregado un tercer argumento y un reloj con `setInterval` | Regresión real de contrato histórico (no homologable) | `fix(e10): T07`: la recarga con guard de vigencia (sólo la suscripción Realtime) es la que conserva el borrador (DH-02 B intacta); el reloj de pantalla usa `setTimeout` rearmado. Sin cambios en la prueba histórica; `e10AccountRequest` actualizada. Suite 409/409 |
+| — | `registrar_pago_pedido(bigint,text)` (H5) sigue pagando pedidos | Observación (HZ-05 del spec) | Cubierto: el trigger cierra la solicitud también por esta vía (TP06) |
+
+### 8.3 Matriz TP01–TP21
+
+| TP | Resultado | Evidencia |
+|---|---|---|
+| TP01 | Aprobada | `e10_t02_modelo`; §8.1 seguridad/publicación |
+| TP02 | Aprobada | `e10_t03_solicitud` |
+| TP03 | Aprobada | `e10_t03_solicitud` |
+| TP04 | Aprobada | `e10_t03_solicitud`; `e10_t06_integracion` |
+| TP05 | Aprobada | Carrera real |
+| TP06 | Aprobada | `e10_t02` (trigger), `e10_t06` (parcial/total con N medios y propina, sin solicitud), `e10_t07` (vías históricas, cobro fallido, descuento autorizado) |
+| TP07 | Aprobada | `e10_t02`, `e10_t03` (reabierto → `PT409`), `e10_t06` (flujo 2), `e10_t07` (retiro E7 HZ-01, reapertura bloqueada tras parcial) |
+| TP08 | Aprobada | `e10_t02`, `e10_t06` (flujo 3), `e10_t07` (sin solicitud) |
+| TP09 | Aprobada | `e10_t02`; `e10_t07` (`TRUNCATE`/`DELETE` de `service_role` → `42501`) |
+| TP10 | Aprobada | Carreras reales (ambos órdenes) |
+| TP11 | Aprobada | Carreras reales (reapertura y anulación en ambos órdenes; dos cajas) |
+| TP12 | Aprobada | `e10_t03_solicitud`; `h5_t03`, `e1_t10`, `e1_delta_t10` sin homologar |
+| TP13 | Aprobada (Node); **PostgREST real pendiente** | `e10AccountRequest` (petición embebida y filtro); verificación con Supabase real en §9 |
+| TP14 | Aprobada | `e10_t02`, `e10_t03`, `e10_t07`; §8.1 |
+| TP15 | Aprobada con desviación; **Realtime real pendiente** | `e10_t06` (autorización RLS emulada por suscriptor) y WAL de la publicación; entrega a clientes reales en §9 |
+| TP16 | Aprobada (Node); **red real pendiente** | `e10AccountRequest` (topic único, 8/6 enlaces, coalescencia, sin polling), `waiterRealtime`/`h5Realtime`/`kitchenRealtimeService` (duplicados, reconexión, remontaje E7-T12) |
+| TP17 | Aprobada | `e10AccountRequest` |
+| TP18 | Aprobada | `e10AccountRequest` |
+| TP19 | Aprobada | `e10_t06_integracion` |
+| TP20 | Aprobada | §8.1 (mismos fallos preexistentes con homologaciones H1–H3; Node 409/409) |
+| TP21 | Aprobada salvo `build` | Replay, SQL, Node, `typecheck` PASS; `build` pendiente en Windows |
+
+## 9. Pendientes antes de E10-T08 (validación humana)
+
+Ninguno es un defecto abierto de E10; todos derivan de la desviación de ambiente (§1) y requieren acción del responsable:
+
+1. **`npm run build` en Windows** con `.env.local` (guardia de ambiente y `rolldown` nativo).
+2. **Aplicar en DEV** (`ibfr…uinf`) las migraciones `20260930000100_e10_t02_solicitud_cuenta.sql` y `20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql`. Son aditivas y compatibles con el frontend ya desplegado (la lectura de Caja conserva sus 19 columnas; la publicación sólo agrega una tabla), pero en `TRANSITIONING` ese proyecto también atiende Production: decisión del responsable. No tocar `mikuyapp-prod`.
+3. **Verificación con Supabase real antes o al inicio de T08:** entrega Realtime de `solicitud_cuenta` a mozo y caja (TP15/TP16 con red real), lectura embebida `solicitud_cuenta(...)` de PostgREST (TP13) y observación de HZ-02 (Caja no recibe la reapertura de un pedido sin solicitud; sí recibe el `SIN_EFECTO` de uno con solicitud).
+4. **PM-002:** la próxima revalidación debe esperar cuatro tablas publicadas (HZ-03).
+
+**Estado:** E10-T02–E10-T07 técnicamente completas en el entorno descrito. E10-T08 no iniciada; no existe `acceptance.md`; E10 no está cerrada.
