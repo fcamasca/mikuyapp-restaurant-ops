@@ -178,7 +178,7 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 | Publicación | `detalle_pedido, mesa, pedido, solicitud_cuenta` |
 | Suite Node completa (26 archivos) | Primera ejecución: 408/409 (1 fallo, D-1). Tras la corrección: **409/409 PASS** |
 | `npm run typecheck` | PASS |
-| `npm run build` | **No ejecutable en este entorno**: la guardia de ambiente exige `.env.local`/variables del proyecto y `rolldown` sólo tiene el binario nativo de Windows en `node_modules` (misma limitación que E1-T18/E7). Pendiente en Windows (§9) |
+| `npm run build` | No ejecutable en el entorno de construcción (guardia de ambiente y `rolldown` nativo de Windows). **Ejecutado por el responsable en Windows el 30/09/2026 sobre `c94940d`: PASS** — guardia `context=local state=TRANSITIONING logical=DEV ref=ibfr…uinf`, `tsc --noEmit` OK, `vite build` 88 módulos (`index.html` 0,72 kB; CSS 45,01 kB; JS 638,37 kB), sólo el aviso conocido de chunk > 500 kB |
 | `git diff --check` (`9c71685..HEAD`) | OK |
 | Revisión de secretos | Sin claves, tokens ni contraseñas; sólo referencias de proyecto ya redactadas (`ibfr…uinf`) |
 | Residuos | 0 bases efímeras, 0 slots de replicación, 0 conexiones; sin archivos sin versionar |
@@ -216,15 +216,18 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 | TP18 | Aprobada | `e10AccountRequest` |
 | TP19 | Aprobada | `e10_t06_integracion` |
 | TP20 | Aprobada (sin regresión; la suite histórica **no** pasa completa) | El resultado de E10 reproduce exactamente la línea base conocida (los mismos 12 fallos preexistentes/superados, §8.1), por lo que E10 no introduce regresión. Las únicas diferencias sin homologar (`h4_t05`, `h5_t06`) se deben al cambio deliberado de la publicación (E10-D07) y se tratan con la homologación H3 en copias temporales, prevista por TP20; no se ocultan fallos ni se cambia evidencia antigua. Node 409/409 |
-| TP21 | Aprobada salvo `build` | Replay, SQL, Node, `typecheck` PASS; `build` pendiente en Windows |
+| TP21 | Aprobada | Replay limpio, SQL, suite Node 409/409, `typecheck` y `npm run build` en Windows (PASS, §8.1) |
 
 ## 9. Pendientes antes de E10-T08 (validación humana)
 
-Ninguno es un defecto abierto de E10; todos derivan de la desviación de ambiente (§1) y requieren acción del responsable:
+Ninguno es un defecto abierto de E10. Estado al 30/09/2026:
 
-1. **`npm run build` en Windows** con `.env.local` (guardia de ambiente y `rolldown` nativo).
-2. **Aplicar en DEV** (`ibfr…uinf`) las migraciones `20260930000100_e10_t02_solicitud_cuenta.sql` y `20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql`. Son aditivas y compatibles con el frontend ya desplegado (la lectura de Caja conserva sus 19 columnas; la publicación sólo agrega una tabla), pero en `TRANSITIONING` ese proyecto también atiende Production: decisión del responsable. No tocar `mikuyapp-prod`.
-3. **Verificación con Supabase real antes o al inicio de T08:** entrega Realtime de `solicitud_cuenta` a mozo y caja (TP15/TP16 con red real), lectura embebida `solicitud_cuenta(...)` de PostgREST (TP13) y observación de HZ-02 (Caja no recibe la reapertura de un pedido sin solicitud; sí recibe el `SIN_EFECTO` de uno con solicitud).
-4. **PM-002:** la próxima revalidación debe esperar cuatro tablas publicadas (HZ-03).
+1. ~~`npm run build` en Windows~~ — **hecho (PASS)**, registrado en TP21.
+2. **Push** de `feature/E10-AccountRequest` (y de `feature/E10-AccountRequest-spec` como checkpoint): lo realiza el responsable; desde las sesiones de construcción GitHub rechaza la escritura (403 / cuenta no enlazada). Los commits conservan su autor original con `Co-Authored-By: Claude` (decisión del responsable: no se reescriben hashes).
+3. **Aplicar en DEV compartido** (`ibfr…uinf`, nunca `mikuyapp-prod`) sólo `20260930000100_e10_t02_solicitud_cuenta.sql` y `20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql`. Ni la máquina enlazada ni el entorno de construcción alcanzan `*.supabase.co` (política de red), por lo que lo ejecuta el responsable. Recomendado: `npx supabase db push --dry-run` (debe listar exactamente esas dos migraciones) y luego `npx supabase db push`; alternativa: ejecutar ambos archivos en orden en el editor SQL del proyecto DEV.
+4. **Verificación con Supabase real** (TP13, TP15, TP16 y HZ-02): `scripts/e10_dev_verificacion.mjs`, con una caja abierta en DEV y dos mesas libres:
+   `node --env-file=.env.local --experimental-strip-types scripts/e10_dev_verificacion.mjs`
+   Exige ambiente lógico DEV y el ref DEV esperado; usa los usuarios de prueba de `.env.local` y los servicios reales del frontend con dos dispositivos de mozo, dos de caja y cocina; crea y cobra dos pedidos de prueba (observación `E10-DEV`) dejando las mesas libres; escribe `e10-dev-verificacion.log` (ignorado por git). Verifica: lectura embebida real (TP13), entrega Realtime de alta/cierre/`SIN_EFECTO` a ambas cajas y al segundo mozo, idempotencia sin evento, cocina sin eventos (TP15), remontaje antes de la salida del canal, reconexión y 0 peticiones REST en 10 s sin señales (TP16), y HZ-02 real (reapertura sin solicitud no llega a Caja; con solicitud llega `SIN_EFECTO`). Su resultado se registra en esta evidencia antes de T08.
+5. **PM-002:** la próxima revalidación debe esperar cuatro tablas publicadas (HZ-03).
 
-**Estado:** E10-T02–E10-T07 técnicamente completas en el entorno descrito. E10-T08 no iniciada; no existe `acceptance.md`; E10 no está cerrada.
+**Estado:** E10-T02–E10-T07 técnicamente completas; TP13, TP15 y TP16 quedan aprobados con cobertura local y pendientes de su confirmación con Supabase real (punto 4). E10-T08 no iniciada; no existe `acceptance.md`; E10 no está cerrada.
