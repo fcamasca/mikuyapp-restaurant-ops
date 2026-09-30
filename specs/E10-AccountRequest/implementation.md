@@ -53,3 +53,33 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 **Defectos encontrados / corregidos:** `pg_catalog.greatest(...)` no existe (`GREATEST` es una construcción SQL, no una función); se corrigió en la migración antes del commit (sin calificar). Dos ajustes de la propia prueba (patrón de `pg_get_triggerdef`, número de columna del comentario).
 
 **Pendientes no bloqueantes:** ninguno.
+
+## 4. E10-T03 — RPC y lecturas
+
+**Commit:** ver `git log` (`feat(e10): T03 …`).
+
+**Archivos:**
+
+- `supabase/migrations/20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql` (nueva, aditiva). Se separó de la migración de T02 según lo previsto en E10-D17: `rpc_solicitar_cuenta_pedido(bigint)` (contexto `MOZO`/local, lock del pedido, matriz de estados, mesa `PENDIENTE_PAGO`, idempotencia por la pendiente existente, `clock_timestamp()` tras el lock, `23505` defensivo resuelto como existente, `PT409`/`42501`/`22023`); recreación atómica (`DROP` + `CREATE`, patrón E1-T10) de `obtener_pedidos_pendientes_pago_caja()` con las 19 columnas previas intactas y, al final, `solicitud_cuenta_id`, `cuenta_solicitada_en`, `cuenta_solicitada_por_nombre`, `servidor_ahora`; privilegios (`EXECUTE` sólo `authenticated`) y comentarios.
+- `supabase/tests/e10_t03_solicitud.sql` (nueva).
+- `supabase/tests/e10_concurrency_setup.sql`, `e10_concurrency_call.sql`, `e10_concurrency_verify.sql` y `scripts/e10_concurrency.sh` (carreras reales en base efímera).
+
+**Pruebas focalizadas (test-plan §2, T03):**
+
+| Verificación | Resultado |
+|---|---|
+| Replay completo (59 migraciones + seed) | PASS |
+| TP02 — solicitud sobre `ENTREGADO` (sin pagos y con cobro parcial): fila con local/pedido/actor correctos, hora posterior a la entrega, mesa derivable; pedido, mesa, `historial_estado`, `cobro`, `pago`, `descuento_pedido` y `auditoria_caja` idénticos antes y después | PASS |
+| TP03 — `ABIERTO`, `ENVIADO`, `RECIBIDO_COCINA`, `EN_PREPARACION`, `LISTO`, reabierto, `PAGADO`, `ANULADO` → `PT409`; nulo → `22023`; otro local, `COCINA`, `CAJA`, `ADMINISTRADOR`, sin sesión y pedido inexistente → `42501`; ningún rechazo crea filas | PASS |
+| TP04 — segunda llamada del mismo mozo y de otro mozo: misma solicitud, misma hora y autor, `ya_existia = true`, una sola fila | PASS |
+| TP12 — contrato exacto (19 columnas previas + 4 nuevas); pedido con solicitud (nombre del mozo, hora, `servidor_ahora`), con cobro parcial, sin solicitud y multi-línea; pedidos no pendientes excluidos; solicitud `SIN_EFECTO` no aparece tras la reentrega y la nueva sí; `MOZO`, `COCINA`, `ADMINISTRADOR` → `42501`; CAJA de otro local sin filas | PASS |
+| Parte SQL de TP14 — ambas funciones `SECURITY DEFINER`, owner `postgres`, `search_path = pg_catalog`, `EXECUTE` sólo `authenticated`, comentadas; lectura `STABLE`; sin `40001` | PASS |
+| Regresión puntual de la lectura de Caja: `h5_t03_cashier_pending_orders_read`, `e1_t10_lecturas_autoritativas`, `e1_delta_t10_lecturas_cobro` | PASS (sin homologación: la firma extendida conserva las aserciones históricas) |
+| TP05 real — dos mozos simultáneos sobre el mismo pedido | PASS: una fila `PENDIENTE`; A `ya_existia = f`, B `ya_existia = t`; sin `23505` expuesto |
+| TP10 real — solicitud antes que cobro final | PASS: el cobro espera el lock y deja la solicitud `ATENDIDA` (`cerrada_en ≥ solicitada_en`) |
+| TP10 real — cobro final antes que solicitud | PASS: la solicitud recibe `PT409`, sin filas |
+| Carreras: `40001`, `40P01`, conexiones residuales | 0 / 0 / 0 |
+
+**Defectos encontrados / corregidos:** el comentario interno de la RPC mencionaba el literal `40001`, lo que el catálogo de seguridad (búsqueda de `40001` en `prosrc`) contaría como uso manual; se reescribió antes del commit. Ajustes del arnés de carreras (configuración de sesión y `VERBOSITY`).
+
+**Pendientes no bloqueantes:** ninguno. La homologación prevista de `h5_t03`/`e1_t10` resultó innecesaria.
