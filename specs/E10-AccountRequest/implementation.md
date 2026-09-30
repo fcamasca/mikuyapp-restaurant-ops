@@ -110,3 +110,23 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 **Pendientes no bloqueantes:** la lectura embebida vía PostgREST y la entrega Realtime real de `solicitud_cuenta` sólo pueden comprobarse con Supabase real (§6).
 
 **Nota de entorno:** las pruebas Node y `typecheck` se ejecutaron en el entorno de construcción con una copia de `node_modules` del responsable.
+
+## 6. E10-T05 — Caja
+
+**Commit:** ver `git log` (`feat(e10): T05 …`).
+
+**Archivos:**
+
+- `src/services/cashierService.ts`: `CashierPendingOrder` incorpora `billRequestId`, `billRequestedAt`, `billRequestedBy`, `serverNow` (mapeados de la lectura extendida; `null` si faltan). Funciones puras: `sortCashierOrders` (solicitudes primero por antigüedad; luego el orden E1 por creación), `cashierDraftFingerprint` (pedido, estado, subtotal, neto, descuento, pagado, saldo), `newBillRequests` y `billRequestElapsedMinutes` (desfase medido con `servidor_ahora`). Ninguna RPC nueva de cobro.
+- `src/pages/CashierPage.tsx`: contador “N cuentas solicitadas”, etiqueta “Cuenta solicitada · hace N min” en la lista, punto ámbar en la barra colapsada (sin alterar sus textos accesibles E1), línea “Cuenta solicitada por {mozo} a las hh:mm · hace N min” en el panel, región `aria-live="polite"` que anuncia sólo solicitudes nuevas (sin sonido), reloj de pantalla de 30 s sólo mientras haya solicitudes (no consulta la base), suscripción con `solicitud_cuenta`. **DH-02 B:** `refresh` recibe `preserveDraft`; la señal Realtime pasa `true` y el borrador/confirmación sólo se limpia si cambia la huella autoritativa del pedido seleccionado o si desaparece; cargas iniciales, “Reintentar” y refrescos tras una mutación propia conservan la invalidación E1; un error de lectura también invalida.
+- `tests/e10AccountRequest.test.mjs`: 6 pruebas de Caja (TP18).
+
+**Pruebas focalizadas (test-plan §2, T05):**
+
+| Verificación | Resultado |
+|---|---|
+| `tests/e10AccountRequest.test.mjs` (TP18: mapeo, orden, huella DH-02 B —otra mesa conserva, cambio de saldo/descuento/total o desaparición invalida—, aviso sólo de nuevas, espera con reloj de servidor, cableado Realtime `preserveDraft`, contador/etiqueta/panel/`aria-live`, reloj de pantalla sin consultas, sin acciones nuevas de cobro) | 18/18 PASS (incluye T04) |
+| `tests/cashierPage.test.mjs`, `tests/cashierService.test.mjs`, `tests/cashierPrint.test.mjs` | PASS sin modificar |
+| `npm run typecheck` | PASS |
+
+**Defectos:** ninguno. **Pendientes no bloqueantes:** ninguno.

@@ -102,6 +102,11 @@ export interface CashierPendingOrder {
   netTotal: number;
   paid: number;
   balance: number;
+  /** E10-D08: solicitud de cuenta PENDIENTE (null si no existe) y hora de servidor del snapshot. */
+  billRequestId: number | null;
+  billRequestedAt: string | null;
+  billRequestedBy: string | null;
+  serverNow: string | null;
 }
 export interface PaymentMediumLine {
   paymentId: number;
@@ -193,6 +198,10 @@ interface PendingRow {
   total_neto: number | string;
   pagado_acumulado: number | string;
   saldo: number | string;
+  solicitud_cuenta_id?: number | null;
+  cuenta_solicitada_en?: string | null;
+  cuenta_solicitada_por_nombre?: string | null;
+  servidor_ahora?: string | null;
 }
 const methods = new Set<PaymentMethodCode>([
   "EFECTIVO",
@@ -245,11 +254,59 @@ export function groupCashierOrders(
         netTotal: Number(r.total_neto),
         paid: Number(r.pagado_acumulado),
         balance: Number(r.saldo),
+        billRequestId: r.solicitud_cuenta_id ?? null,
+        billRequestedAt: r.cuenta_solicitada_en ?? null,
+        billRequestedBy: r.cuenta_solicitada_por_nombre ?? null,
+        serverNow: r.servidor_ahora ?? null,
       });
   }
-  return [...m.values()].sort(
-    (a, b) => a.createdAt.localeCompare(b.createdAt) || a.orderId - b.orderId,
-  );
+  return sortCashierOrders([...m.values()]);
+}
+/**
+ * E10-D14: cuentas solicitadas primero, por antigüedad de la solicitud; luego el orden E1 por creación.
+ */
+export function sortCashierOrders(
+  orders: readonly CashierPendingOrder[],
+): readonly CashierPendingOrder[] {
+  return [...orders].sort((a, b) => {
+    if (a.billRequestedAt && b.billRequestedAt)
+      return (
+        Date.parse(a.billRequestedAt) - Date.parse(b.billRequestedAt) ||
+        a.orderId - b.orderId
+      );
+    if (a.billRequestedAt) return -1;
+    if (b.billRequestedAt) return 1;
+    return a.createdAt.localeCompare(b.createdAt) || a.orderId - b.orderId;
+  });
+}
+/**
+ * E10-D14 / DH-02 B: huella autoritativa del pedido seleccionado (estado, total, descuento, pagado,
+ * saldo). El borrador de cobro sólo se invalida si la huella cambia o el pedido desaparece.
+ */
+export function cashierDraftFingerprint(
+  orders: readonly CashierPendingOrder[],
+  selectedId: number | null,
+): string | null {
+  const o = orders.find((x) => x.orderId === selectedId);
+  return o
+    ? [o.orderId, o.orderStatus, o.subtotal, o.netTotal, o.discount, o.paid, o.balance].join("|")
+    : null;
+}
+/** E10-D14: solicitudes que no estaban en el snapshot anterior (para el aviso accesible). */
+export function newBillRequests(
+  previous: readonly CashierPendingOrder[],
+  next: readonly CashierPendingOrder[],
+): readonly CashierPendingOrder[] {
+  const known = new Set(previous.map((x) => x.billRequestId).filter((x) => x !== null));
+  return next.filter((x) => x.billRequestId !== null && !known.has(x.billRequestId));
+}
+/** E10-D14: minutos transcurridos desde la solicitud, con el reloj del servidor (desfase medido al leer). */
+export function billRequestElapsedMinutes(
+  requestedAt: string,
+  serverOffsetMs: number,
+  localNowMs: number,
+): number {
+  return Math.max(0, Math.floor((localNowMs + serverOffsetMs - Date.parse(requestedAt)) / 60000));
 }
 export function createCashierService(client: Client) {
   const rpc = async <T>(

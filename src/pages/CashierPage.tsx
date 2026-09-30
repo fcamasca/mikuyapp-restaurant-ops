@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AuthenticatedUserMenu from "../components/AuthenticatedUserMenu";
 import {
+  billRequestElapsedMinutes,
+  cashierDraftFingerprint,
   createCashierService,
+  newBillRequests,
   type AdminDiscount,
   type Cashbox,
   type CashSession,
@@ -380,10 +383,28 @@ export default function CashierPage({
     [documentOrder, setDocumentOrder] = useState<CashierPendingOrder | null>(
       null,
     );
+  // E10-D14: solicitudes de cuenta (desfase con el reloj del servidor, reloj de pantalla y aviso accesible).
+  const [serverOffsetMs, setServerOffsetMs] = useState(0),
+    [displayNowMs, setDisplayNowMs] = useState(() => Date.now()),
+    [billAnnouncement, setBillAnnouncement] = useState("");
+  const ordersRef = useRef<readonly CashierPendingOrder[] | null>(null),
+    selectedIdRef = useRef<number | null>(null);
   const pending = useRef(false),
     paymentConfirmationRef = useRef<PaymentConfirmation | null>(null),
     closeKeyRef = useRef<string | null>(null);
   const selected = orders.find((x) => x.orderId === selectedId) ?? null;
+  const requestedBills = orders.filter((x) => x.billRequestedAt).length;
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+  // E10-D14: sólo reloj de pantalla para “hace N min”; no consulta la base (la sincronización es Realtime).
+  useEffect(() => {
+    if (requestedBills === 0) return;
+    const timer = setInterval(() => setDisplayNowMs(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [requestedBills]);
+  const billElapsed = (requestedAt: string) =>
+    `hace ${billRequestElapsedMinutes(requestedAt, serverOffsetMs, displayNowMs)} min`;
   const clearPaymentOptions = useCallback(() => {
     if (paymentConfirmationRef.current) {
       paymentConfirmationRef.current = null;
@@ -408,6 +429,8 @@ export default function CashierPage({
   const refresh = useCallback(async (
     showLoading = true,
     isCurrent: () => boolean = () => true,
+    // E10-D14 / DH-02 B: una señal Realtime conserva el borrador si el pedido seleccionado no cambió.
+    preserveDraft = false,
   ) => {
     if (!service) return;
     if (showLoading) setLoading(true);
@@ -455,13 +478,28 @@ export default function CashierPage({
         setMovements([]);
       }
     }
+    const previousOrders = ordersRef.current;
+    const draftUnchanged =
+      preserveDraft &&
+      o.ok &&
+      previousOrders !== null &&
+      cashierDraftFingerprint(previousOrders, selectedIdRef.current) ===
+        cashierDraftFingerprint(o.data, selectedIdRef.current);
     if (o.ok) {
+      const arrived = previousOrders === null ? [] : newBillRequests(previousOrders, o.data);
+      if (arrived.length > 0)
+        setBillAnnouncement(
+          arrived.map((x) => `Mesa ${x.tableCode} pidió la cuenta.`).join(" "),
+        );
+      const serverNow = o.data.find((x) => x.serverNow)?.serverNow;
+      if (serverNow) setServerOffsetMs(Date.parse(serverNow) - Date.now());
+      ordersRef.current = o.data;
       setOrders(o.data);
       setSelectedId((x) =>
         o.data.some((y) => y.orderId === x) ? x : (o.data[0]?.orderId ?? null),
       );
     } else setError(o.error.message);
-    clearPaymentOptions();
+    if (!draftUnchanged) clearPaymentOptions();
     setLoading(false);
   }, [clearPaymentOptions, context, service]);
   useEffect(() => {
@@ -473,12 +511,12 @@ export default function CashierPage({
     let handle: Awaited<ReturnType<typeof subscribeToOperationsChanges>> | null = null;
     void subscribeToOperationsChanges(
       cr.client,
-      () => refresh(false, () => !disposed),
+      () => refresh(false, () => !disposed, true),
       () => {
         if (disposed) return;
         setError("La conexión en tiempo real se interrumpió. Estamos recuperando Caja.");
       },
-      { channelName: "cashier-orders-signals", initialRefresh: false },
+      { channelName: "cashier-orders-signals", initialRefresh: false, additionalSignalTables: ["solicitud_cuenta"] },
     ).then((started) => {
       if (disposed) void started.stop();
       else handle = started;
@@ -587,6 +625,7 @@ export default function CashierPage({
   return (
     <main className="min-h-screen bg-stone-100 p-3 text-stone-900 sm:p-6">
       <div className="mx-auto max-w-7xl">
+        <p aria-live="polite" className="sr-only" role="status">{billAnnouncement}</p>
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-semibold text-emerald-700">MikuyApp · Caja</p>
@@ -782,6 +821,7 @@ export default function CashierPage({
           <section className={`min-w-0 rounded-2xl border border-stone-200 bg-white shadow-sm ${ordersPanelOpen ? "p-4" : "p-1.5"}`}>
             <div className={`flex items-center ${ordersPanelOpen ? "justify-between gap-3" : "justify-center"}`}>
               {ordersPanelOpen && <h2 className="text-xl font-bold">Pedidos pendientes</h2>}
+              {ordersPanelOpen && requestedBills > 0 && <p className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">{requestedBills} {requestedBills === 1 ? "cuenta solicitada" : "cuentas solicitadas"}</p>}
               <button
                 aria-expanded={ordersPanelOpen}
                 aria-label={ordersPanelOpen ? "Ocultar lista de pedidos pendientes" : "Mostrar lista de pedidos pendientes"}
@@ -815,6 +855,7 @@ export default function CashierPage({
                 >
                   <span className="block font-bold text-stone-950">Mesa {x.tableCode}</span>
                   <span className="text-sm text-stone-600">Pedido #{x.orderId}</span>
+                  {x.billRequestedAt && <span className="mt-2 block w-fit max-w-full truncate rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900">Cuenta solicitada · {billElapsed(x.billRequestedAt)}</span>}
                   <span className="mt-2 block text-sm text-stone-600">Saldo <b className="text-base text-emerald-800">{money.format(x.balance)}</b></span>
                 </button>
               ))
@@ -824,7 +865,7 @@ export default function CashierPage({
               {!loading && orders.map((order) => (
                 <button
                   aria-label={`Abrir ${order.tableName}, pedido ${order.orderId}, saldo ${money.format(order.balance)}`}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-xs font-black transition focus:outline-none focus:ring-4 focus:ring-emerald-100 ${selectedId === order.orderId ? "border-emerald-700 bg-emerald-700 text-white shadow-sm" : "border-stone-300 bg-white text-stone-700 hover:border-emerald-500 hover:bg-emerald-50"}`}
+                  className={`relative flex h-9 w-9 items-center justify-center rounded-lg border text-xs font-black transition focus:outline-none focus:ring-4 focus:ring-emerald-100 ${selectedId === order.orderId ? "border-emerald-700 bg-emerald-700 text-white shadow-sm" : "border-stone-300 bg-white text-stone-700 hover:border-emerald-500 hover:bg-emerald-50"}`}
                   key={order.orderId}
                   onClick={() => {
                     clearPaymentOptions();
@@ -835,6 +876,7 @@ export default function CashierPage({
                   type="button"
                 >
                   {order.tableCode}
+                  {order.billRequestedAt && <span aria-hidden="true" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white" />}
                 </button>
               ))}
             </div>}
@@ -846,6 +888,7 @@ export default function CashierPage({
                   <h2 className="text-xl font-bold">Detalle del pedido #{selected.orderId}</h2>
                   <p className="rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-900">{selected.tableName}</p>
                 </div>
+                {selected.billRequestedAt && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">Cuenta solicitada por {selected.billRequestedBy ?? "el mozo"} a las {new Date(selected.billRequestedAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", timeZone: "America/Lima" })} · {billElapsed(selected.billRequestedAt)}</p>}
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600">
                   <p>Subtotal <b className="ml-1 text-stone-950">{money.format(selected.subtotal)}</b></p>
                   <p>Descuento <b className="ml-1 text-stone-950">{money.format(selected.discount)}</b></p>
