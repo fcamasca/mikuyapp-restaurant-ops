@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { rtDescribeTopic, rtLog, rtLogSignal } from './realtimeDebug.ts'
 
 export interface OperationsRealtimeHandle {
   readonly resync: () => Promise<void>
@@ -43,16 +42,14 @@ export async function subscribeToOperationsChanges(
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
   const refresh = async (): Promise<void> => {
-    if (stopped) { rtLog(options.channelName, 'refetch descartado: handle detenido'); return }
+    if (stopped) return
     if (refreshInFlight) {
       refreshAgain = true
       return refreshInFlight
     }
-    rtLog(options.channelName, 'refetch iniciado')
     refreshInFlight = refreshSnapshot()
     try {
       await refreshInFlight
-      rtLog(options.channelName, 'refetch terminado')
     } finally {
       refreshInFlight = null
       if (refreshAgain && !stopped) {
@@ -73,18 +70,13 @@ export async function subscribeToOperationsChanges(
 
   if (options.initialRefresh !== false) await refresh()
   const topic = subscriptionTopic(options.channelName)
-  rtLog(options.channelName, `suscribiendo topic ${topic} (${rtDescribeTopic(client, topic)})`)
   const channel = client.channel(topic)
   for (const table of signalTables) {
     for (const event of signalEvents) {
-      channel.on('postgres_changes', { event, schema: 'public', table }, (signal: unknown) => {
-        rtLogSignal(options.channelName, table, event, signal)
-        scheduleRefresh()
-      })
+      channel.on('postgres_changes', { event, schema: 'public', table }, scheduleRefresh)
     }
   }
   channel.subscribe((status) => {
-    rtLog(options.channelName, `estado ${status}${stopped ? ' (handle detenido, ignorado)' : ''}`)
     if (stopped) return
     if (status === 'SUBSCRIBED') {
       void refresh()
@@ -101,7 +93,6 @@ export async function subscribeToOperationsChanges(
     async stop(): Promise<void> {
       if (stopped) return
       stopped = true
-      rtLog(options.channelName, `stop topic ${topic} (${rtDescribeTopic(client, topic)})`)
       refreshAgain = false
       if (refreshTimer !== null) {
         cancelTimeout(refreshTimer)

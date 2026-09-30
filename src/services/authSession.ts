@@ -1,4 +1,3 @@
-import { rtLog } from './realtimeDebug.ts'
 import type { AuthChangeEvent, Session, SupabaseClient } from '@supabase/supabase-js'
 
 export type AuthenticationStatus =
@@ -91,7 +90,6 @@ export function createAuthenticationController(
       try {
         const result = client.auth.onAuthStateChange(
           (_event: AuthChangeEvent, session: Session | null) => {
-            rtLog('auth', `evento ${_event} (sesión ${session ? 'presente' : 'ausente'})`)
             if (active) {
               publishSession(session)
             }
