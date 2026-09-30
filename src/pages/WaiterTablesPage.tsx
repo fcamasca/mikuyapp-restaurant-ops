@@ -6,6 +6,7 @@ import { subscribeToOperationsChanges } from '../services/operationsRealtimeServ
 import {
   createWaiterOrderService,
   filterAndSortWaiterTables,
+  formatBillRequestTime,
   type WaiterTableBoardItem,
   type WaiterTableFilter,
   type WaiterTableOrder,
@@ -79,7 +80,7 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
     void subscribeToOperationsChanges(clientResult.client, () => loadBoard(false, () => !disposed), () => {
       if (disposed) return
       setError('La conexión en tiempo real se interrumpió. Estamos recuperando las mesas.')
-    }, { channelName: 'waiter-tables-signals', initialRefresh: false }).then((started) => {
+    }, { channelName: 'waiter-tables-signals', initialRefresh: false, additionalSignalTables: ['solicitud_cuenta'] }).then((started) => {
       if (disposed) void started.stop()
       else handle = started
     })
@@ -163,6 +164,7 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
                       <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-wide text-stone-600">{table.codigo}</p><h3 className="mt-1 break-words text-xl font-bold text-stone-950">{table.nombre}</h3></div><span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${status.badgeClassName}`}>{status.label}</span></div>
                       <p className="mt-3 text-sm text-stone-700">Estado: <strong>{status.label}</strong></p>
                       {table.pedido && <p className="mt-2 text-sm text-stone-700">Atendido por: <strong>{table.pedido.creadorNombre}</strong></p>}
+                      {table.pedido?.cuentaSolicitadaEn && <p className="mt-2 w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Cuenta solicitada · {formatBillRequestTime(table.pedido.cuentaSolicitadaEn)}</p>}
                       <div className="mt-4 rounded-xl bg-white/80 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Total vigente</p><p className="mt-1 text-xl font-bold text-stone-950">{table.pedido ? moneyFormatter.format(table.pedido.total) : 'Sin consumo'}</p></div>
                       <button aria-busy={isOpening} className="mt-4 min-h-12 w-full rounded-xl bg-stone-900 px-4 py-3 text-base font-bold text-white disabled:cursor-not-allowed disabled:opacity-55" disabled={Boolean(openingTableId) || unavailable} onClick={() => { void handleTableAction(table) }} type="button">{isOpening ? 'Abriendo pedido…' : table.pedido ? 'Ver pedido' : table.estado === 'LIBRE' ? 'Tomar pedido' : 'Pedido no disponible'}</button>
                     </li>

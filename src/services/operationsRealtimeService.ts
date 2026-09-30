@@ -5,8 +5,13 @@ export interface OperationsRealtimeHandle {
   readonly stop: () => Promise<void>
 }
 
+/** E10-D07: tablas de señal opcionales (sin importes) que una vista puede escuchar además de las tres base. */
+export type AdditionalSignalTable = 'solicitud_cuenta'
+
 interface OperationsRealtimeOptions {
   readonly channelName: string
+  /** E10-D07: por defecto ninguna; mozo y caja agregan `solicitud_cuenta`. Mismo canal y topic único. */
+  readonly additionalSignalTables?: readonly AdditionalSignalTable[]
   readonly initialRefresh?: boolean
   readonly debounceMs?: number
   readonly setTimeoutFn?: typeof setTimeout
@@ -71,7 +76,7 @@ export async function subscribeToOperationsChanges(
   if (options.initialRefresh !== false) await refresh()
   const topic = subscriptionTopic(options.channelName)
   const channel = client.channel(topic)
-  for (const table of signalTables) {
+  for (const table of [...signalTables, ...(options.additionalSignalTables ?? [])]) {
     for (const event of signalEvents) {
       channel.on('postgres_changes', { event, schema: 'public', table }, scheduleRefresh)
     }

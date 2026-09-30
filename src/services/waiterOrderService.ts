@@ -14,6 +14,8 @@ export interface CurrentOrderSummary {
   readonly estado: OrderStatusCode
   readonly total: number
   readonly creadorNombre: string
+  /** E10-D13: hora de la solicitud de cuenta PENDIENTE; ausente si no existe. */
+  readonly cuentaSolicitadaEn?: string
 }
 
 export interface WaiterTableBoardItem {
@@ -46,6 +48,24 @@ export interface WaiterOrderReview {
   readonly id: number
   readonly estado: OrderStatusCode
   readonly mesa: { readonly id: string; readonly codigo: string; readonly nombre: string; readonly estado: TableStatusCode }
+  /** E10-D13: hora de la solicitud de cuenta PENDIENTE; ausente si no existe. */
+  readonly cuentaSolicitadaEn?: string
+}
+
+/** E10-D04: resultado de rpc_solicitar_cuenta_pedido. */
+export interface BillRequestResult {
+  readonly solicitudId: number
+  readonly solicitadaEn: string
+  readonly yaExistia: boolean
+}
+
+/** E10-D13: la solicitud de cuenta sólo se ofrece para un pedido ENTREGADO sin solicitud pendiente. */
+export function canRequestBill(review: Pick<WaiterOrderReview, 'estado' | 'cuentaSolicitadaEn'> | null): boolean {
+  return review?.estado === 'ENTREGADO' && !review.cuentaSolicitadaEn
+}
+
+export function formatBillRequestTime(value: string): string {
+  return new Date(value).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })
 }
 
 export type WaiterOrderResult<T> =
@@ -60,12 +80,21 @@ export type WaiterOrderReviewResult =
   | { readonly ok: false; readonly error: { readonly kind: 'order-not-current'; readonly message: string; readonly recoverable: false } }
 
 interface TableRow extends Omit<WaiterTableBoardItem, 'pedido'> { readonly activo: boolean }
-interface OrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode; readonly creado_por: string }
+interface PendingBillRequestRow { readonly id: number; readonly solicitada_en: string }
+interface OrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode; readonly creado_por: string; readonly solicitud_cuenta?: readonly PendingBillRequestRow[] | null }
 interface DetailRow { readonly pedido_id: number; readonly cantidad: number; readonly precio_unitario: number }
 interface OrderCreatorRow { readonly pedido_id: number; readonly creador_nombre: string }
 interface OpenOrderRow { readonly pedido_id: number; readonly fue_creado: boolean }
 interface AddedDetailRow extends WaiterOrderDetail { readonly detalle_id: number }
-interface ReviewOrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode }
+interface ReviewOrderRow { readonly id: number; readonly mesa_id: string; readonly estado: OrderStatusCode; readonly solicitud_cuenta?: readonly PendingBillRequestRow[] | null }
+interface BillRequestRow { readonly solicitud_id: number; readonly solicitada_en: string; readonly ya_existia: boolean }
+
+// E10-D08: la solicitud PENDIENTE se lee embebida en la misma petición de pedido (RLS en ambos niveles).
+const pendingBillRequestEmbed = 'solicitud_cuenta(id,solicitada_en)'
+function pendingBillRequestTime(row: { readonly solicitud_cuenta?: readonly PendingBillRequestRow[] | null }): { readonly cuentaSolicitadaEn: string } | Record<string, never> {
+  const request = row.solicitud_cuenta?.[0]
+  return request ? { cuentaSolicitadaEn: request.solicitada_en } : {}
+}
 interface ReviewTableRow { readonly id: string; readonly codigo: string; readonly nombre: string; readonly estado: TableStatusCode }
 interface SentOrderRow { readonly pedido_id: number; readonly detalles_enviados: number }
 interface DeliveredOrderRow { readonly pedido_id: number; readonly pedido_estado: 'ENTREGADO'; readonly mesa_id: string; readonly mesa_estado: 'PENDIENTE_PAGO' }
@@ -144,8 +173,9 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         const [tablesResult, ordersResult] = await Promise.all([
           client.from('mesa').select('id,codigo,nombre,estado,activo')
             .eq('local_id', context.local.id).eq('activo', true).returns<TableRow[]>(),
-          client.from('pedido').select('id,mesa_id,estado,creado_por')
-            .eq('local_id', context.local.id).in('estado', currentOrderStatuses).returns<OrderRow[]>(),
+          client.from('pedido').select(`id,mesa_id,estado,creado_por,${pendingBillRequestEmbed}`)
+            .eq('local_id', context.local.id).eq('solicitud_cuenta.estado', 'PENDIENTE')
+            .in('estado', currentOrderStatuses).returns<OrderRow[]>(),
         ])
         if (tablesResult.error || ordersResult.error) {
           return connectionError('No pudimos cargar las mesas. Revisa tu conexión e intenta nuevamente.')
@@ -186,6 +216,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
                 estado: currentOrder.estado,
                 total: totals.get(currentOrder.id) ?? 0,
                 creadorNombre: creatorsByOrder.get(currentOrder.id) ?? 'Mozo no disponible',
+                ...pendingBillRequestTime(currentOrder),
               }
               : null,
           }
@@ -224,8 +255,9 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
     async getOrderReview(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderReviewResult> {
       if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para consultar este pedido.')
       try {
-        const orderResult = await client.from('pedido').select('id,mesa_id,estado')
-          .eq('id', orderId).eq('local_id', context.local.id).in('estado', currentOrderStatuses).returns<ReviewOrderRow[]>()
+        const orderResult = await client.from('pedido').select(`id,mesa_id,estado,${pendingBillRequestEmbed}`)
+          .eq('id', orderId).eq('local_id', context.local.id).eq('solicitud_cuenta.estado', 'PENDIENTE')
+          .in('estado', currentOrderStatuses).returns<ReviewOrderRow[]>()
         const order = orderResult.data?.[0]
         if (orderResult.error) return connectionError('No pudimos cargar el pedido vigente. Intenta nuevamente.')
         if (!order) return { ok: false, error: { kind: 'order-not-current', message: orderNoLongerCurrentMessage, recoverable: false } }
@@ -233,7 +265,7 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
           .eq('id', order.mesa_id).eq('local_id', context.local.id).eq('activo', true).returns<ReviewTableRow[]>()
         const table = tableResult.data?.[0]
         if (tableResult.error || !table) return connectionError('No pudimos identificar la mesa del pedido.')
-        return { ok: true, data: { id: order.id, estado: order.estado, mesa: table } }
+        return { ok: true, data: { id: order.id, estado: order.estado, mesa: table, ...pendingBillRequestTime(order) } }
       } catch {
         return connectionError('No pudimos cargar el pedido vigente. Intenta nuevamente.')
       }
@@ -370,6 +402,29 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
         return { ok: true, data: { mesaId: row.mesa_id } }
       } catch {
         return connectionError('No pudimos entregar el pedido. No se realizó ningún cambio.')
+      }
+    },
+
+    async requestBill(context: ValidatedProfileContext, orderId: number): Promise<WaiterOrderResult<BillRequestResult>> {
+      if (context.role.codigo !== 'MOZO') return connectionError('No tienes autorización para solicitar la cuenta.')
+      try {
+        // E10-D04: PostgreSQL decide sobre el estado persistido; una repetición devuelve la solicitud existente.
+        const result = await client.rpc('rpc_solicitar_cuenta_pedido', { p_pedido_id: orderId })
+        const row = (result.data as BillRequestRow[] | null)?.[0]
+        if (result.error?.code === 'PT409') {
+          return {
+            ok: false,
+            error: {
+              kind: 'concurrent-conflict',
+              message: 'El pedido cambió (fue pagado, reabierto o anulado) y ya no admite solicitar la cuenta. Cargamos el estado más reciente.',
+              recoverable: true,
+            },
+          }
+        }
+        if (result.error || !row) return connectionError('No pudimos solicitar la cuenta. Intenta nuevamente.')
+        return { ok: true, data: { solicitudId: row.solicitud_id, solicitadaEn: row.solicitada_en, yaExistia: row.ya_existia } }
+      } catch {
+        return connectionError('No pudimos solicitar la cuenta. Intenta nuevamente.')
       }
     },
 

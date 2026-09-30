@@ -83,3 +83,30 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 **Defectos encontrados / corregidos:** el comentario interno de la RPC mencionaba el literal `40001`, lo que el catálogo de seguridad (búsqueda de `40001` en `prosrc`) contaría como uso manual; se reescribió antes del commit. Ajustes del arnés de carreras (configuración de sesión y `VERBOSITY`).
 
 **Pendientes no bloqueantes:** ninguno. La homologación prevista de `h5_t03`/`e1_t10` resultó innecesaria.
+
+## 5. E10-T04 — Realtime y mozo
+
+**Commit:** ver `git log` (`feat(e10): T04 …`).
+
+**Archivos:**
+
+- `src/services/operationsRealtimeService.ts`: opción `additionalSignalTables` (tipo `AdditionalSignalTable = 'solicitud_cuenta'`), por defecto vacía. Mismo canal, mismo topic único por suscripción (corrección E7-T12 intacta), mismos eventos `INSERT`/`UPDATE`, debounce, coalescencia y resincronización.
+- `src/services/waiterOrderService.ts`: `requestBill` (`rpc_solicitar_cuenta_pedido`; `PT409` → conflicto recuperable; otros errores sin éxito falso; rol ajeno sin llamada); `canRequestBill`, `formatBillRequestTime`; lectura embebida `solicitud_cuenta(id,solicitada_en)` filtrada por `estado = 'PENDIENTE'` en `getOrderReview` y `getTableBoard` (misma petición, sin viajes adicionales); campo opcional `cuentaSolicitadaEn` presente sólo si existe una solicitud pendiente (conserva exactamente el contrato previo cuando no hay solicitud).
+- `src/pages/WaiterOrderPage.tsx`: botón “Solicitar cuenta” sólo para `ENTREGADO` sin solicitud (≥ 44 px, ancho completo en celular), confirmación en línea con el patrón de “Entregar pedido”, guard `useRef`, resincronización del snapshot tras la respuesta (un pedido no vigente vuelve a mesas por el flujo E7-T12), estado “Cuenta solicitada a caja · hh:mm”, mensaje de “ya estaba solicitada”, aviso de reapertura junto a la carta sin bloquear la reapertura H5; suscripción con `additionalSignalTables: ['solicitud_cuenta']`.
+- `src/pages/WaiterTablesPage.tsx`: etiqueta “Cuenta solicitada · hh:mm” en la tarjeta; suscripción con `solicitud_cuenta`.
+- `tests/e10AccountRequest.test.mjs` (nueva): servicio, pantallas y Realtime del mozo.
+- Cocina (`KitchenBoardPage`, `kitchenRealtimeService`) sin cambios.
+
+**Pruebas focalizadas (test-plan §2, T04):**
+
+| Verificación | Resultado |
+|---|---|
+| `tests/e10AccountRequest.test.mjs` (TP13, TP17 y parte de TP16: RPC sin datos de identidad, idempotencia, `PT409`, errores y rol ajeno; lectura embebida con filtro `PENDIENTE` y contrato previo intacto sin solicitud; tablero sin viajes extra; matriz `canRequestBill`; botón/confirmación/guard/estado/aviso; cocina con 6 enlaces; mozo con 8 enlaces, topic único, señal `INSERT` → refetch; sin polling) | 12/12 PASS |
+| `tests/waiterBoard.test.mjs`, `tests/waiterRealtime.test.mjs`, `tests/kitchenRealtimeService.test.mjs`, `tests/kitchenBoard.test.mjs` | PASS sin modificar (113/113 en total con la nueva prueba) |
+| `npm run typecheck` | PASS |
+
+**Defectos:** ninguno. La homologación prevista del conteo de enlaces en `waiterRealtime` resultó innecesaria (la prueba histórica usa sus propias opciones, sin tablas adicionales).
+
+**Pendientes no bloqueantes:** la lectura embebida vía PostgREST y la entrega Realtime real de `solicitud_cuenta` sólo pueden comprobarse con Supabase real (§6).
+
+**Nota de entorno:** las pruebas Node y `typecheck` se ejecutaron en el entorno de construcción con una copia de `node_modules` del responsable.
