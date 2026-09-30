@@ -130,3 +130,28 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 | `npm run typecheck` | PASS |
 
 **Defectos:** ninguno. **Pendientes no bloqueantes:** ninguno.
+
+## 7. E10-T06 — Integración
+
+**Commit:** ver `git log` (`test(e10): T06 …`).
+
+**Desviación de ambiente (ver §1).** El recorrido “local → DEV con dos dispositivos” no pudo ejecutarse en DEV: no hay Supabase local en Docker ni credenciales de base para DEV, y en `TRANSITIONING` el proyecto DEV también atiende Production, por lo que aplicar migraciones allí queda como acción del responsable. El recorrido se ejecutó en PostgreSQL local con las RPC reales y **actores independientes** (dos mozos, dos cajas, cocina, administrador y usuarios de otro local); la entrega Realtime se verificó por sus dos componentes (autorización RLS del suscriptor y cambios decodificados de la publicación).
+
+**Archivos:** `supabase/tests/e10_t06_integracion.sql`, `scripts/e10_t06_integracion.sh`.
+
+| Verificación | Resultado |
+|---|---|
+| Migraciones E10 incrementales sobre la línea base (57 + seed): `…0930000100`, `…0930000200` | PASS |
+| Replay completo (59 migraciones + seed) | PASS |
+| Flujo 1 — pedido mixto con cocina; solicitud rechazada antes de la entrega (`PT409`); solicitud del mozo 1 y repetición del mozo 2 (misma solicitud, autor y hora); la segunda caja la ve; cobro parcial deja `PENDIENTE` y saldo 26; cobro total con dos medios y propina → `PAGADO`/`LIBRE` y `ATENDIDA` (`cerrada_por` = caja 1); segunda caja rechazada con el conflicto E1 (`PT409`); solicitud sobre `PAGADO` → `PT409` | PASS |
+| Flujo 2 — solicitud → reapertura por el mozo 2 → `SIN_EFECTO/REAPERTURA`; nueva entrega → nueva solicitud → cobro por la caja 2; historia `SIN_EFECTO/REAPERTURA, ATENDIDA` | PASS |
+| Flujo 3 — solicitud → anulación ADMIN → `SIN_EFECTO/ANULACION` (`cerrada_por` = administrador) | PASS |
+| Flujo 4 — cobro directo sin solicitud (DH-01 A): sin filas; pedido identificable como “sin solicitud registrada” | PASS |
+| TP15 (autorización Realtime emulada: lectura de la fila nueva con rol y claims del suscriptor) | Reciben: mozo 1, mozo 2, caja 1, caja 2. No reciben: cocina, administrador, mozo y caja de otro local, `anon` |
+| Señal en WAL (decodificación lógica `test_decoding`; publicación = `detalle_pedido, mesa, pedido, solicitud_cuenta`) | 3 `INSERT` (altas) y 3 `UPDATE` (cierres `ATENDIDA`, `SIN_EFECTO/REAPERTURA`, `SIN_EFECTO/ANULACION`); la repetición idempotente y el cobro sin solicitud no emiten cambios; 0 `DELETE` |
+| TP19 (SQL) — intervalos de E8 (`entregado → solicitud`, `solicitud → cierre`, `creación → pago`) derivados con las reglas de E10-D15: no negativos, una sola `ATENDIDA` por pedido pagado con solicitud, cobro final unívoco | PASS |
+| Residuos (slots de replicación, bases efímeras) | 0 / 0 |
+
+**HZ-02 — confirmado a nivel de RLS.** Tras la reapertura de un pedido `ENTREGADO`, la fila nueva de `pedido` (`ABIERTO`) no es legible por `CAJA` (`pedido_select_caja_local_cobro` sólo cubre `ENTREGADO`/`PAGADO`) y `CAJA` no tiene política sobre `mesa`; como Supabase Realtime entrega un cambio sólo si el suscriptor puede leer el registro nuevo, Caja **no** recibe señal de esa reapertura (comportamiento heredado de H5). En pedidos con solicitud, la fila `SIN_EFECTO` sí es legible por Caja y produce la señal de E10 (mitigación prevista). Pendiente: observarlo con Realtime real en DEV durante T08. No se corrige en E10 (fuera de alcance).
+
+**Defectos:** ninguno. **Pendientes no bloqueantes:** verificación con Supabase real (§9).
