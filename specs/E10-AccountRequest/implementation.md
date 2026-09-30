@@ -168,8 +168,8 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 |---|---|
 | Replay limpio total | 59 migraciones en orden estricto + seed: OK (línea base 57 + seed: OK) |
 | SQL E10 (`e10_t02_modelo`, `e10_t03_solicitud`, `e10_t06_integracion`, `e10_t07_complementos`) | 4/4 PASS |
-| Suite histórica sin homologar | Línea base: 44 PASS / 21 FAIL. E10: 46 PASS / 23 FAIL (+2 PASS por las pruebas E10 en B1). Únicas diferencias: `h4_t05_realtime_publication_rls` y `h5_t06_realtime_cashier_signal`, que fijan la publicación exacta de tres tablas |
-| Suite histórica homologada (H1 y H2 de E7-T11 en ambas bases; **H3** de E10 sólo en E10: arreglo esperado de la publicación ampliado con `public.solicitud_cuenta` en `h4_t05` y `h5_t06`, en copias temporales) | Línea base 53/12 y E10 57/12: **mismo conjunto de 12 fallos preexistentes** (clasificados en E7-T11 §5.4); `h4_t05` y `h5_t06` pasan completos con H3 |
+| Suite histórica sin homologar | **No pasa completa ni en la línea base ni en E10.** Línea base: 44 PASS / 21 FAIL. E10: 46 PASS / 23 FAIL = los mismos 21 fallos de la línea base + 2 nuevos (`h4_t05_realtime_publication_rls` y `h5_t06_realtime_cashier_signal`, que fijan la publicación exacta de tres tablas); los PASS suben de 44 a 46 porque se suman las 4 pruebas `e10_*` y se restan esas 2 |
+| Suite histórica homologada (H1 y H2 de E7-T11 en ambas bases; **H3** de E10 sólo en E10: arreglo esperado de la publicación ampliado con `public.solicitud_cuenta` en `h4_t05` y `h5_t06`, en copias temporales; el repositorio y la evidencia histórica no se modifican) | **Tampoco pasa completa.** Línea base 53 PASS / 12 FAIL; E10 57 PASS / 12 FAIL. Los 12 fallos son los mismos en ambas bases: `dbstd_t03_function_metadata`, `dbstd_t04_catalog_comments`, `domain_object_names`, `h3_t04_open_order_detail_mutations`, `h5_t02_safe_order_delivery`, `order_audit_trail`, `tp09_tp11_schema`, `e1_t03_caja_sesion`, `e1_t08_pago_sesion`, cleanup de la carrera H4-T03 y carrera H5-T04 (ejecución y verificación), ya clasificados como preexistentes o superados en `specs/E7-OrderOperationalImprovements/implementation-t11.md` §5.4. Con H3, `h4_t05` y `h5_t06` pasan completas |
 | Carreras H4/H5 históricas | Idénticas a la línea base (H4-T03, H5-T02 ×2 correctas; H5-T04 preexistente) |
 | Carreras E10 reales (TP05, TP10 ×2, TP11 ×5) | 8/8 PASS; sin `40001`, `40P01` ni deadlocks; 0 conexiones residuales |
 | Integración y señal WAL (T06) | PASS (incremental, recorrido, 3 `INSERT` + 3 `UPDATE`, 0 `DELETE`) |
@@ -182,6 +182,8 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 | `git diff --check` (`9c71685..HEAD`) | OK |
 | Revisión de secretos | Sin claves, tokens ni contraseñas; sólo referencias de proyecto ya redactadas (`ibfr…uinf`) |
 | Residuos | 0 bases efímeras, 0 slots de replicación, 0 conexiones; sin archivos sin versionar |
+
+**Lectura correcta del resultado histórico.** La suite SQL histórica no se declara “PASS”: tanto la línea base como E10 tienen 12 fallos (homologada) o 21/23 (sin homologar). La conclusión es únicamente que el resultado con E10 reproduce exactamente la línea base conocida y, por tanto, E10 no introduce regresión.
 
 ### 8.2 Defectos de T07
 
@@ -213,7 +215,7 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 | TP17 | Aprobada | `e10AccountRequest` |
 | TP18 | Aprobada | `e10AccountRequest` |
 | TP19 | Aprobada | `e10_t06_integracion` |
-| TP20 | Aprobada | §8.1 (mismos fallos preexistentes con homologaciones H1–H3; Node 409/409) |
+| TP20 | Aprobada (sin regresión; la suite histórica **no** pasa completa) | El resultado de E10 reproduce exactamente la línea base conocida (los mismos 12 fallos preexistentes/superados, §8.1), por lo que E10 no introduce regresión. Las únicas diferencias sin homologar (`h4_t05`, `h5_t06`) se deben al cambio deliberado de la publicación (E10-D07) y se tratan con la homologación H3 en copias temporales, prevista por TP20; no se ocultan fallos ni se cambia evidencia antigua. Node 409/409 |
 | TP21 | Aprobada salvo `build` | Replay, SQL, Node, `typecheck` PASS; `build` pendiente en Windows |
 
 ## 9. Pendientes antes de E10-T08 (validación humana)
