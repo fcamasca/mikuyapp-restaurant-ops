@@ -145,3 +145,25 @@ Las carreras usan una base efímera nueva por carrera (plantilla con E9) y la el
 | `tsc --noEmit` | OK |
 
 **Defectos:** ninguno abierto.
+
+## 8. E9-T06 — Integración técnica
+
+Sin dispositivos físicos. Ambiente: PostgreSQL 16 local efímero con `wal_level=logical`.
+
+**Archivos:** `supabase/tests/e9_t06_integracion.sql` (recorrido TP23), `scripts/e9_t06_integracion.sh` (migraciones incrementales, recorrido, señal local), `scripts/e9_realtime_verificacion.mjs` (TP22 con clientes Realtime reales, para el ambiente preparado de DC-12).
+
+| Verificación | Resultado |
+|---|---|
+| Migraciones E9 incrementales (`20261001000100`, `20261001000200`) sobre la línea base de 59 migraciones + seed | PASS 2/2 |
+| Replay completo (61 migraciones + seed) | OK |
+| TP23 recorrido integrado con las RPC reales de cada rol: local cerrado (crear pedido y abrir caja → `PT409` “Local cerrado…”, estado actual vacío) → apertura → caja → pedido con producto de cocina y sin cocina → recepción completa y preparación en cocina → entrega → solicitud de cuenta → cobro parcial → cierre de caja con el pedido pendiente (E1 DF-01) → cierre de jornada rechazado (“1 pedidos pendientes y 0 sesiones de caja abiertas”) → nueva sesión de otro cajero en la **misma** jornada → cobro total (pedido `PAGADO`, mesa `LIBRE`, solicitud `ATENDIDA`) → cierre de caja → cierre de jornada → operación rechazada → segunda jornada de la misma fecha `(2)` → jornada con cruce de medianoche (fixture ayer 21:00): pedido de hoy en ella, identificación con la fecha de ayer, cierre posterior. Pedido, sesiones, cobros, solicitud e historial derivan de la jornada correcta | PASS |
+| TP22 (local) — publicación = `detalle_pedido, jornada_operativa, mesa, pedido, solicitud_cuenta` | PASS |
+| TP22 (local) — cambios decodificados del WAL (`test_decoding`) de `jornada_operativa`: 2 `INSERT` (aperturas) y 1 `UPDATE` (cierre); apertura idempotente, cierre rechazado y cierre repetido no emiten; 0 `DELETE` | PASS |
+| TP22 (local) — autorización de `postgres_changes` (RLS de `SELECT` sobre la versión nueva de la fila): ADMIN, MOZO, COCINA y CAJA del local ven la fila `ABIERTA` y la `CERRADA` (reciben apertura y cierre); ADMIN de otro local no ve ninguna; `anon` sin privilegio | PASS |
+| Reacción del cliente a la señal (relectura autoritativa, coalescencia, `SUBSCRIBED`, error, topic único) | Cubierta en T04 (`tests/e9OperationalDay.test.mjs`) con canal simulado |
+| Residuos | 0 slots, 0 bases efímeras |
+| **TP22 con clientes Realtime programáticos contra un servidor Supabase real** | **PENDIENTE (bloqueado por ambiente).** No hay servidor Realtime local (la política de red bloquea el registro npm y Docker Hub, por lo que no puede instalarse el CLI ni la imagen de Realtime), y el único proyecto remoto disponible (compartido, `TRANSITIONING`) tiene datos: según DC-12 la migración E9 aborta allí y su preparación es una acción separada y autorizada. Queda listo `scripts/e9_realtime_verificacion.mjs` (guarda de ambiente DEV, exige local cerrado al inicio y lo deja cerrado; cinco clientes con un segundo ADMIN; apertura, idempotencia, remontaje con topic único, ausencia de polling, reconexión y cierre) para ejecutarse en ese ambiente. |
+
+**Estado de T06:** recorrido técnico y señal local completos; **no se marca completada** mientras falte la ejecución real de TP22 descrita arriba.
+
+**Defectos:** ninguno abierto.
