@@ -70,3 +70,34 @@ Coincide con lo registrado por E10 (`specs/E10-AccountRequest/implementation.md`
 | DV-01 | E9-D06 prevé que `tgf_pago_validar_jornada_operativa` rechace también los pagos sin `sesion_caja_id`. Cuatro tests vigentes insertan pagos legacy sin sesión como dato de su escenario (`e1_t03_fixture.sql`, `e7_t05_cancelacion.sql`, `h6_t02_sales_exports.sql`, `tp10_constraints.sql`; este último espera la violación del `CHECK` de medio, que el trigger anticiparía). Ningún requisito lo exige (R18 e I-4 se refieren a pagos con sesión) y ningún cliente puede insertar en `pago`. | **Sub-punto detenido** conforme a la instrucción de construcción: se implementa la coherencia pedido/sesión y los pagos sin sesión siguen gobernados por `ck_pago_asociacion_e1` como hoy. Ajuste mínimo propuesto: retirar ese rechazo de E9-D06. Pendiente de decisión del responsable. |
 
 **Defectos:** ninguno abierto.
+
+## 5. E9-T03 — RPC y lecturas
+
+**Migración:** `supabase/migrations/20261001000200_e9_t03_rpc_jornada_operativa.sql` (nueva, aditiva; no modifica RPC operativas existentes, DC-10).
+
+- `fn_formatear_identificacion_jornada(date, integer)` interna `IMMUTABLE`: `Jornada YYYY-MM-DD (N)` definida en un único lugar.
+- `rpc_abrir_jornada_operativa(uuid)` (E9-D07): contexto `ADMINISTRADOR` (`42501`), clave obligatoria (`22023`), `local FOR NO KEY UPDATE`, misma clave → misma jornada aunque esté cerrada, abierta existente → `ya_existia = true`, `clock_timestamp()` tras el lock, fecha operativa `America/Lima`, correlativo por local + fecha, `23505` defensivo resuelto como existente.
+- `rpc_cerrar_jornada_operativa(bigint)` (E9-D08): contexto `ADMINISTRADOR`, jornada del local `FOR UPDATE` (`42501` si no existe o es de otro local), cerrada → `ya_estaba_cerrada = true` sin escribir, conteo de sesiones abiertas y pedidos no terminales en sentencias nuevas, `PT409` “No se puede cerrar la jornada: N pedidos pendientes y M sesiones de caja abiertas”, `cerrada_en = greatest(clock_timestamp(), abierta_en)`.
+- `rpc_obtener_jornada_operativa_actual()` (`STABLE`, cuatro roles; cero filas = local cerrado; nombre de quien abrió y `servidor_ahora`).
+- `rpc_obtener_pendientes_cierre_jornada()` (`STABLE`, ADMIN). Contrato: `tipo ∈ (PEDIDO, SESION_CAJA)`, `pedido_id`, `mesa_codigo`, `estado`, `sesion_caja_id`, `caja_codigo`, `abierta_por_nombre`, `desde` (creación del pedido o apertura de la sesión). Es la forma tabular única de los campos que enumera E9-D10 para ambos tipos; sin importes.
+- `rpc_obtener_historial_jornadas_operativas(integer, integer)` (`STABLE`, ADMIN; paginación 1–200 / offset ≥ 0, si no `22023`; sin totales ni conteos).
+- Todas `SECURITY DEFINER`, owner `postgres`, `search_path = pg_catalog`, `EXECUTE` sólo `authenticated`, comentarios.
+
+**Pruebas focalizadas ejecutadas:**
+
+| Prueba | Archivo | Resultado |
+|---|---|---|
+| TP03 — MOZO, COCINA, CAJA, perfil inactivo y sin sesión → `42501`; clave nula → `22023`; rechazos sin filas; apertura válida con local, actor, hora, fecha operativa, número 1, clave e identificación | `supabase/tests/e9_t03_rpc.sql` | PASS |
+| TP04 — misma clave, otra clave y otro ADMIN con jornada abierta → la existente (`ya_existia`), sin filas nuevas; misma clave tras el cierre → la jornada `CERRADA`, no abre otra | idem | PASS |
+| TP05 — 1, 2, 3 en la misma fecha; otro local numera aparte; jornada fixture abierta ayer 21:00: pedido y sesión de hoy se asignan a ella, identificación conserva la fecha de ayer, cierre hoy con `cerrada_en > abierta_en`, siguiente apertura numera en la fecha de hoy | idem | PASS |
+| TP10 — rechazo `PT409` con conteos exactos por pedido `ABIERTO` vacío, cada estado `ENVIADO`…`ENTREGADO`, sesión abierta, `ENTREGADO` con cobro parcial + solicitud de cuenta y con descuento pendiente; resolución con liberación de mesa (H3), cobro total (E1, la solicitud E10 queda `ATENDIDA`), anulación (E1) y cierre de caja (E1); otro local / inexistente → `42501`, nulo → `22023`; cierre válido y repetición idempotente con mismo actor y hora | idem | PASS |
+| TP11 — pendientes exactos (pedido con mesa/estado/desde; sesión con caja/quién/desde), vacío sin pendientes y con local cerrado | idem | PASS |
+| TP12 — estado actual igual para los cuatro roles, otro local sin filas, sin contexto → `42501`; historial ordenado con nombres, paginación, sin columnas de totales, sin cruce de locales | idem | PASS |
+| TP14 (SQL) — seguridad, owner, `search_path`, privilegios, volatilidad (`v`/`s`), función de identificación no expuesta; ninguna función vigente con `40001` manual; matriz de roles de pendientes, historial y cierre | idem | PASS |
+| TP15 — I-2, I-3, I-4 y misma jornada local en toda la base; la jornada se deriva unívocamente de detalle, historial, solicitud de cuenta, cobro, pago, descuento, anulación, resumen de cierre y auditoría; apertura y cierre con actor y hora | idem | PASS |
+| TP16 real — dos ADMIN simultáneos; doble envío con la misma clave | `scripts/e9_concurrency.sh` | PASS 2/2: una sola jornada, número 1, segundo envío `ya_existia` |
+| TP17 real — cierre vs crear pedido y cierre vs abrir caja en ambos órdenes; cierre vs cierre | idem | PASS 5/5: gana la creación → cierre `PT409` con conteo; gana el cierre → creación `PT409` “Local cerrado…” sin residuos (pedido, mesa, sesión, solicitud de apertura, auditoría); segundo cierre idempotente con el actor del primero |
+
+Las carreras usan una base efímera nueva por carrera (plantilla con E9) y la eliminan al terminar, sin limpiezas. En todas: sin `40001`, sin `40P01`, sin conexiones residuales. `e9_t02_modelo.sql` sigue en PASS con T03 aplicada.
+
+**Defectos:** ninguno abierto.
