@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 9 — Jornada operativa del local: plan de pruebas
 
-**Estado de E9: SPEC MODE — listo para revisión humana final; no autorizado para construcción.** Incorpora DC-10, DC-11 y DC-12; no quedan decisiones humanas pendientes. Ninguna prueba se ha ejecutado. Las pruebas automatizadas no sustituyen la validación humana, y E9 no podrá cerrarse con pruebas pendientes.
+**Estado de E9: SPEC APROBADO — construcción autorizada (E9-T02–E9-T07); E9-T08 pendiente; no cerrada ni aceptada.** Incorpora DC-10, DC-11 y DC-12; no quedan decisiones humanas pendientes. Ninguna prueba se ha ejecutado. Las pruebas automatizadas no sustituyen la validación humana, y E9 no podrá cerrarse con pruebas pendientes.
 
 ## 1. Estrategia
 

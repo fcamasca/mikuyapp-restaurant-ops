@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 9 — Jornada operativa del local: diseño
 
-**Estado de E9: SPEC MODE — listo para revisión humana final; no autorizado para construcción.** Diseño derivado de la inspección de `main` en `5e3b40b`. Incorpora las decisiones cerradas DC-10 (validación en puntos de entrada), DC-11 (local cerrado = sólo cerrar sesión) y DC-12 (sin backfill; aborto explícito de la migración) de `requirements.md` §10.2. No quedan decisiones humanas pendientes.
+**Estado de E9: SPEC APROBADO — construcción autorizada (E9-T02–E9-T07); E9-T08 pendiente; no cerrada ni aceptada.** Diseño derivado de la inspección de `main` en `5e3b40b`. Incorpora las decisiones cerradas DC-10 (validación en puntos de entrada), DC-11 (local cerrado = sólo cerrar sesión) y DC-12 (sin backfill; aborto explícito de la migración) de `requirements.md` §10.2. No quedan decisiones humanas pendientes.
 
 ## E9-D01 — Principios y cambio mínimo
 

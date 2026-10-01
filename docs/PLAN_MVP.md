@@ -650,6 +650,8 @@ El MVP se considerará terminado si:
 
 ### Evolución 9 — Jornada operativa del local
 
+**Estado: SPEC APROBADO — CONSTRUCCIÓN EN CURSO (01/10/2026).** Spec en [`specs/E9-OperationalDay/`](../specs/E9-OperationalDay/) (`requirements.md`, `design.md`, `tasks.md`, `test-plan.md`); decisiones DC-01–DC-12 cerradas. Estimación aprobada: **22 h**. Construcción autorizada para E9-T02–E9-T07; E9-T08 (validación humana) pendiente. No está cerrada ni aceptada.
+
 - Apertura de jornada operativa por ADMINISTRADOR.
 - Cierre de jornada operativa por ADMINISTRADOR.
 - Registro de usuario, fecha y hora de apertura/cierre.

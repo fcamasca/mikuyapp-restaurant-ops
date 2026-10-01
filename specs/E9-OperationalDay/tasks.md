@@ -2,11 +2,11 @@
 
 ## 1. Estado
 
-**E9 en SPEC MODE — listo para revisión humana final; no autorizado para construcción.** DH-01, DH-02 y DH-03 están resueltas (DC-10, DC-11 y DC-12, `requirements.md` §10.2); no quedan decisiones humanas pendientes. Ninguna tarea posterior a E9-T01 puede iniciarse hasta la aprobación explícita del spec y la autorización de construcción.
+**E9: SPEC APROBADO — construcción autorizada (E9-T02–E9-T07); E9-T08 pendiente; no cerrada ni aceptada.** DH-01, DH-02 y DH-03 están resueltas (DC-10, DC-11 y DC-12, `requirements.md` §10.2); no quedan decisiones humanas pendientes. El responsable aprobó el spec (estimación 22 h) y autorizó la construcción de E9-T02 a E9-T07. La evidencia se registra en `implementation.md`.
 
 | Tarea | Estado | Evidencia |
 |---|---|---|
-| E9-T01 | Elaborada; decisiones DC-10–DC-12 incorporadas — pendiente de revisión final | `requirements.md`, `design.md`, `tasks.md`, `test-plan.md` |
+| E9-T01 | Completada — spec aprobado; DC-01–DC-12 cerradas | `requirements.md`, `design.md`, `tasks.md`, `test-plan.md` |
 | E9-T02–E9-T08 | No iniciadas | — |
 
 ## 2. Tareas
