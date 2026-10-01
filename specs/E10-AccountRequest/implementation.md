@@ -1,6 +1,6 @@
 # E10 — Evidencia de construcción (T02–T07)
 
-Rama `feature/E10-AccountRequest`, creada desde `9c71685` (spec aprobado, DH-01 A y DH-02 B). **E10-T02–E10-T07 completadas** (§11). Esta evidencia no constituye aceptación: E10-T08 (validación humana) no se inició y no existe `acceptance.md`.
+Rama `feature/E10-AccountRequest`, creada desde `9c71685` (spec aprobado, DH-01 A y DH-02 B). **E10-T02–E10-T07 completadas** (§11). El responsable aprobó TH01–TH07 (7/7) y autorizó el cierre el 30/09/2026; la aceptación formal consta en `acceptance.md`. Los apartados de construcción conservan la secuencia histórica de la verificación.
 
 ## 1. Ambiente de construcción y desviación
 
@@ -11,11 +11,11 @@ Rama `feature/E10-AccountRequest`, creada desde `9c71685` (spec aprobado, DH-01 
 | Suite histórica | `scripts/e10_local_sql_suite.sh <db> supabase/tests`: misma selección, orden y carreras H4/H5 que `scripts/e7_t11_sql_campaign.sh`. |
 | Frontend | Node 22.23.2 en la máquina del responsable (carpeta del repositorio, `node_modules` existente). |
 
-**Desviación de ambiente (a validar por el responsable).** El stack Supabase local en Docker usado en E7 (PostgreSQL 17.6, PostgREST, Auth, Realtime) no está disponible en este entorno de construcción: los registros de imágenes, `npm` y `apt` están bloqueados por la política de red y la máquina Linux enlazada no tiene Docker. Consecuencias:
+**Desviación del ambiente de construcción (resuelta para la aceptación con la verificación real en DEV, §10).** El stack Supabase local en Docker usado en E7 (PostgreSQL 17.6, PostgREST, Auth, Realtime) no estuvo disponible en el entorno de construcción: los registros de imágenes, `npm` y `apt` estaban bloqueados por la política de red y la máquina Linux enlazada no tenía Docker. Consecuencias en esa fase:
 
 - Las pruebas SQL corren sobre PostgreSQL 16 con emulación de plataforma, no sobre la imagen `supabase/postgres:17.6`. El replay de las 57 migraciones existentes + seed es limpio y la suite histórica reproduce exactamente la clasificación de E7-T11 (§2.1), lo que valida la emulación para este alcance.
-- No hay servidor Realtime ni PostgREST locales: la entrega Realtime extremo a extremo y la lectura embebida vía PostgREST se verifican por partes (publicación, RLS evaluada como el suscriptor, decodificación lógica de la publicación y pruebas Node del cliente). La verificación Realtime/PostgREST real queda como prerequisito de E10-T08 en DEV (§6).
-- DEV (`ibfr…uinf`) **no** se modificó: en `TRANSITIONING` ese proyecto también atiende Production y esta sesión no tiene credenciales de base; aplicar la migración en DEV es decisión y acción del responsable.
+- Sin servidor Realtime ni PostgREST locales, la entrega extremo a extremo y la lectura embebida se verificaron inicialmente por partes (publicación, RLS del suscriptor, decodificación lógica y pruebas Node). La verificación real posterior en DEV completó ambos puntos (§10).
+- Durante T02–T06, DEV (`ibfr…uinf`) no se modificó desde el entorno de construcción. Posteriormente el responsable aplicó allí las migraciones y ejecutó la verificación real (§§9–10).
 
 ## 2. Línea base (antes de E10)
 
@@ -152,9 +152,9 @@ Coincide uno a uno con la clasificación de `specs/E7-OrderOperationalImprovemen
 | TP19 (SQL) — intervalos de E8 (`entregado → solicitud`, `solicitud → cierre`, `creación → pago`) derivados con las reglas de E10-D15: no negativos, una sola `ATENDIDA` por pedido pagado con solicitud, cobro final unívoco | PASS |
 | Residuos (slots de replicación, bases efímeras) | 0 / 0 |
 
-**HZ-02 — confirmado a nivel de RLS.** Tras la reapertura de un pedido `ENTREGADO`, la fila nueva de `pedido` (`ABIERTO`) no es legible por `CAJA` (`pedido_select_caja_local_cobro` sólo cubre `ENTREGADO`/`PAGADO`) y `CAJA` no tiene política sobre `mesa`; como Supabase Realtime entrega un cambio sólo si el suscriptor puede leer el registro nuevo, Caja **no** recibe señal de esa reapertura (comportamiento heredado de H5). En pedidos con solicitud, la fila `SIN_EFECTO` sí es legible por Caja y produce la señal de E10 (mitigación prevista). Pendiente: observarlo con Realtime real en DEV durante T08. No se corrige en E10 (fuera de alcance).
+**HZ-02 — confirmado a nivel de RLS.** Tras la reapertura de un pedido `ENTREGADO`, la fila nueva de `pedido` (`ABIERTO`) no es legible por `CAJA` (`pedido_select_caja_local_cobro` sólo cubre `ENTREGADO`/`PAGADO`) y `CAJA` no tiene política sobre `mesa`; Caja **no** recibe señal de esa reapertura (comportamiento heredado de H5). En pedidos con solicitud, la fila `SIN_EFECTO` sí es legible por Caja y produce la señal de E10. La observación con Realtime real en DEV está registrada en §10. No se corrige en E10 (fuera de alcance).
 
-**Defectos:** ninguno. **Pendientes no bloqueantes:** verificación con Supabase real (§9).
+**Defectos:** ninguno. La verificación con Supabase real, pendiente al concluir T06, quedó completada después por el responsable (§§9–10).
 
 ## 8. E10-T07 — Validación final (ejecución única)
 
@@ -260,5 +260,6 @@ Ejecutada por el responsable en Windows con `scripts/e10_dev_verificacion.mjs` (
 
 - **E10-T02–E10-T07: completadas.** E10-T07 incluye la validación integral local y la verificación real en DEV.
 - **TP01–TP21: técnicamente completadas** según la evidencia acumulada.
-- **E10-T08 (validación humana TH01–TH07): no iniciada.**
-- No existe `acceptance.md`. **E10 no está cerrada ni aceptada.**
+- **E10-T08 (validación humana TH01–TH07): completada; 7/7 aprobadas por el responsable.**
+- El responsable declaró: **“Apruebo TH01–TH07 y autorizo el cierre de E10.”** Fecha de aceptación humana: 30/09/2026. Ver `acceptance.md`: **E10 ACEPTADA / CERRADA**.
+- Defectos bloqueantes abiertos: ninguno. Estimación aprobada: 18 h; **no se registra un tiempo real consolidado**.

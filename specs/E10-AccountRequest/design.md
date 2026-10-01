@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 10 — Solicitud de cuenta y atención en caja: diseño
 
-**Estado: DISEÑO APROBADO (30/09/2026).** Diseño derivado de la inspección de `main` en `ee3c94c`, con las decisiones aprobadas DH-01 A (el cobro no exige solicitud previa) y DH-02 B (invalidación del borrador de Caja acotada al pedido seleccionado); ver `requirements.md` §10. Construcción habilitada, no iniciada.
+**Estado de E10: ACEPTADA / CERRADA (30/09/2026).** Diseño aprobado derivado de la inspección de `main` en `ee3c94c`, con DH-01 A y DH-02 B; construcción y validación completadas. Ver `requirements.md` §10, `implementation.md` y `acceptance.md`.
 
 ## E10-D01 — Principios y cambio mínimo
 
@@ -273,11 +273,11 @@ E10 no crea vistas, funciones de agregación, tableros ni almacenamiento analít
 - **E1:** sin cambios en RPC financieras, auditoría, reportes ni documentos. Sólo se extiende la lectura de pendientes y la regla de invalidación del borrador en la UI (DH-02 B).
 - **E7:** la corrección de Realtime (topic único) se conserva; el trigger nuevo sobre `pedido` no interfiere con los triggers de detalle; las RPC de mozo/cocina no cambian.
 
-## E10-D17 — Migración prevista (construcción futura)
+## E10-D17 — Migraciones ejecutadas
 
-Una migración nueva y aditiva, posterior a `20260924000800`, sin editar migraciones históricas:
+El diseño preveía una migración nueva y aditiva, posterior a `20260924000800`, sin editar migraciones históricas:
 
-`…_e10_t02_solicitud_cuenta.sql`: tabla, restricciones, índices, comentarios, RLS y privilegios (incluida la revocación a `service_role`); triggers de inmutabilidad y de cierre; `rpc_solicitar_cuenta_pedido`; recreación extendida de `obtener_pedidos_pendientes_pago_caja`; alta en la publicación; `notify pgrst, 'reload schema'`. Se aplica primero en local y luego en DEV, conforme a PM-002. Si la construcción prefiere separar la RPC/lectura en una segunda migración, se documenta en la evidencia de T03.
+La ejecución separó modelo/triggers/publicación en `20260930000100_e10_t02_solicitud_cuenta.sql` y RPC/lectura de Caja en `20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql`, como registra `implementation.md` §§3–4. Ambas se aplicaron en local y después en DEV por el responsable (`implementation.md` §9).
 
 ## E10-D18 — Estrategia de validación
 

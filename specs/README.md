@@ -12,4 +12,4 @@ Los documentos pueden conservar prefijos históricos del hito. Cada paquete reú
 - [H6 — MVP liberado](H6-MVPReleased/): cerrado, validado y aceptado.
 - [E1 — Operación de caja](E1-CashOperation/): cerrada, validada y aceptada.
 - [E7 — Mejoras operativas de pedidos](E7-OrderOperationalImprovements/): cerrada, validada y aceptada.
-- [E10 — Solicitud de cuenta y atención en caja](E10-AccountRequest/): spec aprobado; construcción no iniciada.
+- [E10 — Solicitud de cuenta y atención en caja](E10-AccountRequest/): cerrada y aceptada; [aceptación](E10-AccountRequest/acceptance.md).

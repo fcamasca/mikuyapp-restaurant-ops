@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 10 — Solicitud de cuenta y atención en caja: plan de pruebas
 
-**Estado: PLAN APROBADO (30/09/2026)**, con DH-01 A y DH-02 B aprobadas. Verificaciones focalizadas T02–T06 y fase final T07 ejecutadas: **TP01–TP21 técnicamente completadas** (`implementation.md` §8.3 y §10; en TP20 la suite histórica reproduce la línea base, sin regresión). **TH01–TH07 (E10-T08) no iniciadas.**
+**Estado de E10: ACEPTADA / CERRADA (30/09/2026).** Plan aprobado con DH-01 A y DH-02 B. **TP01–TP21 técnicamente completadas** (`implementation.md` §8.3 y §10; TP20 reproduce la línea base histórica sin regresión). **TH01–TH07 aprobadas humanamente: 7/7**, según la aprobación explícita registrada en `acceptance.md`.
 
 ## 1. Estrategia
 
@@ -105,7 +105,7 @@ Reglas:
 | E10-TP20 | R07, R21 | Regresión H3–E7. | Suites SQL `h3_*`, `h4_*`, `h5_*`, `h6_*`, `e1_*`, `e7_*`, `order_audit_trail`, `release_empty_order_table` y pruebas Node de mozo, cocina, caja, impresión, Inicio y Pedidos ADMIN aprobadas sin editar evidencia histórica. Homologaciones documentadas: `h4_t05` (publicación exacta de tres tablas) cubierta por TP01; `h5_t03`/`e1_t10` (firma de `obtener_pedidos_pendientes_pago_caja`) cubiertas por TP12; conteo de enlaces del mozo en `waiterRealtime` cubierto por TP16. |
 | E10-TP21 | Todos | Ejecución integral. | Replay limpio de todas las migraciones + seed; todos los SQL de `supabase/tests/` y de E10; suite Node completa; `npm run typecheck`; `npm run build` (limitaciones ambientales documentadas como en E1-TP65/E7); sin conexiones residuales. |
 
-## 4. Pruebas humanas (E10-T08, después de T07)
+## 4. Pruebas humanas (E10-T08, aprobadas 7/7)
 
 | ID | Caso | Dispositivos | Resultado esperado |
 |---|---|---|---|
@@ -117,9 +117,9 @@ Reglas:
 | E10-TH06 | Cliente paga directamente en caja sin solicitud. | PC | Cobro idéntico al actual. |
 | E10-TH07 | Uso táctil y responsive. | Celular, tablet vertical/horizontal, PC | Objetivos ≥ 44 px; sin desplazamiento horizontal; etiquetas legibles. |
 
-## 5. Criterios de salida
+## 5. Criterios de salida cumplidos
 
 - TP01–TP21 aprobados y TH01–TH07 aprobadas humanamente.
-- Ningún defecto bloqueante abierto; defectos no bloqueantes resueltos o aceptados explícitamente por el responsable.
+- Ningún defecto bloqueante abierto. HZ-02 está confirmado y documentado como comportamiento heredado fuera del alcance de E10 (`implementation.md` §10).
 - Evidencia registrada por tarea y de la fase final, incluida la confirmación de HZ-02.
-- Sólo después: elaboración y aprobación de `acceptance.md`.
+- Aprobación humana explícita del cierre y registro en `acceptance.md` (30/09/2026).

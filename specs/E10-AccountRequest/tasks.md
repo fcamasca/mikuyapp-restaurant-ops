@@ -2,14 +2,14 @@
 
 ## 1. Estado
 
-**SPEC APROBADO (30/09/2026)** con DH-01 A y DH-02 B aprobadas. Construcción T02–T07 completada; E10 no está cerrada ni aceptada.
+**E10 ACEPTADA / CERRADA (30/09/2026).** DH-01 A y DH-02 B aprobadas; T01–T08 completadas. TP01–TP21 técnicamente completadas y TH01–TH07 aprobadas humanamente (7/7). Ver `implementation.md` y `acceptance.md`.
 
 | Tarea | Estado | Evidencia |
 |---|---|---|
 | E10-T01 | Completada — Spec aprobado 30/09/2026 | `requirements.md`, `design.md`, `tasks.md`, `test-plan.md` |
 | E10-T02–E10-T06 | Completadas | `implementation.md` §3–§7 |
 | E10-T07 | Completada — validación integral local y verificación real en DEV (12/12); build Windows PASS | `implementation.md` §8–§10 |
-| E10-T08 | No iniciada | — |
+| E10-T08 | Completada — TH01–TH07 aprobadas humanamente (7/7); cierre autorizado | `test-plan.md` §4; `acceptance.md` |
 
 ## 2. Tareas
 
@@ -24,13 +24,13 @@ Derivadas directamente de `design.md`. Cada tarea declara sus verificaciones **f
 | E10-T05 | 4. Caja | `cashierService.getPendingOrders` mapea los campos nuevos; `CashierPage`: orden por solicitud, etiqueta “Cuenta solicitada · hace N min” (también en barra colapsada), contador, línea en el panel, región `aria-live` para solicitudes nuevas, suscripción con `solicitud_cuenta`; **DH-02 B (aprobada):** invalidación del borrador sólo si cambia la huella del pedido seleccionado. Sin nuevas acciones de cobro. | T03, T04 (opción Realtime) | Caja ve y prioriza solicitudes sin refrescar; el cobro E1 no cambia; una solicitud de otra mesa no borra el cobro en curso. | R06–R08, R16, R19, R20, R22 | D07, D08, D11, D14 | `tests/cashierService.test.mjs`, `tests/cashierPage.test.mjs`, `tests/cashierPrint.test.mjs`; TP18 | 2.5 h |
 | E10-T06 | 5. Integración | Recorrido local → DEV con dos dispositivos (mozo celular + caja PC) y segunda caja/segundo mozo: solicitud, repetición, cobro parcial y total, reapertura, anulación; confirmar HZ-02 y registrar resultado; replay de la migración E10 sobre la baseline; evidencia y defectos. | T02–T05 | Flujo integrado funcionando en DEV; lista de defectos no bloqueantes. | R09–R11, R16, R17 | D05, D07, D12, D16 | Recorrido de TP15 y TP19; replay E10 | 1.5 h |
 | E10-T07 | 6. Pruebas finales y regresión | Ejecución única de TP01–TP21: SQL integral, concurrencia, seguridad/RLS, Realtime, regresión H3/H4/H5/H6/E1/E7 con homologación documentada (`h4_t05`, `h5_t03`/`e1_t10`, conteo de enlaces del mozo), replay limpio total, suite Node completa, `typecheck`, `build`. Corregir defectos pendientes. | T06 | Evidencia integral aprobada; cero defectos abiertos. | Todos | D18 | `test-plan.md` §3 completo | 3 h |
-| E10-T08 | Validación humana | TH01–TH07 en celular, tablet y PC con DEV/Preview; luego, y sólo con aprobación, crear `acceptance.md`. | T07 | Pruebas humanas aprobadas; aceptación formal posterior. | Todos | Todos | `test-plan.md` §4 | 1.5 h |
+| E10-T08 | Validación humana | TH01–TH07 aprobadas humanamente (7/7); aprobación explícita del cierre y registro en `acceptance.md`. | T07 | Pruebas humanas aprobadas y E10 aceptada/cerrada. | Todos | Todos | `test-plan.md` §4 | 1.5 h |
 
 ## 3. Orden y dependencias
 
 1. T02 → T03 son secuenciales (misma migración/zona de base de datos).
 2. T04 depende de T03 (RPC y lectura embebida); T05 depende de T03 y de la opción Realtime de T04. T04 y T05 pueden avanzar en paralelo una vez disponible la opción `additionalSignalTables`.
-3. T06 integra todo; T07 es la única puerta integral; T08 es humana y precede a `acceptance.md`.
+3. T06 integró el flujo; T07 cerró la validación técnica y T08 la validación humana, registrada en `acceptance.md`.
 4. Dependencias externas: E1 y E7 aplicadas en el ambiente de construcción (ya en `main`); PM-002 `TRANSITIONING` limita la construcción a local/DEV/Preview y la próxima revalidación de PM-002 deberá esperar cuatro tablas publicadas; E10 no puede desplegarse a PROD antes que E1 y E7.
 5. Relación con E8: E10 no depende de E8. E8, cuando se especifique, consumirá los datos de E10 para distinguir tiempo del cliente y tiempo de Caja; puede ejecutarse antes que E10, pero en ese caso no podrá desagregar `ENTREGADO → PAGADO`.
 
@@ -41,7 +41,7 @@ Derivadas directamente de `design.md`. Cada tarea declara sus verificaciones **f
 3. Cambios sólo SQL no exigen `typecheck`/`build`; cambios sólo UI no exigen SQL.
 4. Las carreras reales se ejecutan sólo donde la tarea lo indica (T03: TP05 y TP10; la carrera TP11 queda para T07).
 5. Defectos bloqueantes se corrigen de inmediato; los no bloqueantes se registran en la evidencia de la tarea y se resuelven antes de T07.
-6. Ninguna tarea marca E10 como cerrada. E10 se cierra sólo tras T07, T08 y la aprobación posterior de `acceptance.md`.
+6. T07 y T08 están completadas; la aprobación humana y el cierre formal se registran en `acceptance.md`.
 
 ## 5. Matriz de trazabilidad Requirement → Design → Task → Test
 
@@ -82,8 +82,10 @@ Derivadas directamente de `design.md`. Cada tarea declara sus verificaciones **f
 
 Cifras de referencia de planificación, no tiempo real consumido.
 
+No se registra un tiempo real consolidado: la evidencia disponible no permite calcularlo.
+
 ## 7. Riesgos de planificación
 
-- La semántica exacta de Realtime ante un `UPDATE` que deja la fila fuera de la RLS del suscriptor (HZ-02) se confirma en T06; no cambia el diseño de E10.
+- La semántica de Realtime ante un `UPDATE` que deja la fila fuera de la RLS del suscriptor (HZ-02) quedó confirmada en DEV real (`implementation.md` §10); no cambia el diseño de E10.
 - `CashierPage` concentra la mayor parte del cambio de UI y ya es extenso (≈1.200 líneas); se recomienda un commit por tarea y mantener la lógica de ordenamiento y huella en funciones puras probadas.
 - La homologación de pruebas históricas que fijan la publicación o la firma de la lectura de Caja debe documentarse en T07 sin editar la evidencia histórica.

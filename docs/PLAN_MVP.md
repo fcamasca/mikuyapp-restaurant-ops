@@ -662,7 +662,7 @@ El MVP se considerará terminado si:
 
 ### Evolución 10 — Solicitud de cuenta y atención en caja
 
-**Estado: SPEC APROBADO — 30/09/2026.** Spec en [`specs/E10-AccountRequest/`](../specs/E10-AccountRequest/) (`requirements.md`, `design.md`, `tasks.md`, `test-plan.md`). Construcción habilitada, no iniciada. Estimación de referencia: 18 h, no tiempo real consumido.
+**Estado: CERRADA / ACEPTADA — 30/09/2026.** Spec, evidencia técnica y aceptación en [`specs/E10-AccountRequest/`](../specs/E10-AccountRequest/) (`requirements.md`, `design.md`, `tasks.md`, `test-plan.md`, `implementation.md`, `acceptance.md`). TP01–TP21 técnicamente completadas; TH01–TH07 aprobadas humanamente (7/7) y cierre autorizado por el responsable. Estimación aprobada: **18 h**. **No se registra un tiempo real consolidado** porque la evidencia disponible no permite calcularlo.
 
 - El mozo solicita a caja la cuenta total de un pedido entregado; sin selección de productos o cantidades, sin nueva división de cuenta ni propinas y sin cambios en el modelo financiero de E1.
 - La solicitud es una entidad operativa propia (pendiente, atendida o sin efecto); no se agregan estados a pedido, detalle ni mesa.

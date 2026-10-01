@@ -2,7 +2,7 @@
 
 ## 1. Estado, objetivo y fuente de verdad
 
-**Estado: SPEC APROBADO (30/09/2026).** El responsable aprobó `requirements.md`, `design.md`, `tasks.md` y `test-plan.md`, con las decisiones DH-01 (opción A) y DH-02 (opción B) aprobadas (sección 10). El spec pasa a preparación de construcción; la construcción (E10-T02 en adelante) todavía no se inició. No existe `acceptance.md`.
+**Estado de E10: ACEPTADA / CERRADA (30/09/2026).** El responsable aprobó el spec, DH-01 A y DH-02 B, y posteriormente TH01–TH07 (7/7) y el cierre. La construcción y validación técnica TP01–TP21 están completadas; ver `implementation.md` y `acceptance.md`.
 
 > Nota: este documento se redactó en Spec Mode; los requisitos aprobados se conservan sin cambios.
 
@@ -168,17 +168,17 @@ Decisión técnica adicional: no se registra un “comienzo de atención” de C
 | ID | Hallazgo | Tratamiento |
 |---|---|---|
 | HZ-01 | `CashierPage.refresh` ejecuta `clearPaymentOptions()` en cada refresco, incluido el disparado por Realtime: cualquier señal visible para Caja (hoy, la entrega o el cobro de **otro** pedido) descarta medios, importes y confirmación en curso. E10 agrega una nueva fuente de señales. | Resuelto por DH-02 B (aprobada): invalidación acotada al pedido seleccionado (E10-R22). |
-| HZ-02 | Inspección estática: la política `pedido_select_caja_local_cobro` sólo expone a `CAJA` pedidos `ENTREGADO`/`PAGADO` y `CAJA` no tiene política sobre `mesa`. Cuando un pedido `ENTREGADO` se reabre (`→ ABIERTO`), la fila nueva no es visible para Caja y, según la semántica de Realtime (evaluación RLS del registro nuevo), Caja no recibiría señal: su lista queda desactualizada hasta la siguiente señal; si intenta cobrar recibe el `PT409` E1 vigente. | Comportamiento heredado de H5, fuera de alcance. E10 lo mitiga sólo para pedidos con solicitud pendiente (la solicitud `SIN_EFECTO` es visible para Caja y produce señal). Confirmar en E10-T06 y registrar; no se corrige en E10. |
+| HZ-02 | La política `pedido_select_caja_local_cobro` sólo expone a `CAJA` pedidos `ENTREGADO`/`PAGADO` y `CAJA` no tiene política sobre `mesa`. Cuando un pedido `ENTREGADO` se reabre (`→ ABIERTO`), la fila nueva no es visible para Caja y no recibe señal de esa reapertura. | Comportamiento heredado de H5, confirmado en DEV real (`implementation.md` §10) y fuera de alcance. E10 lo mitiga sólo para pedidos con solicitud pendiente: `SIN_EFECTO` es visible para Caja y produce señal. No se corrigió en E10. |
 | HZ-03 | `PLAN_MVP.md` §4.8 (MVP histórico) declara que Realtime usa `detalle_pedido`, `pedido` y `mesa`; PM-002 (`PM002_T10_EXECUTION.md`) y la prueba `supabase/tests/h4_t05_realtime_publication_rls.sql` esperan exactamente esas tres tablas. | No contradice una decisión vigente: §4 es histórica y E1-D11 ya previó publicar tablas con RLS sin importes. E10 publica `solicitud_cuenta` (sin datos financieros). La aserción de `h4_t05` queda superada y se homologa sin editar evidencia histórica; PM-002 deberá esperar cuatro tablas en su próxima revalidación (dependencia, sin modificar PM-002). |
 | HZ-04 | `pedido.modificado_en/por` tiene semántica “pendiente de decisión” (comentario DBSTD) y alimenta `ultima_actualizacion_en` de E1-T17. | Por eso E10 no usa esas columnas como señal (alternativa descartada en E10-D07). |
 | HZ-05 | Además de `rpc_registrar_cobro_pedido`, siguen ejecutables por `authenticated` `registrar_pago_pedido`, `rpc_registrar_pago_total_pedido` y `rpc_registrar_pago_pedido_v2`, todas capaces de dejar un pedido `PAGADO`. | El cierre de la solicitud se implementa sobre la transición de `pedido` y no dentro de una RPC concreta, para cubrir todas las vías sin modificarlas (E10-D05). |
 | HZ-06 | `PLAN_MVP.md` E8 incluye “Tiempo desde entrega hasta pago” como métrica única. | Ajuste documental mínimo en este Spec Mode (sección E8 del plan). |
 
-## 12. Condición de construcción y cierre
+## 12. Construcción y cierre
 
-- Spec aprobado el 30/09/2026 con DH-01 A y DH-02 B; pasa a preparación de construcción a partir de E10-T02.
-- Construcción con pruebas focalizadas por tarea y validación integral única en la fase final (mismo modelo de E7).
-- E10 sólo podrá cerrarse después de construcción, ejecución completa del plan de pruebas, pruebas humanas y creación/aprobación posterior de `acceptance.md`.
+- Spec aprobado el 30/09/2026 con DH-01 A y DH-02 B.
+- Construcción T02–T07 y TP01–TP21 completadas según `implementation.md`; TH01–TH07 aprobadas humanamente (7/7).
+- Cierre autorizado explícitamente por el responsable el 30/09/2026 y registrado en `acceptance.md`: **ACEPTADA / CERRADA**.
 
 ## 13. Trazabilidad
 
