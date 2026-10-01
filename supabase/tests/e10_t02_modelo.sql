@@ -82,7 +82,8 @@ begin
   end if;
   select array_agg(schemaname || '.' || tablename order by schemaname, tablename) into v_tables
   from pg_publication_tables where pubname = 'supabase_realtime';
-  if v_tables is distinct from array['public.detalle_pedido', 'public.mesa', 'public.pedido', 'public.solicitud_cuenta'] then
+  -- Contrato actualizado por E9 (E9-D12): la publicación incluye también jornada_operativa.
+  if v_tables is distinct from array['public.detalle_pedido', 'public.jornada_operativa', 'public.mesa', 'public.pedido', 'public.solicitud_cuenta'] then
     raise exception 'E10-TP01: publicación inesperada %', v_tables;
   end if;
   if obj_description('public.solicitud_cuenta'::regclass, 'pg_class') is null
@@ -113,6 +114,15 @@ begin
   select v_mozo, v_local, id, 'Mozo E10' from public.rol where codigo = 'MOZO'
   union all select v_caja, v_local, id, 'Caja E10' from public.rol where codigo = 'CAJA'
   union all select v_admin, v_local, id, 'Admin E10' from public.rol where codigo = 'ADMINISTRADOR';
+  -- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+  insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+  select l.id, (now() at time zone 'America/Lima')::date,
+    1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+    (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+  from public.local l
+  where l.id in (v_local)
+    and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+    and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
   insert into public.mesa (id, local_id, codigo, nombre)
   select v_m[g], v_local, 'E10-' || g, 'Mesa ' || g from generate_series(1, 4) g;
   perform pg_temp.e10_set_user(v_mozo);

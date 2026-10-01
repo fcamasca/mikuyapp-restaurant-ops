@@ -25,6 +25,15 @@ begin
     select caja_user,local_id,id,'Caja' from public.rol where codigo='CAJA' union all
     select admin_user,local_id,id,'Admin' from public.rol where codigo='ADMINISTRADOR' union all
     select waiter,local_id,id,'Mozo' from public.rol where codigo='MOZO';
+  -- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+  insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+  select l.id, (now() at time zone 'America/Lima')::date,
+    1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+    (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+  from public.local l
+  where l.id in (local_id)
+    and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+    and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
   insert into public.caja(id,local_id,codigo,nombre) values(box_id,local_id,'T06','Caja T06');
   insert into public.sesion_caja(id,caja_id,local_id,abierta_por,monto_inicial,idempotency_key)
     values(session_id,box_id,local_id,caja_user,0,'e1060000-0000-0000-0000-000000000601');

@@ -6,7 +6,10 @@ delete from public.pedido where id=-50491;
 delete from public.mesa where id='00000000-0000-0000-0000-00000000e491';
 delete from public.producto where id='00000000-0000-0000-0000-00000000e492';
 delete from public.categoria where id='00000000-0000-0000-0000-00000000e493';
-delete from public.perfil_usuario where id='00000000-0000-0000-0000-00000000e494';
-delete from auth.users where id='00000000-0000-0000-0000-00000000e494';
-delete from public.local where id='00000000-0000-0000-0000-00000000e495';
+-- E9 (homologación mínima): la jornada es inmutable y no se borra; se cierra con la transición permitida ABIERTA -> CERRADA.
+update public.jornada_operativa set estado = 'CERRADA', cerrada_por = abierta_por, cerrada_en = greatest(now(), abierta_en)
+where local_id in ('00000000-0000-0000-0000-00000000e495'::uuid) and estado = 'ABIERTA';
+delete from public.perfil_usuario where (id='00000000-0000-0000-0000-00000000e494') and id not in (select abierta_por from public.jornada_operativa union all select cerrada_por from public.jornada_operativa where cerrada_por is not null); -- E9 (homologación mínima): el perfil que abre/cierra una jornada no se borra
+delete from auth.users where (id='00000000-0000-0000-0000-00000000e494') and id not in (select id from public.perfil_usuario); -- E9 (homologación mínima): se conserva el usuario de un perfil conservado
+delete from public.local where (id='00000000-0000-0000-0000-00000000e495') and id not in (select local_id from public.jornada_operativa); -- E9 (homologación mínima): el local con jornadas (inmutables) se conserva
 commit;

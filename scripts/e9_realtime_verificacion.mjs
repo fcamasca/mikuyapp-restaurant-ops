@@ -1,18 +1,19 @@
-// E9 — TP22 con clientes Realtime programáticos contra un servidor Supabase real (lo que el entorno local
-// no puede cubrir: no hay servidor Realtime local). Verifica que ADMIN, MOZO, COCINA y CAJA reciben la
-// apertura y el cierre de la jornada sin refrescar, con un segundo ADMIN, remontaje con topic único,
-// reconexión y ausencia de polling. Usa los servicios reales del frontend (operationalDayService).
+// E9 — TP22/TP21 con clientes Realtime programáticos contra un servidor Supabase REAL: el stack Supabase local
+// del repositorio (Docker + `supabase start`, http://127.0.0.1:54321), mismo patrón aprobado en E7-T10.
+// Verifica que ADMIN, MOZO, COCINA y CAJA reciben la apertura y el cierre de la jornada sin refrescar (con un
+// segundo ADMIN), la apertura idempotente, el remontaje con topic único, la ausencia de polling y la
+// reconexión, usando los servicios reales del frontend (operationalDayService).
 //
-// Uso (raíz del repo, en un ambiente DEV preparado y autorizado según DC-12, con las migraciones E9 aplicadas):
-//   node --env-file=.env.local --experimental-strip-types scripts/e9_realtime_verificacion.mjs
-// Requiere en .env.local los usuarios de prueba H2_ADMIN/H2_MOZO/H2_COCINA/H2_CAJA (EMAIL y PASSWORD).
-// Precondición: el local de prueba debe estar CERRADO al iniciar; el script abre una jornada y la cierra,
-// dejando el local cerrado como lo encontró. Si el local está abierto, aborta sin cambiar nada.
-// Nunca se ejecuta contra PROD: exige ambiente lógico DEV y el ref DEV esperado. Escribe e9-realtime-verificacion.log.
+// Uso: lo invoca scripts/e9_t06_local.ps1 con variables efímeras tomadas de `supabase status`:
+//   E9_VALIDATION_SUPABASE_URL=http://127.0.0.1:54321  E9_VALIDATION_PUBLISHABLE_KEY=...  E9_VALIDATION_SERVICE_ROLE_KEY=...
+//   node --experimental-strip-types scripts/e9_realtime_verificacion.mjs
+// Guardia: sólo loopback. Nunca DEV, el proyecto compartido ni PROD (DC-12). La clave de servicio local se usa
+// únicamente para crear los usuarios de prueba (Auth admin); la fixture de tablas se crea con psql dentro del
+// contenedor de base local. El local de prueba es propio de cada ejecución y queda cerrado al terminar.
 import { appendFileSync, writeFileSync } from 'node:fs'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
-import { readLocalLinkedProjectRef, validateEnvironmentConfiguration, maskProjectRef } from './environmentGuard.mjs'
 import { createOperationalDayService, subscribeToOperationalDay } from '../src/services/operationalDayService.ts'
 
 const LOG = 'e9-realtime-verificacion.log'
@@ -24,42 +25,57 @@ const check = (id, ok, detail) => { results.push({ id, ok, detail }); log(`${ok 
 const unwrap = (r, label) => { if (!r.ok) throw new Error(`${label}: ${r.error.message}`); return r.data }
 const must = (r, label) => { if (r.error) throw new Error(`${label}: ${r.error.code ?? ''} ${r.error.message}`); return r.data }
 
-// ===== Guardia de ambiente: sólo DEV
-const env = validateEnvironmentConfiguration(process.env, await readLocalLinkedProjectRef())
-if (env.logicalEnvironment !== 'DEV' || !process.env.MIKUY_DEV_SUPABASE_PROJECT_REF || env.effectiveRef !== process.env.MIKUY_DEV_SUPABASE_PROJECT_REF.trim()) {
-  throw new Error('Sólo se ejecuta contra DEV (ambiente lógico DEV y ref DEV esperado).')
+const url = process.env.E9_VALIDATION_SUPABASE_URL?.trim()
+const publishableKey = process.env.E9_VALIDATION_PUBLISHABLE_KEY?.trim()
+const serviceRoleKey = process.env.E9_VALIDATION_SERVICE_ROLE_KEY?.trim()
+if (!url || !publishableKey || !serviceRoleKey) throw new Error('Faltan variables E9_VALIDATION_*.')
+if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(new URL(url).hostname)) {
+  throw new Error('Guardia E9: sólo se ejecuta contra el stack Supabase local (loopback).')
 }
-log(`Ambiente: state=${env.state} logical=${env.logicalEnvironment} ref=${maskProjectRef(env.effectiveRef)}`)
-const url = process.env.VITE_SUPABASE_URL.trim()
-const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY.trim()
+log(`Stack Supabase local: ${url}`)
+
+function localSql(sql) {
+  const container = process.env.E9_VALIDATION_DB_CONTAINER?.trim() || 'supabase_db_mikuyapp-restaurant-ops'
+  return execFileSync('docker', ['exec', '-i', '-e', 'PGPASSWORD=postgres', container, 'psql', '-h', '127.0.0.1', '-U', 'postgres',
+    '-d', 'postgres', '-X', '-At', '-v', 'ON_ERROR_STOP=1'], { input: sql, encoding: 'utf8' }).trim()
+}
+
+// ===== Fixture propia: local nuevo (sin jornadas, por tanto cerrado) con un usuario por rol
+const runId = randomUUID().slice(0, 8)
+const password = randomBytes(18).toString('base64url')
+const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+const users = {}
+for (const [key, code] of [['admin', 'ADMINISTRADOR'], ['mozo', 'MOZO'], ['cocina', 'COCINA'], ['caja', 'CAJA']]) {
+  const email = `e9-val-${runId}-${key}@example.invalid`
+  const created = await admin.auth.admin.createUser({ email, password, email_confirm: true })
+  if (created.error) throw new Error(`usuario ${key}: ${created.error.message}`)
+  users[key] = { id: created.data.user.id, email, code }
+}
+const perfiles = Object.entries(users).map(([key, u]) => `('${u.id}'::uuid, '${u.code}', '${key} ${runId}')`).join(', ')
+const fx = JSON.parse(localSql(`with l as (insert into public.local (codigo, nombre) values ('E9-VAL-${runId}', 'Validación E9 ${runId}') returning id),
+  p as (insert into public.perfil_usuario (id, local_id, rol_id, nombre)
+        select u.id, l.id, r.id, u.nombre from l, (values ${perfiles}) as u(id, codigo, nombre) join public.rol r on r.codigo = u.codigo returning id)
+select json_build_object('local', (select id from l), 'perfiles', (select count(*) from p));`).split(/\r?\n/).pop())
+if (fx.perfiles !== 4) throw new Error(`fixture local: perfiles=${fx.perfiles}`)
+const migrations = localSql("select count(*) || ' migraciones, última ' || max(version) from supabase_migrations.schema_migrations")
+const publication = localSql("select string_agg(tablename, ',' order by tablename) from pg_publication_tables where pubname = 'supabase_realtime'")
+log(`Base local: ${migrations}; publicación = ${publication}; local de prueba E9-VAL-${runId}`)
+check('Publicación incluye jornada_operativa', publication.split(',').includes('jornada_operativa'), publication)
 
 let restRequests = 0
 const countingFetch = (...args) => { if (String(args[0]).includes('/rest/v1/')) restRequests += 1; return fetch(...args) }
-async function device(email, password, label, codigo) {
-  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: countingFetch } })
-  const session = must(await client.auth.signInWithPassword({ email, password }), `login ${label}`)
-  const profile = must(await client.from('perfil_usuario').select('id,local_id,nombre').eq('id', session.user.id).single(), `perfil ${label}`)
-  const context = { profile: { id: session.user.id, local_id: profile.local_id, rol_id: 0, nombre: profile.nombre, activo: true },
-    role: { id: 0, codigo, activo: true }, local: { id: profile.local_id, nombre: 'DEV', activo: true } }
+async function device(user, label) {
+  const client = createClient(url, publishableKey, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: countingFetch } })
+  must(await client.auth.signInWithPassword({ email: user.email, password }), `login ${label}`)
+  const context = { profile: { id: user.id, local_id: fx.local, rol_id: 0, nombre: label, activo: true },
+    role: { id: 0, codigo: user.code, activo: true }, local: { id: fx.local, nombre: 'Validación E9', activo: true } }
   return { client, label, context, service: createOperationalDayService(client), state: 'desconocido', dayId: null, refetches: 0 }
 }
-
-const e = process.env
 const devices = [
-  await device(e.H2_ADMIN_EMAIL, e.H2_ADMIN_PASSWORD, 'admin-1', 'ADMINISTRADOR'),
-  await device(e.H2_ADMIN_EMAIL, e.H2_ADMIN_PASSWORD, 'admin-2', 'ADMINISTRADOR'),
-  await device(e.H2_MOZO_EMAIL, e.H2_MOZO_PASSWORD, 'mozo', 'MOZO'),
-  await device(e.H2_COCINA_EMAIL, e.H2_COCINA_PASSWORD, 'cocina', 'COCINA'),
-  await device(e.H2_CAJA_EMAIL, e.H2_CAJA_PASSWORD, 'caja', 'CAJA'),
+  await device(users.admin, 'admin-1'), await device(users.admin, 'admin-2'),
+  await device(users.mozo, 'mozo'), await device(users.cocina, 'cocina'), await device(users.caja, 'caja'),
 ]
-const [admin] = devices
-
-// ===== Precondiciones: migraciones E9 aplicadas y local CERRADO
-const probe = await admin.client.rpc('rpc_cerrar_jornada_operativa', { p_jornada_operativa_id: null })
-if (probe.error?.code !== '22023') throw new Error(`Migraciones E9 no aplicadas (respuesta ${probe.error?.code ?? 'sin error'}).`)
-const initial = unwrap(await admin.service.getCurrent(), 'estado inicial')
-if (initial) throw new Error(`El local está abierto (${initial.identificacion}). El script no cierra jornadas ajenas: ciérrela desde la UI o use otro ambiente.`)
-log('Precondiciones OK: migraciones E9 aplicadas; local cerrado.')
+const [adminDevice] = devices
 
 async function refresh(d) {
   d.refetches += 1
@@ -73,41 +89,46 @@ async function waitAll(predicate, timeoutMs = 10000) {
 }
 
 const handles = []
+let openedId = null
 try {
   for (const d of devices) {
-    handles.push(await subscribeToOperationalDay(d.client, () => refresh(d), () => log(`${d.label}: error de conexión`), { channelName: 'e9-dev-operational-day' }))
+    handles.push(await subscribeToOperationalDay(d.client, () => refresh(d), () => log(`${d.label}: error de conexión`), { channelName: 'e9-local-operational-day' }))
   }
   await waitAll((d) => d.state === 'CERRADA')
   check('Suscripción inicial: los cinco clientes ven el local cerrado', devices.every((d) => d.state === 'CERRADA'), devices.map((d) => `${d.label}=${d.state}`).join(' '))
 
-  // Apertura
-  const opened = unwrap(await admin.service.open(admin.context, randomUUID()), 'abrir')
+  const opened = unwrap(await adminDevice.service.open(adminDevice.context, randomUUID()), 'abrir')
+  openedId = opened.id
   const tOpen = await waitAll((d) => d.state === 'ABIERTA' && d.dayId === opened.id)
-  check('TP22 apertura: MOZO, COCINA, CAJA y el segundo ADMIN la reciben sin refrescar', tOpen >= 0, `${tOpen} ms (${opened.identificacion})`)
+  check('TP22 apertura recibida sin refrescar por MOZO, COCINA, CAJA y el segundo ADMIN', tOpen >= 0, `${tOpen} ms (${opened.identificacion})`)
   const again = unwrap(await devices[1].service.open(devices[1].context, randomUUID()), 'abrir de nuevo')
   check('TP22 apertura idempotente desde el segundo ADMIN', again.yaExistia && again.id === opened.id, `ya_existia=${again.yaExistia}`)
 
-  // Remontaje con el mismo nombre de canal (topic único) y ausencia de polling
   const mozo = devices[2]
   await handles[2].stop()
-  handles[2] = await subscribeToOperationalDay(mozo.client, () => refresh(mozo), () => log('mozo remontado: error'), { channelName: 'e9-dev-operational-day' })
+  handles[2] = await subscribeToOperationalDay(mozo.client, () => refresh(mozo), () => log('mozo remontado: error'), { channelName: 'e9-local-operational-day' })
+  await sleep(1500)
   const beforeIdle = restRequests
   await sleep(10000)
-  check('TP21/TP22 sin polling: 10 s sin señales no generan peticiones REST', restRequests === beforeIdle, `${restRequests - beforeIdle} peticiones`)
+  check('TP21 sin polling: 10 s sin señales no generan peticiones REST', restRequests === beforeIdle, `${restRequests - beforeIdle} peticiones`)
   const cocina = devices[3]
   cocina.client.realtime.disconnect()
   await sleep(1500)
   const beforeReconnect = cocina.refetches
   cocina.client.realtime.connect()
-  const tReconnect = await (async () => { const start = Date.now(); while (Date.now() - start < 15000) { if (cocina.refetches > beforeReconnect) return Date.now() - start; await sleep(50) } return -1 })()
-  check('TP21 reconexión resincroniza el estado autoritativo', tReconnect >= 0, `${tReconnect} ms`)
+  const start = Date.now(); let tReconnect = -1
+  while (Date.now() - start < 15000) { if (cocina.refetches > beforeReconnect) { tReconnect = Date.now() - start; break } await sleep(50) }
+  check('TP21 la reconexión resincroniza el estado autoritativo', tReconnect >= 0, `${tReconnect} ms`)
 
-  // Cierre (sin pendientes: el script no crea pedidos ni sesiones)
-  const closed = unwrap(await admin.service.close(admin.context, opened.id), 'cerrar')
+  const closed = unwrap(await adminDevice.service.close(adminDevice.context, opened.id), 'cerrar')
+  openedId = null
   const tClose = await waitAll((d) => d.state === 'CERRADA')
-  check('TP22 cierre: los cinco clientes (incluido el mozo remontado) pasan a local cerrado sin refrescar', tClose >= 0 && !closed.yaEstabaCerrada, `${tClose} ms`)
+  check('TP22 cierre recibido sin refrescar por los cinco clientes (incluido el mozo remontado, topic único)', tClose >= 0 && !closed.yaEstabaCerrada, `${tClose} ms`)
+} catch (error) {
+  check('Ejecución sin excepciones', false, error instanceof Error ? error.message : String(error))
 } finally {
   for (const h of handles) await h.stop()
+  if (openedId !== null) await adminDevice.service.close(adminDevice.context, openedId)
   const failed = results.filter((r) => !r.ok)
   log(`RESUMEN ${results.length - failed.length}/${results.length} PASS${failed.length ? ' — FALLAS: ' + failed.map((r) => r.id).join('; ') : ''}`)
   process.exit(failed.length ? 1 : 0)

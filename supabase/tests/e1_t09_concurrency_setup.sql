@@ -10,6 +10,15 @@ select 'e1095000-0000-0000-0000-000000000101'::uuid,'e1095000-0000-0000-0000-000
 select 'e1095000-0000-0000-0000-000000000102'::uuid,'e1095000-0000-0000-0000-000000000201'::uuid,id,'Caja B' from public.rol where codigo='CAJA' union all
 select 'e1095000-0000-0000-0000-000000000103'::uuid,'e1095000-0000-0000-0000-000000000201'::uuid,id,'Admin' from public.rol where codigo='ADMINISTRADOR' union all
 select 'e1095000-0000-0000-0000-000000000104'::uuid,'e1095000-0000-0000-0000-000000000201'::uuid,id,'Mozo' from public.rol where codigo='MOZO';
+-- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+select l.id, (now() at time zone 'America/Lima')::date,
+  1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+  (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+from public.local l
+where l.id in ('e1095000-0000-0000-0000-000000000201'::uuid)
+  and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+  and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
 insert into public.caja(id,local_id,codigo,nombre)values
 ('e1095000-0000-0000-0000-000000000301','e1095000-0000-0000-0000-000000000201','R1','R1'),
 ('e1095000-0000-0000-0000-000000000302','e1095000-0000-0000-0000-000000000201','R2','R2'),

@@ -19,6 +19,15 @@ from (values
   (15,1,'COCINA','Cocina',true), (16,2,'CAJA','Caja otro local',true),
   (17,1,'CAJA','Perfil inactivo',false), (18,3,'CAJA','Local inactivo',true)
 ) f(n,local_n,rol,nombre,activo) join public.rol r on r.codigo = f.rol;
+-- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+select l.id, (now() at time zone 'America/Lima')::date,
+  1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+  (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+from public.local l
+where l.id in ('e1040000-0000-0000-0000-000000000001'::uuid, 'e1040000-0000-0000-0000-000000000002'::uuid, 'e1040000-0000-0000-0000-000000000003'::uuid)
+  and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+  and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
 insert into public.caja(id,local_id,codigo,nombre,activo)
 select ('e1040000-0000-0000-0000-' || lpad(f.n::text,12,'0'))::uuid,
   ('e1040000-0000-0000-0000-' || lpad(f.local_n::text,12,'0'))::uuid,

@@ -11,6 +11,15 @@ begin
   insert into auth.users(id,aud,role,email,encrypted_password) values(admin,'authenticated','authenticated','t12-a@example.invalid','x'),(cashier_a,'authenticated','authenticated','t12-ca@example.invalid','x'),(cashier_b,'authenticated','authenticated','t12-cb@example.invalid','x'),(waiter,'authenticated','authenticated','t12-w@example.invalid','x'),(kitchen,'authenticated','authenticated','t12-k@example.invalid','x'),(other,'authenticated','authenticated','t12-o@example.invalid','x');
   insert into public.local(id,codigo,nombre) values(la,'T12-A','Local A'),(lb,'T12-B','Local B');
   insert into public.perfil_usuario(id,local_id,rol_id,nombre) select admin,la,id,'Admin' from public.rol where codigo='ADMINISTRADOR' union all select cashier_a,la,id,'Caja A' from public.rol where codigo='CAJA' union all select cashier_b,la,id,'Caja B' from public.rol where codigo='CAJA' union all select waiter,la,id,'Mozo' from public.rol where codigo='MOZO' union all select kitchen,la,id,'Cocina' from public.rol where codigo='COCINA' union all select other,lb,id,'Caja otro' from public.rol where codigo='CAJA';
+  -- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+  insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+  select l.id, (now() at time zone 'America/Lima')::date,
+    1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+    (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+  from public.local l
+  where l.id in (la, lb)
+    and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+    and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
   insert into public.caja(id,local_id,codigo,nombre) values(box,la,'T12','Caja reporte'),(boxb,lb,'T12B','Caja B');
   insert into public.sesion_caja(id,caja_id,local_id,abierta_por,abierta_en,monto_inicial,idempotency_key,estado,cerrada_por,cerrada_en,efectivo_esperado,efectivo_contado,diferencia,motivo_diferencia) values(s,box,la,cashier_a,opened,100,'e1120000-0000-0000-0000-000000000701','CERRADA',cashier_b,closed,160,158,-2,'Faltante'),(sb,boxb,lb,other,opened,10,'e1120000-0000-0000-0000-000000000702','ABIERTA',null,null,null,null,null,null);
   insert into public.movimiento_caja(sesion_caja_id,caja_id,local_id,tipo,importe,motivo,actor_id,idempotency_key,creado_en) values(s,box,la,'ENTRADA',20,'Ingreso',cashier_b,'e1120000-0000-0000-0000-000000000703',opened+interval '1 hour'),(s,box,la,'SALIDA',5,'Egreso',cashier_a,'e1120000-0000-0000-0000-000000000704',opened+interval '2 hours');

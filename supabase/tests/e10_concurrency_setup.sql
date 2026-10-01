@@ -12,6 +12,15 @@ union all select '00000000-0000-0000-0000-00000e10cc02', '00000000-0000-0000-000
 union all select '00000000-0000-0000-0000-00000e10cc03', '00000000-0000-0000-0000-00000e10cc10', id, 'Caja Uno' from public.rol where codigo = 'CAJA'
 union all select '00000000-0000-0000-0000-00000e10cc04', '00000000-0000-0000-0000-00000e10cc10', id, 'Caja Dos' from public.rol where codigo = 'CAJA'
 union all select '00000000-0000-0000-0000-00000e10cc05', '00000000-0000-0000-0000-00000e10cc10', id, 'Admin' from public.rol where codigo = 'ADMINISTRADOR';
+-- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+select l.id, (now() at time zone 'America/Lima')::date,
+  1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+  (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+from public.local l
+where l.id in ('00000000-0000-0000-0000-00000e10cc10'::uuid)
+  and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+  and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
 insert into public.mesa (id, local_id, codigo, nombre)
 select ('00000000-0000-0000-0000-00000e10cc' || (20 + g))::uuid, '00000000-0000-0000-0000-00000e10cc10', 'CC-' || g, 'Mesa ' || g
 from generate_series(1, 9) g;

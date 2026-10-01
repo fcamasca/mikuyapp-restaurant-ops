@@ -20,6 +20,15 @@ begin
   insert into auth.users(id,aud,role,email,encrypted_password) values(a,'authenticated','authenticated','t11-a@example.invalid','x'),(b,'authenticated','authenticated','t11-b@example.invalid','x'),(admin,'authenticated','authenticated','t11-admin@example.invalid','x'),(other,'authenticated','authenticated','t11-other@example.invalid','x'),(waiter,'authenticated','authenticated','t11-w@example.invalid','x');
   insert into public.local(id,codigo,nombre) values(la,'T11-A','Local A'),(lb,'T11-B','Local B');
   insert into public.perfil_usuario(id,local_id,rol_id,nombre) select a,la,id,'Caja A' from public.rol where codigo='CAJA' union all select b,la,id,'Caja B' from public.rol where codigo='CAJA' union all select admin,la,id,'Admin' from public.rol where codigo='ADMINISTRADOR' union all select other,lb,id,'Caja otro' from public.rol where codigo='CAJA' union all select waiter,la,id,'Mozo' from public.rol where codigo='MOZO';
+  -- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+  insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+  select l.id, (now() at time zone 'America/Lima')::date,
+    1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+    (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+  from public.local l
+  where l.id in (la, lb)
+    and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+    and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
   insert into public.caja(id,local_id,codigo,nombre) values(box,la,'T11-A','Caja A'),(boxb,lb,'T11-B','Caja B');
   perform pg_temp.t11_user(a);perform public.rpc_abrir_sesion_caja(box,100,'e1110000-0000-0000-0000-000000000601');select id into s from public.sesion_caja where caja_id=box and estado='ABIERTA';
   perform pg_temp.t11_user(other);perform public.rpc_abrir_sesion_caja(boxb,10,'e1110000-0000-0000-0000-000000000602');select id into sb from public.sesion_caja where caja_id=boxb and estado='ABIERTA';

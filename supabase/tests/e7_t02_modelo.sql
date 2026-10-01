@@ -95,6 +95,15 @@ begin
   insert into public.local (id, codigo, nombre) values (v_local, 'E7-T02', 'Local E7 T02');
   insert into public.perfil_usuario (id, local_id, rol_id, nombre)
   select v_mozo, v_local, id, 'Mozo E7' from public.rol where codigo = 'MOZO';
+  -- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+  insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+  select l.id, (now() at time zone 'America/Lima')::date,
+    1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+    (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+  from public.local l
+  where l.id in (v_local)
+    and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+    and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
   insert into public.mesa (id, local_id, codigo, nombre, estado) values (v_mesa, v_local, 'E7', 'Mesa E7', 'OCUPADA');
   insert into public.categoria (id, local_id, codigo, nombre) values (v_cat, v_local, 'E7', 'Cat E7');
   insert into public.producto (id, local_id, categoria_id, codigo, nombre, precio)

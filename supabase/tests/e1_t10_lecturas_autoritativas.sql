@@ -5,6 +5,15 @@ insert into auth.users(id,aud,role,email,encrypted_password)values
 ('e1100000-0000-0000-0000-000000000101','authenticated','authenticated','r-caja@x','x'),('e1100000-0000-0000-0000-000000000102','authenticated','authenticated','r-admin@x','x'),('e1100000-0000-0000-0000-000000000103','authenticated','authenticated','r-mozo@x','x'),('e1100000-0000-0000-0000-000000000104','authenticated','authenticated','r-other@x','x');
 insert into public.local(id,codigo,nombre)values('e1100000-0000-0000-0000-000000000201','READ','Read'),('e1100000-0000-0000-0000-000000000202','READ-O','Other');
 insert into public.perfil_usuario(id,local_id,rol_id,nombre)select 'e1100000-0000-0000-0000-000000000101'::uuid,'e1100000-0000-0000-0000-000000000201'::uuid,id,'Caja Uno' from rol where codigo='CAJA' union all select 'e1100000-0000-0000-0000-000000000102','e1100000-0000-0000-0000-000000000201',id,'Admin Uno' from rol where codigo='ADMINISTRADOR' union all select 'e1100000-0000-0000-0000-000000000103','e1100000-0000-0000-0000-000000000201',id,'Mozo Uno' from rol where codigo='MOZO' union all select 'e1100000-0000-0000-0000-000000000104','e1100000-0000-0000-0000-000000000202',id,'Caja Otro' from rol where codigo='CAJA';
+-- E9 (homologación mínima): precondición global de E9 — jornada operativa ABIERTA válida para los locales del fixture.
+insert into public.jornada_operativa (local_id, fecha_operativa, numero, abierta_por, abierta_en, idempotency_key)
+select l.id, (now() at time zone 'America/Lima')::date,
+  1 + coalesce((select max(j.numero) from public.jornada_operativa j where j.local_id = l.id and j.fecha_operativa = (now() at time zone 'America/Lima')::date), 0),
+  (select p.id from public.perfil_usuario p where p.local_id = l.id order by p.id limit 1), now(), gen_random_uuid()
+from public.local l
+where l.id in ('e1100000-0000-0000-0000-000000000201'::uuid, 'e1100000-0000-0000-0000-000000000202'::uuid)
+  and exists (select 1 from public.perfil_usuario p where p.local_id = l.id)
+  and not exists (select 1 from public.jornada_operativa j where j.local_id = l.id and j.estado = 'ABIERTA');
 insert into public.caja(id,local_id,codigo,nombre)values('e1100000-0000-0000-0000-000000000301','e1100000-0000-0000-0000-000000000201','C','Caja'),('e1100000-0000-0000-0000-000000000302','e1100000-0000-0000-0000-000000000202','CO','Otra');
 insert into public.sesion_caja(id,caja_id,local_id,abierta_por,monto_inicial,idempotency_key)values('e1100000-0000-0000-0000-000000000401','e1100000-0000-0000-0000-000000000301','e1100000-0000-0000-0000-000000000201','e1100000-0000-0000-0000-000000000101',0,'e1100000-0000-0000-0000-000000000601'),('e1100000-0000-0000-0000-000000000402','e1100000-0000-0000-0000-000000000302','e1100000-0000-0000-0000-000000000202','e1100000-0000-0000-0000-000000000104',0,'e1100000-0000-0000-0000-000000000602');
 insert into public.categoria(id,local_id,codigo,nombre)values('e1100000-0000-0000-0000-000000000501','e1100000-0000-0000-0000-000000000201','CAT','Cat'),('e1100000-0000-0000-0000-000000000503','e1100000-0000-0000-0000-000000000202','CATO','Cat O');

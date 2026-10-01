@@ -7,7 +7,13 @@
 | Tarea | Estado | Evidencia |
 |---|---|---|
 | E9-T01 | Completada — spec aprobado; DC-01–DC-12 cerradas | `requirements.md`, `design.md`, `tasks.md`, `test-plan.md` |
-| E9-T02–E9-T08 | No iniciadas | — |
+| E9-T02 | Completada | `implementation.md` §4 |
+| E9-T03 | Completada | `implementation.md` §5 |
+| E9-T04 | Completada | `implementation.md` §6 |
+| E9-T05 | Completada | `implementation.md` §7 |
+| E9-T06 | En curso — falta TP22 con servidor Realtime real (stack Supabase local, Windows) | `implementation.md` §8 |
+| E9-T07 | En curso — regresión con 0 fallos nuevos; faltan TP22 real, `npm run build` y la decisión del responsable sobre 21 fallos preexistentes y DV-01 | `implementation.md` §9 |
+| E9-T08 | No iniciada | — |
 
 ## 2. Tareas
 
