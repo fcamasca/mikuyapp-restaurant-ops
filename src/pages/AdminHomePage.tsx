@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createAdminCashService, type AdminDiscount } from "../services/cashierService";
 import { createCashNotificationService, type CashNotification } from "../services/cashNotificationService";
+import OperationalDayAdminPanel from "../components/OperationalDayAdminPanel";
 import type { ValidatedProfileContext } from "../services/profileContext";
 import { createSalesService, type CurrentOrderFlow, type DailyCashSummary, type OrderFlowCode, type SessionCashReport } from "../services/salesService";
 import { getSupabaseClient } from "../services/supabaseClient";
@@ -12,7 +13,7 @@ const time = new Intl.DateTimeFormat("es-PE", { hour: "2-digit", minute: "2-digi
 const flowSubtitle: Readonly<Record<OrderFlowCode, string>> = { POR_RECIBIR: "Pendiente de Cocina", EN_PREPARACION: "Trabajo en Cocina", LISTOS_PARA_ENTREGAR: "Pendiente de Mozo" };
 const formatWait = (seconds: number | null) => seconds == null ? "—" : `${Math.max(1, Math.round(seconds / 60))} min`;
 
-export default function AdminHomePage({ context, onCash, onPending }: { readonly context: ValidatedProfileContext; readonly onCash: () => void; readonly onPending: () => void }) {
+export default function AdminHomePage({ context, onCash, onOrders, onPending }: { readonly context: ValidatedProfileContext; readonly onCash: () => void; readonly onOrders: () => void; readonly onPending: () => void }) {
   const client = useMemo(() => getSupabaseClient(), []);
   const sales = useMemo(() => client.ok ? createSalesService(client.client) : null, [client]);
   const cash = useMemo(() => client.ok ? createAdminCashService(client.client) : null, [client]);
@@ -57,6 +58,7 @@ export default function AdminHomePage({ context, onCash, onPending }: { readonly
 
   return <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-7">
     <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">Inicio</p><h1 className="mt-1 text-2xl font-bold sm:text-3xl">Resumen del local</h1><p className="mt-1 text-sm text-stone-600">{context.local.nombre} · {date.format(new Date())}</p></div><button className="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold" disabled={loading} onClick={() => void load()} type="button">Actualizar</button></div>
+    <OperationalDayAdminPanel context={context} onCash={onCash} onOrders={onOrders} />
     {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800" role="alert">{error} <button className="font-bold underline" onClick={() => void load()} type="button">Reintentar</button></div>}
     {loading ? <p aria-busy="true" className="mt-6 rounded-2xl bg-white p-6">Cargando Inicio…</p> : daily && <>
       <section aria-label="Indicadores de hoy" className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

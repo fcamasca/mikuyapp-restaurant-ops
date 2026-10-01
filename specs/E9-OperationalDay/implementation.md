@@ -123,3 +123,25 @@ Las carreras usan una base efímera nueva por carrera (plantilla con E9) y la el
 | `tsc --noEmit` | OK |
 
 **Defectos:** ninguno abierto.
+
+## 7. E9-T05 — Frontend ADMIN
+
+**Archivos:**
+
+- `src/components/OperationalDayAdminPanel.tsx` (nuevo): bloque “Jornada operativa”, primero en Inicio. Local cerrado → **Abrir jornada** con confirmación en línea; abierto → `Jornada YYYY-MM-DD (N) · abierta por X a las hh:mm` (y “desde el dd/mm” si cruzó la medianoche, comparando con `servidor_ahora`) y **Cerrar jornada** con confirmación. Guard `useRef` + botones deshabilitados durante la operación; clave de apertura conservada entre reintentos hasta el éxito; `ya_existia` / `ya_estaba_cerrada` informados como aviso, no como error. Ante `PT409` del cierre muestra el mensaje con conteos del servidor, carga `rpc_obtener_pendientes_cierre_jornada` y lista pedidos (mesa, pedido, estado) y cajas (caja, quién, desde) con enlaces **Ver pedidos** / **Ver caja** y la secuencia sugerida. Se actualiza con la misma señal Realtime (aperturas/cierres de otro administrador). Sin métricas ni totales.
+- `src/pages/AdminOperationalDaysPage.tsx` (nuevo): historial en tabla responsive (identificación, estado, apertura, cierre), páginas de 20 con **Cargar más**; sin totales.
+- `src/services/appRoutes.ts`: `/admin/jornadas` (sólo ADMIN por la regla vigente de `/admin/*`).
+- `src/components/AdminShell.tsx`: `OPERACIÓN → Jornadas`.
+- `src/App.tsx`: ruta `/admin/jornadas`; `AdminHomePage` recibe `onOrders`.
+- `src/pages/AdminHomePage.tsx`: inserta el bloque antes de los bloques existentes, que no cambian ni de contenido ni de orden.
+
+**Pruebas focalizadas:**
+
+| Prueba | Resultado |
+|---|---|
+| `tests/e9AdminOperationalDay.test.mjs` (nuevo, 9 pruebas): abrir envía sólo la clave y `ya_existia` no es error; cerrar envía sólo la jornada, `ya_estaba_cerrada` no es error y el `PT409` conserva los conteos; pendientes e historial sin importes; MOZO/COCINA/CAJA no llaman a las RPC ADMIN; `/admin/jornadas` sólo ADMIN y en `OPERACIÓN`; bloque primero en Inicio sin alterar el orden E1; confirmaciones, guard, clave idempotente, avisos y señal; pendientes con enlaces y secuencia; sin métricas ni totales; paginación; objetivos de 44 px y filas sin desplazamiento horizontal | PASS |
+| `tests/adminHome.test.mjs`, `tests/appRoutes.test.mjs` | PASS |
+| Total focal | 28/28 PASS |
+| `tsc --noEmit` | OK |
+
+**Defectos:** ninguno abierto.

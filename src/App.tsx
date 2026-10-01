@@ -12,6 +12,7 @@ import SalesPage from './pages/SalesPage'
 import AdminHomePage from './pages/AdminHomePage'
 import AdminPendingPage from './pages/AdminPendingPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
+import AdminOperationalDaysPage from './pages/AdminOperationalDaysPage'
 import AdminShell from './components/AdminShell'
 import OperationalDayGate from './components/OperationalDayGate'
 import { getRoleDestination, getWaiterOrderId, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
@@ -128,8 +129,9 @@ function ApplicationRouter() {
       return <LoadingScreen context />
     }
     let content;
-    if (resolution.pathname === '/admin/inicio') content = <AdminHomePage context={profileContext.context} onCash={() => navigate('/admin/caja')} onPending={() => navigate('/admin/pendientes')} />
+    if (resolution.pathname === '/admin/inicio') content = <AdminHomePage context={profileContext.context} onCash={() => navigate('/admin/caja')} onOrders={() => navigate('/admin/pedidos')} onPending={() => navigate('/admin/pendientes')} />
     else if (resolution.pathname === '/admin/pedidos') content = <AdminOrdersPage context={profileContext.context} />
+    else if (resolution.pathname === '/admin/jornadas') content = <AdminOperationalDaysPage context={profileContext.context} />
     else if (resolution.pathname === '/admin/pendientes') content = <AdminPendingPage context={profileContext.context} />
     else if (resolution.pathname === '/admin/caja') content = <SalesPage context={profileContext.context} embedded mode="cash" isSigningOut={isSigningOut} onBack={() => navigate('/admin/inicio')} onSignOut={() => { void signOut() }} />
     else if (resolution.pathname === '/admin/ventas') content = <SalesPage context={profileContext.context} embedded mode="sales" isSigningOut={isSigningOut} onBack={() => navigate('/admin/inicio')} onSignOut={() => { void signOut() }} />
