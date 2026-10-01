@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AuthProvider, useAuthentication } from './components/AuthProvider'
 import AuthenticatedUserMenu from './components/AuthenticatedUserMenu'
 import CategoryAdministrationPage from './pages/CategoryAdministrationPage'
@@ -13,6 +13,7 @@ import AdminHomePage from './pages/AdminHomePage'
 import AdminPendingPage from './pages/AdminPendingPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
 import AdminShell from './components/AdminShell'
+import OperationalDayGate from './components/OperationalDayGate'
 import { getRoleDestination, getWaiterOrderId, resolveApplicationRoute, type ApplicationRoute } from './services/appRoutes'
 
 function LoadingScreen({ context = false }: { readonly context?: boolean }) {
@@ -112,6 +113,12 @@ function ApplicationRouter() {
     return <LoadingScreen context />
   }
 
+  // E9-D13 / DC-11: toda pantalla de MOZO, COCINA y CAJA (incluidas /ventas y /tecnica) queda detrás del
+  // estado del local. ADMINISTRADOR, /login y /403 no pasan por el gate.
+  const gated = (node: ReactNode): ReactNode => (role === 'ADMINISTRADOR' || !profileContext.context
+    ? node
+    : <OperationalDayGate context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }}>{node}</OperationalDayGate>)
+
   if (resolution.pathname === '/admin/catalogo') {
     if (!profileContext.context) return <LoadingScreen context />
     return <CategoryAdministrationPage context={profileContext.context} isSigningOut={isSigningOut} onNavigateToSales={() => navigate('/admin/ventas')} onNavigateToTechnical={() => navigate('/tecnica')} onSignOut={() => { void signOut() }} />
@@ -132,7 +139,7 @@ function ApplicationRouter() {
   }
   if (resolution.pathname === '/ventas') {
     if (!profileContext.context) return <LoadingScreen context />
-    return <SalesPage context={profileContext.context} isSigningOut={isSigningOut} onBack={() => navigate(getRoleDestination(role))} onSignOut={() => { void signOut() }} />
+    return gated(<SalesPage context={profileContext.context} isSigningOut={isSigningOut} onBack={() => navigate(getRoleDestination(role))} onSignOut={() => { void signOut() }} />)
   }
 
   if (resolution.pathname === '/mozo/mesas') {
@@ -140,42 +147,42 @@ function ApplicationRouter() {
       return <LoadingScreen context />
     }
 
-    return (
+    return gated(
       <WaiterTablesPage
         context={profileContext.context}
         isSigningOut={isSigningOut}
         onOpenOrder={(orderId) => navigate(`/mozo/pedidos/${orderId}`)}
         onNavigateToTechnical={() => navigate('/tecnica')}
         onSignOut={() => { void signOut() }}
-      />
+      />,
     )
   }
 
   if (resolution.pathname === '/cocina') {
     if (!profileContext.context) return <LoadingScreen context />
-    return (
+    return gated(
       <KitchenBoardPage
         context={profileContext.context}
         isSigningOut={isSigningOut}
         onSignOut={() => { void signOut() }}
-      />
+      />,
     )
   }
 
   if (resolution.pathname === '/caja') {
     if (!profileContext.context) return <LoadingScreen context />
-    return <CashierPage context={profileContext.context} isSigningOut={isSigningOut} onNavigateToSales={() => navigate('/ventas')} onSignOut={() => { void signOut() }} />
+    return gated(<CashierPage context={profileContext.context} isSigningOut={isSigningOut} onNavigateToSales={() => navigate('/ventas')} onSignOut={() => { void signOut() }} />)
   }
 
   const waiterOrderId = getWaiterOrderId(resolution.pathname)
   if (waiterOrderId !== null) {
     if (!profileContext.context) return <LoadingScreen context />
-    return <WaiterOrderPage context={profileContext.context} isSigningOut={isSigningOut} orderId={waiterOrderId} onBack={() => navigate('/mozo/mesas')} onSignOut={() => { void signOut() }} />
+    return gated(<WaiterOrderPage context={profileContext.context} isSigningOut={isSigningOut} orderId={waiterOrderId} onBack={() => navigate('/mozo/mesas')} onSignOut={() => { void signOut() }} />)
   }
 
   if (resolution.pathname === '/tecnica') {
     if (!profileContext.context) return <LoadingScreen context />
-    return (
+    return gated(
       <>
         <nav className="flex items-center justify-end gap-3 bg-stone-100 px-4 pt-4 sm:px-8">
           {role !== 'COCINA' && role !== 'CAJA' && (
@@ -190,7 +197,7 @@ function ApplicationRouter() {
           <AuthenticatedUserMenu context={profileContext.context} isSigningOut={isSigningOut} onSignOut={() => { void signOut() }} />
         </nav>
         <VerificationPage role={role} />
-      </>
+      </>,
     )
   }
 

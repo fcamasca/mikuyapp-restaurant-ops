@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ValidatedProfileContext } from './profileContext'
 import type { OrderStatusCode, TableStatusCode } from '../types/operations'
+import { LOCAL_CLOSED_MESSAGE, isLocalClosedError } from './operationalDayService.ts'
 
 const currentOrderStatuses: readonly OrderStatusCode[] = [
   'ABIERTO', 'ENVIADO', 'RECIBIDO_COCINA', 'EN_PREPARACION', 'LISTO', 'ENTREGADO',
@@ -232,6 +233,8 @@ export function createWaiterOrderService(client: WaiterOrderClient) {
       try {
         const result = await client.rpc('crear_o_recuperar_pedido_mesa', { p_mesa_id: tableId })
         const row = (result.data as OpenOrderRow[] | null)?.[0]
+        // E9-D13 (HZ-06): PostgreSQL rechazó por local cerrado; la vista resincroniza el estado del local.
+        if (isLocalClosedError(result.error)) return connectionError(LOCAL_CLOSED_MESSAGE)
         if (result.error || !row) return connectionError('No pudimos abrir el pedido de la mesa. Intenta nuevamente.')
         return { ok: true, data: { pedidoId: row.pedido_id, fueCreado: row.fue_creado } }
       } catch {

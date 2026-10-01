@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ValidatedProfileContext } from "./profileContext";
 import type { PaymentMethodCode } from "../types/operations";
+import { LOCAL_CLOSED_MESSAGE, isLocalClosedError } from "./operationalDayService.ts";
 export interface Cashbox {
   id: string;
   codigo: string;
@@ -315,6 +316,8 @@ export function createCashierService(client: Client) {
   ): Promise<CashierResult<T>> => {
     try {
       const r = await client.rpc(name, args);
+      // E9-D13 (HZ-06): apertura de caja rechazada por local cerrado; la vista resincroniza el estado del local.
+      if (isLocalClosedError(r.error)) return fail(LOCAL_CLOSED_MESSAGE, r.error?.code);
       return r.error
         ? fail(
             "La operación cambió o no pudo completarse. Recarga los datos.",

@@ -101,3 +101,25 @@ Coincide con lo registrado por E10 (`specs/E10-AccountRequest/implementation.md`
 Las carreras usan una base efímera nueva por carrera (plantilla con E9) y la eliminan al terminar, sin limpiezas. En todas: sin `40001`, sin `40P01`, sin conexiones residuales. `e9_t02_modelo.sql` sigue en PASS con T03 aplicada.
 
 **Defectos:** ninguno abierto.
+
+## 6. E9-T04 — Frontend operativo
+
+**Archivos:**
+
+- `src/services/operationalDayService.ts` (nuevo): `LOCAL_CLOSED_MESSAGE`, `isLocalClosedError` (sólo `PT409` con el mensaje exacto de PostgreSQL), `createOperationalDayService` (`getCurrent`, `open`, `close`, `getClosingBlockers`, `getHistory`; todo por RPC, sin local, actor, fecha ni número del cliente) y `subscribeToOperationalDay`: canal propio sobre `jornada_operativa` (`INSERT`/`UPDATE`), topic único con `subscriptionTopic` (pieza existente reutilizada; `operationsRealtimeService` no se modifica), debounce/coalescencia, relectura en `SUBSCRIBED` y ante `CHANNEL_ERROR`/`TIMED_OUT`/`CLOSED`; sin polling.
+- `src/components/OperationalDayGate.tsx` (nuevo): `OperationalDayGate`, `useOperationalDay` (`{ jornada, resync }`), `LocalClosedScreen`. Estados `loading` / `open` / `closed` / `error`; sólo `open` renderiza la pantalla solicitada (fail-closed, E9-R12). Local cerrado: texto exacto “Local cerrado — el sistema no se encuentra aperturado”, local, menú de usuario, **Actualizar** y **Cerrar sesión**. Error: **Reintentar** y **Cerrar sesión**.
+- `src/App.tsx`: función `gated` que envuelve todas las pantallas de MOZO, COCINA y CAJA —`/mozo/mesas`, `/mozo/pedidos/:id`, `/cocina`, `/caja`, `/ventas` y `/tecnica` (DC-11)—; ADMIN, `/login` y `/403` no pasan por el gate.
+- `src/services/waiterOrderService.ts` (`createOrRecoverOrder`) y `src/pages/WaiterTablesPage.tsx`: el `PT409` de local cerrado devuelve el mensaje del servidor y la vista llama a `resync()` (HZ-06).
+- `src/services/cashierService.ts` (helper `rpc`) y `src/pages/CashierPage.tsx`: la apertura de caja rechazada por local cerrado conserva el mensaje y resincroniza el gate; Caja muestra la identificación de la jornada sobre el estado de caja (E9-R31).
+- Mozo y cocina no cambian con el local abierto; `KitchenBoardPage` y `kitchenRealtimeService` no se tocan.
+
+**Pruebas focalizadas** (`node --experimental-strip-types --test`):
+
+| Prueba | Resultado |
+|---|---|
+| `tests/e9OperationalDay.test.mjs` (nuevo, 12 pruebas): lectura del estado por RPC sin datos del cliente; cero filas = cerrado; error ≠ abierto/cerrado; reconocimiento exacto del `PT409` de local cerrado; suscripción sólo a `jornada_operativa` `INSERT`/`UPDATE` con topic único; coalescencia de señales duplicadas, relectura en `SUBSCRIBED` y ante error; `operationsRealtimeService` intacto y sin polling; pantalla de local cerrado (texto, local, Cerrar sesión, Actualizar, sin acciones operativas, ≥ 44 px, sin desplazamiento horizontal); fail-closed; todas las rutas de MOZO/COCINA/CAJA con gate y ADMIN//login//403 sin gate; Caja (identificación + resync); apertura de caja y apertura de pedido con local cerrado | PASS |
+| `tests/appRoutes.test.mjs`, `tests/waiterBoard.test.mjs`, `tests/cashierPage.test.mjs`, `tests/kitchenRealtimeService.test.mjs` (cocina conserva sus enlaces) | PASS |
+| Total focal | 124/124 PASS |
+| `tsc --noEmit` | OK |
+
+**Defectos:** ninguno abierto.

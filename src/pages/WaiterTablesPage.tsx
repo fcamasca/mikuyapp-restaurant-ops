@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AuthenticatedUserMenu from '../components/AuthenticatedUserMenu'
+import { useOperationalDay } from '../components/OperationalDayGate'
+import { LOCAL_CLOSED_MESSAGE } from '../services/operationalDayService.ts'
 import type { ValidatedProfileContext } from '../services/profileContext'
 import { getSupabaseClient } from '../services/supabaseClient'
 import { subscribeToOperationsChanges } from '../services/operationsRealtimeService.ts'
@@ -46,6 +48,7 @@ const moneyFormatter = new Intl.NumberFormat('es-PE', { style: 'currency', curre
 export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, onSignOut, onNavigateToTechnical }: WaiterTablesPageProps) {
   const clientResult = useMemo(() => getSupabaseClient(), [])
   const service = useMemo(() => clientResult.ok ? createWaiterOrderService(clientResult.client) : null, [clientResult])
+  const operationalDay = useOperationalDay()
   const [tables, setTables] = useState<readonly WaiterTableBoardItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,6 +106,8 @@ export default function WaiterTablesPage({ context, isSigningOut, onOpenOrder, o
       const result = await service.createOrRecoverOrder(context, table.id)
       if (!result.ok) {
         setActionError(result.error.message)
+        // E9-D13: el servidor informa local cerrado; el gate resincroniza y muestra la pantalla de local cerrado.
+        if (result.error.message === LOCAL_CLOSED_MESSAGE) void operationalDay.resync()
         return
       }
       onOpenOrder(result.data.pedidoId)

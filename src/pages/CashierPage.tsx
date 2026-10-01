@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AuthenticatedUserMenu from "../components/AuthenticatedUserMenu";
+import { useOperationalDay } from "../components/OperationalDayGate";
+import { LOCAL_CLOSED_MESSAGE } from "../services/operationalDayService.ts";
 import {
   billRequestElapsedMinutes,
   cashierDraftFingerprint,
@@ -333,6 +335,7 @@ export default function CashierPage({
       () => (cr.ok ? createCashierService(cr.client) : null),
       [cr],
     );
+  const operationalDay = useOperationalDay();
   const [cashboxes, setCashboxes] = useState<readonly Cashbox[]>([]),
     [cashboxId, setCashboxId] = useState(""),
     [session, setSession] = useState<CashSession | null>(null),
@@ -572,6 +575,8 @@ export default function CashierPage({
     try {
       const r = await action();
       if (!r.ok) setError(r.error?.message ?? "Error servidor");
+      // E9-D13: apertura de caja rechazada por local cerrado; el gate resincroniza el estado del local.
+      if (!r.ok && r.error?.message === LOCAL_CLOSED_MESSAGE) void operationalDay.resync();
       await refresh();
     } finally {
       pending.current = false;
@@ -654,6 +659,9 @@ export default function CashierPage({
           </div>
         )}
         <section className="mt-3 rounded-xl border border-stone-200 bg-white px-3 py-2 shadow-sm">
+          {operationalDay.jornada && (
+            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-stone-500" data-testid="cashier-operational-day">{operationalDay.jornada.identificacion}</p>
+          )}
           {loading ? (
             <p aria-busy="true">Cargando caja…</p>
           ) : cashboxes.length === 0 ? (
