@@ -13,4 +13,4 @@ Los documentos pueden conservar prefijos históricos del hito. Cada paquete reú
 - [E1 — Operación de caja](E1-CashOperation/): cerrada, validada y aceptada.
 - [E7 — Mejoras operativas de pedidos](E7-OrderOperationalImprovements/): cerrada, validada y aceptada.
 - [E10 — Solicitud de cuenta y atención en caja](E10-AccountRequest/): cerrada y aceptada; [aceptación](E10-AccountRequest/acceptance.md).
-- [E9 — Jornada operativa del local](E9-OperationalDay/): spec aprobado; construcción en curso (E9-T02–E9-T07); validación humana pendiente.
+- [E9 — Jornada operativa del local](E9-OperationalDay/): **cerrada, validada y aceptada** (01/10/2026); 6 humanas ejecutadas/aprobadas y TH02/TH07 no ejecutadas, aceptadas por dispensa. [Requisitos](E9-OperationalDay/requirements.md), [diseño](E9-OperationalDay/design.md), [tareas](E9-OperationalDay/tasks.md), [plan de pruebas](E9-OperationalDay/test-plan.md), [implementación](E9-OperationalDay/implementation.md), [aceptación](E9-OperationalDay/acceptance.md).

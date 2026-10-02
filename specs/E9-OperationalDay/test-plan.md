@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 9 — Jornada operativa del local: plan de pruebas
 
-**Estado de E9: SPEC APROBADO — construcción autorizada (E9-T02–E9-T07); E9-T08 pendiente; no cerrada ni aceptada.** Incorpora DC-10, DC-11 y DC-12; no quedan decisiones humanas pendientes. Ninguna prueba se ha ejecutado. Las pruebas automatizadas no sustituyen la validación humana, y E9 no podrá cerrarse con pruebas pendientes.
+**Estado de E9: CERRADA, VALIDADA Y ACEPTADA (01/10/2026).** Incorpora DC-10, DC-11 y DC-12; no quedan decisiones humanas pendientes. Evidencia técnica aprobada en [implementation.md](implementation.md). Aceptación humana: seis pruebas ejecutadas/aprobadas y TH02/TH07 no ejecutadas, aceptadas por dispensa explícita; [acceptance.md](acceptance.md).
 
 ## 1. Estrategia
 
@@ -65,7 +65,7 @@ Reglas:
 | E9-TP06 | R11, R14, R15, R17 | Creación con y sin jornada. | Con jornada abierta: `crear_o_recuperar_pedido_mesa`, `h3_abrir_o_recuperar_pedido` y `rpc_abrir_sesion_caja` asignan la jornada abierta. Sin jornada: las tres → `PT409` “Local cerrado — el sistema no se encuentra aperturado”, sin `pedido`, `historial_estado`, cambio de mesa, `sesion_caja`, `solicitud_apertura_caja`, `auditoria_caja` ni notificaciones residuales. Un `INSERT` directo como `postgres` sin jornada abierta también se rechaza. La recuperación idempotente de una sesión ya abierta (E1-R02) sigue funcionando. |
 | E9-TP07 | R14, R16, R17 | Asignación por servidor e inmutabilidad. | `INSERT` con `jornada_operativa_id` distinto de la abierta → `42501`; igual → aceptado; `UPDATE` de `jornada_operativa_id` en `pedido` o `sesion_caja` (incluso como owner) → `23514`; transiciones normales del pedido (reapertura H5, cobro, anulación) no alteran la jornada. |
 | E9-TP08 | R11, R13, R15, DC-10 | Matriz de operaciones con local cerrado. | Con el local cerrado y datos terminales de una jornada anterior, cada función de la tabla de `design.md` E9-D05 (y las políticas de escritura directa de `detalle_pedido`) se rechaza sin efectos con su conflicto vigente; se verifica además que ninguna de esas funciones fue modificada por E9 (definición idéntica a la de la baseline anterior a E9). En la misma condición, `ADMINISTRADOR` ejecuta sin cambios las funciones no operativas: lecturas de carta/mesas y su administración, reportes de ventas y caja, auditoría, notificaciones, historial de jornadas y apertura. |
-| E9-TP09 | R18 | Coherencia pedido / sesión en el cobro. | Fixture que deshabilita temporalmente el trigger de asignación dentro de una transacción con `ROLLBACK` para fabricar un pedido y una sesión de jornadas distintas: `rpc_registrar_cobro_pedido`, `registrar_pago_pedido`, `rpc_registrar_pago_total_pedido` y `rpc_registrar_pago_pedido_v2` → `PT409`, sin `cobro`, `pago`, auditoría ni cambio de estado. `pago` sin `sesion_caja_id` → `23514`. Con pedido y sesión de la misma jornada, los cuatro cobros funcionan como hoy. |
+| E9-TP09 | R18 | Coherencia pedido / sesión en el cobro. | Fixture que deshabilita temporalmente el trigger de asignación dentro de una transacción con `ROLLBACK` para fabricar un pedido y una sesión de jornadas distintas: `rpc_registrar_cobro_pedido`, `registrar_pago_pedido`, `rpc_registrar_pago_total_pedido` y `rpc_registrar_pago_pedido_v2` → `PT409`, sin `cobro`, `pago`, auditoría ni cambio de estado. **DV-01 aprobada:** `pago` sin `sesion_caja_id` conserva las reglas E1 vigentes; E9 no agrega una prohibición de nulos. Con pedido y sesión de la misma jornada, los cuatro cobros funcionan como hoy. |
 
 ### 3.4 Cierre
 
@@ -126,6 +126,23 @@ Reglas:
 | E9-TH07 | Un dispositivo queda sin red mientras el ADMIN cierra la jornada; al recuperar la red intenta operar. | Celular + PC | Al reconectar muestra “Local cerrado”; cualquier intento de abrir pedido es rechazado por el servidor. |
 | E9-TH08 | Uso táctil, responsive e historial. | Celular, tablet vertical/horizontal, PC | Pantalla de local cerrado, bloque de jornada e historial legibles, objetivos ≥ 44 px, sin desplazamiento horizontal; historial con las jornadas probadas en orden. |
 
+## 4.1 Resultados humanos finales — 01/10/2026
+
+Las definiciones originales de TH01–TH08 de la tabla anterior se conservan. El responsable comunica los siguientes resultados y aprueba explícitamente el cierre:
+
+| Prueba | Resultado final | Registro |
+|---|---|---|
+| TH01 | EJECUTADA Y APROBADA | Confirmada por el responsable |
+| TH02 | NO EJECUTADA — ACEPTADA POR DISPENSA DEL RESPONSABLE | No se dispone de un segundo ADMIN; dispensa explícita, no PASS ejecutado |
+| TH03 | EJECUTADA Y APROBADA | Confirmada por el responsable |
+| TH04 | EJECUTADA Y APROBADA | Confirmada por el responsable |
+| TH05 | EJECUTADA Y APROBADA | Confirmada por el responsable |
+| TH06 | EJECUTADA Y APROBADA | Confirmada por el responsable; no se infiere ejecución del cruce de medianoche opcional |
+| TH07 | NO EJECUTADA — ACEPTADA POR DISPENSA DEL RESPONSABLE | Frontend aún no desplegado en un entorno adecuado para validar pérdida/recuperación real de conectividad; no PASS ejecutado |
+| TH08 | EJECUTADA Y APROBADA | Confirmada por el responsable |
+
+**Total: 6 ejecutadas y aprobadas; 2 no ejecutadas, aceptadas por dispensa.** Las dispensas constituyen la decisión humana de aceptación para TH02 y TH07 y no se presentan como cobertura ejecutada. No se repiten pruebas técnicas ni se ejecutan ambos escenarios retroactivamente. Véase [aceptación](acceptance.md).
+
 ## 5. Criterios de salida
 
 - TP01–TP25 aprobados y TH01–TH08 aprobadas humanamente.
@@ -135,3 +152,5 @@ Reglas:
 - Evidencia histórica de aceptación de H1–H6, E1, E7 y E10 sin cambios.
 - Evidencia registrada por tarea y de la fase final.
 - Aprobación humana explícita del cierre; recién entonces se redacta `acceptance.md`.
+
+**Resultado de salida:** cierre aprobado el 01/10/2026 con la evidencia técnica registrada y las dos dispensas humanas explícitas de §4.1. Los 21 fallos SQL preexistentes permanecen como FAIL fuera de alcance, no como PASS.

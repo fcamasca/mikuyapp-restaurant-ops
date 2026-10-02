@@ -24,3 +24,7 @@ Cada entrada debe indicar ID, fecha, tipo, nombre, estado, descripción, impacto
 | Evidencia | DBSTD-TP01–TP26, regresión SQL, 297/297 tests automatizados, lint, typecheck, build, rollback compensatorio y validación remota aprobados. |
 | Referencias | [Aceptación](../specs/DB-Standardization/acceptance.md), [despliegue](../specs/DB-Standardization/deployment.md), [estándar](DATABASE_STANDARD.md), [matriz de cumplimiento](DATABASE_COMPLIANCE_MATRIX.md) |
 | Pendientes derivados | Semántica definitiva de `pedido.modificado_en/modificado_por`; posible separación futura del trigger; campaña futura y de baja prioridad de renombrado `rpc_`/`fn_`/`tgf_`/`trg_`/`pol_`. |
+
+## Referencia de estado de evoluciones funcionales
+
+Las evoluciones conservan sus IDs y su fuente de verdad en [PLAN_MVP.md](PLAN_MVP.md); no se les asigna un identificador PM en esta bitácora. **E9 — Jornada operativa del local: CERRADA, VALIDADA Y ACEPTADA (01/10/2026)**, con seis pruebas humanas ejecutadas/aprobadas y TH02/TH07 no ejecutadas, aceptadas por dispensa explícita del responsable. [Spec](../specs/E9-OperationalDay/requirements.md), [evidencia](../specs/E9-OperationalDay/implementation.md) y [aceptación](../specs/E9-OperationalDay/acceptance.md). Sin declaración de despliegue a PROD ni cambio de PM-002.

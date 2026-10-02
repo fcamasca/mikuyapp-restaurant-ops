@@ -650,7 +650,7 @@ El MVP se considerará terminado si:
 
 ### Evolución 9 — Jornada operativa del local
 
-**Estado: SPEC APROBADO — CONSTRUCCIÓN EN CURSO (01/10/2026).** Spec en [`specs/E9-OperationalDay/`](../specs/E9-OperationalDay/) (`requirements.md`, `design.md`, `tasks.md`, `test-plan.md`); decisiones DC-01–DC-12 cerradas. Estimación aprobada: **22 h**. Construcción autorizada para E9-T02–E9-T07; E9-T08 (validación humana) pendiente. No está cerrada ni aceptada.
+**Estado: CERRADA, VALIDADA Y ACEPTADA (01/10/2026).** [Spec aprobado](../specs/E9-OperationalDay/requirements.md), [evidencia técnica](../specs/E9-OperationalDay/implementation.md) y [aceptación](../specs/E9-OperationalDay/acceptance.md). Decisiones DC-01–DC-12 conservadas; DV-01 aprobada. Estimación aprobada: **22 h**. T02–T07 completadas; T08 completada por aceptación humana: seis ejecutadas/aprobadas y TH02/TH07 no ejecutadas, aceptadas por dispensa explícita del responsable. Este cierre no acredita despliegue a PROD.
 
 - Apertura de jornada operativa por ADMINISTRADOR.
 - Cierre de jornada operativa por ADMINISTRADOR.
@@ -659,7 +659,7 @@ El MVP se considerará terminado si:
 - Mozo, Cocina y Caja deben visualizar que la operación está cerrada.
 - Las operaciones críticas deben validar la jornada abierta también en PostgreSQL/servidor.
 - La apertura de sesión de caja requiere una jornada operativa abierta.
-- El cierre de jornada deberá considerar las condiciones operativas pendientes que se definan en su futuro Spec Mode.
+- El cierre de jornada considera las condiciones operativas pendientes definidas en el spec aprobado de E9.
 - Historial y trazabilidad de aperturas y cierres.
 
 ### Evolución 10 — Solicitud de cuenta y atención en caja

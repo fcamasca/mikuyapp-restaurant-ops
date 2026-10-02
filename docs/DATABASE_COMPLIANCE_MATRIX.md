@@ -1,7 +1,7 @@
 # MikuyApp — Matriz de Cumplimiento del Estándar de Base de Datos
 
 **Versión:** 1.0  
-**Estado:** Actualizada después de PM-001 / DB Standardization (`ACCEPTED + DEPLOYED`)
+**Estado:** Baseline PM-001 / DB Standardization (`ACCEPTED + DEPLOYED`), con addendum documental E9 aceptada (01/10/2026)
 **Referencia:** `docs/DATABASE_STANDARD.md`  
 **Motor:** PostgreSQL / Supabase  
 **Esquema evaluado:** `public`
@@ -499,3 +499,19 @@ La estrategia recomendada es:
 4. evitar renombrados retroactivos puramente estéticos;
 5. incorporar los ajustes de arquitectura en una evolución técnica planificada.
 ```
+
+# 20. Addendum E9 — Jornada operativa del local (01/10/2026)
+
+E9 está **CERRADA, VALIDADA Y ACEPTADA**; [aceptación](../specs/E9-OperationalDay/acceptance.md) y [evidencia técnica](../specs/E9-OperationalDay/implementation.md). Las secciones anteriores conservan el inventario evaluado en PM-001; no son un inventario exhaustivo del esquema ampliado posterior. El repositorio validado hasta E9 tiene 27 tablas públicas y 61 migraciones; no se afirma despliegue a PROD.
+
+| Objeto o regla E9 | Cumplimiento y evidencia |
+|---|---|
+| `jornada_operativa` | Entidad transaccional; constraints `pk_`, `fk_`, `uq_`, `ck_`, índices `idx_` y único parcial; comentarios; sin duplicación en tablas derivables |
+| `pedido` / `sesion_caja` | `jornada_operativa_id` obligatorio, inmutable y FK compuesta con local; asignación de servidor |
+| Funciones, triggers y policy | Prefijos `rpc_`, `fn_`, `tgf_`, `trg_`, `pol_`; owner postgres, SECURITY DEFINER y search_path pg_catalog; lecturas STABLE y escrituras VOLATILE |
+| RLS y grants | SELECT authenticated de jornadas del local; sin escritura cliente; public/anon/service_role sin privilegios sobre tabla y secuencia; funciones internas sin EXECUTE cliente |
+| Secuencia identity | `jornada_operativa_id_seq`, sin renombrado de secuencias históricas |
+| Coherencia de pago / DV-01 | Misma jornada cuando existe sesión; sin nueva prohibición E9 de sesión nula, reglas E1 preservadas |
+| Realtime | Publicación: detalle_pedido, jornada_operativa, mesa, pedido, solicitud_cuenta; señal + relectura, sin polling |
+
+Modelo/RPC/integración/matriz SQL E9 4/4 PASS; sin defectos E9 abiertos. HZ-E9-01 y los 21 FAIL preexistentes permanecen fuera de alcance y documentados individualmente, no son PASS. E9 no cambia DATABASE_STANDARD.md ni las recomendaciones históricas de PM-001; PM-002 conserva su estado.

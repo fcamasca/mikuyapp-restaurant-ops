@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 9 — Jornada operativa del local: implementación y evidencia
 
-**Estado: construcción en curso (E9-T02–E9-T07).** E9-T08 (validación humana con dispositivos reales) no se ejecuta en esta fase. E9 no está cerrada ni aceptada; no existe `acceptance.md`.
+**Estado: E9 CERRADA, VALIDADA Y ACEPTADA (01/10/2026).** E9-T02–E9-T07 completadas; E9-T08 completada por aceptación humana: seis pruebas ejecutadas/aprobadas y TH02/TH07 no ejecutadas, aceptadas por dispensa explícita. Aprobación del responsable y cierre en [acceptance.md](acceptance.md).
 
 ## 1. Baseline, rama y ambiente
 
@@ -29,7 +29,7 @@ Coincide con lo registrado por E10 (`specs/E10-AccountRequest/implementation.md`
 
 ## 3. Preparación documental
 
-- `docs/PLAN_MVP.md` §15 Evolución 9: estado “SPEC APROBADO — CONSTRUCCIÓN EN CURSO”, estimación 22 h, T08 pendiente.
+- Preparación inicial de `docs/PLAN_MVP.md` §15 Evolución 9 para construcción autorizada, con estimación 22 h. Estado final actualizado a CERRADA, VALIDADA Y ACEPTADA; T08 completada por aceptación humana, con las dispensas registradas en `acceptance.md`.
 - `specs/README.md`: entrada E9.
 - Cabeceras de estado de los cuatro documentos del spec y E9-T01 completada en `tasks.md`. El contenido aprobado no cambia.
 
@@ -67,7 +67,7 @@ Coincide con lo registrado por E10 (`specs/E10-AccountRequest/implementation.md`
 | ID | Hallazgo | Tratamiento |
 |---|---|---|
 | HZ-E9-01 | `h3_abrir_o_recuperar_pedido(uuid)` (vía heredada) invoca `public.h2_auth_context()`, renombrada a `obtener_contexto_autenticado` en `20260826000300`; falla con `42883` para todo usuario autenticado ya en la baseline. No puede crear pedidos con o sin E9. | Preexistente y ajeno a E9; no se corrige (fuera de alcance). El trigger de E9 la cubre igualmente. Informado al responsable. |
-| DV-01 | E9-D06 prevé que `tgf_pago_validar_jornada_operativa` rechace también los pagos sin `sesion_caja_id`. Cuatro tests vigentes insertan pagos legacy sin sesión como dato de su escenario (`e1_t03_fixture.sql`, `e7_t05_cancelacion.sql`, `h6_t02_sales_exports.sql`, `tp10_constraints.sql`; este último espera la violación del `CHECK` de medio, que el trigger anticiparía). Ningún requisito lo exige (R18 e I-4 se refieren a pagos con sesión) y ningún cliente puede insertar en `pago`. | **Sub-punto detenido** conforme a la instrucción de construcción: se implementa la coherencia pedido/sesión y los pagos sin sesión siguen gobernados por `ck_pago_asociacion_e1` como hoy. Ajuste mínimo propuesto: retirar ese rechazo de E9-D06. Pendiente de decisión del responsable. |
+| DV-01 | E9-D06 prevé que `tgf_pago_validar_jornada_operativa` rechace también los pagos sin `sesion_caja_id`. Cuatro tests vigentes insertan pagos legacy sin sesión como dato de su escenario (`e1_t03_fixture.sql`, `e7_t05_cancelacion.sql`, `h6_t02_sales_exports.sql`, `tp10_constraints.sql`; este último espera la violación del `CHECK` de medio, que el trigger anticiparía). Ningún requisito lo exige (R18 e I-4 se refieren a pagos con sesión) y ningún cliente puede insertar en `pago`. | **DV-01 aprobada por el responsable el 2026-10-01:** retirado el rechazo nuevo del diseño y TP09. El código ya conservaba `ck_pago_asociacion_e1`; no fue necesario cambiar migraciones ni RPC. Coherencia obligatoria cuando existe sesión. `requirements.md` intacto: R18 e I-4 ya expresan este alcance. |
 
 **Defectos:** ninguno abierto.
 
@@ -162,19 +162,19 @@ Sin dispositivos físicos. Ambiente: PostgreSQL 16 local efímero con `wal_level
 | TP22 (local) — autorización de `postgres_changes` (RLS de `SELECT` sobre la versión nueva de la fila): ADMIN, MOZO, COCINA y CAJA del local ven la fila `ABIERTA` y la `CERRADA` (reciben apertura y cierre); ADMIN de otro local no ve ninguna; `anon` sin privilegio | PASS |
 | Reacción del cliente a la señal (relectura autoritativa, coalescencia, `SUBSCRIBED`, error, topic único) | Cubierta en T04 (`tests/e9OperationalDay.test.mjs`) con canal simulado |
 | Residuos | 0 slots, 0 bases efímeras |
-| **TP22 con clientes Realtime programáticos contra un servidor Supabase real** | **PENDIENTE de ejecución en Windows.** El entorno de construcción no puede levantar un servidor Realtime (la política de red bloquea el registro npm y Docker Hub). Conforme a DC-12 se usa el stack Supabase **local** del repositorio (Docker + `supabase start`, patrón aprobado en E7-T10), nunca DEV, el proyecto compartido ni PROD: `scripts/e9_t06_local.ps1` levanta los servicios mínimos, ejecuta `db reset --local` (61 migraciones + seed), corre las pruebas SQL de E9 sobre la imagen PostgreSQL de Supabase y lanza `scripts/e9_realtime_verificacion.mjs` (guarda de loopback; local de prueba propio sin jornadas; cinco clientes con un segundo ADMIN; apertura, idempotencia, remontaje con topic único, ausencia de polling, reconexión y cierre). Resultado a registrar en §9.7. |
+| **TP22 con clientes Realtime programáticos contra un servidor Supabase real** | **PASS 7/7 en Windows (2026-10-01), repetido desde reset completo; evidencia y diagnóstico en §9.7.** La limitación descrita a continuación corresponde al entorno de construcción anterior: El entorno de construcción no puede levantar un servidor Realtime (la política de red bloquea el registro npm y Docker Hub). Conforme a DC-12 se usa el stack Supabase **local** del repositorio (Docker + `supabase start`, patrón aprobado en E7-T10), nunca DEV, el proyecto compartido ni PROD: `scripts/e9_t06_local.ps1` levanta los servicios mínimos, ejecuta `db reset --local` (61 migraciones + seed), corre las pruebas SQL de E9 sobre la imagen PostgreSQL de Supabase y lanza `scripts/e9_realtime_verificacion.mjs` (guarda de loopback; local de prueba propio sin jornadas; cinco clientes con un segundo ADMIN; apertura, idempotencia, remontaje con topic único, ausencia de polling, reconexión y cierre). Resultado a registrar en §9.7. |
 
-**Estado de T06:** recorrido técnico y señal local completos; **no se marca completada** mientras falte la ejecución real de TP22 descrita arriba.
+**Estado de T06: completada técnicamente.** Recorrido SQL, publicación, autorización y TP22 real de apertura/cierre demostrados; no incluye E9-T08.
 
 **Defectos:** ninguno abierto.
 
 ## 9. E9-T07 — Homologación y pruebas finales
 
-Ambiente: PostgreSQL 16 local efímero con `wal_level=logical` (mismas plataforma y scripts de E10: `scripts/e10_local_platform.sql`, `e10_local_replay.sh`, `e10_local_sql_suite.sh`). Ejecución única con `scripts/e9_t07_campaign.sh c83c8fd` (en el repositorio del responsable la misma línea base es `313794a`). Registro completo: salida de la campaña (`== fallos: 0`).
+Ambiente: PostgreSQL 16 local efímero con `wal_level=logical` (mismas plataforma y scripts de E10: `scripts/e10_local_platform.sql`, `e10_local_replay.sh`, `e10_local_sql_suite.sh`). Ejecución única con `scripts/e9_t07_campaign.sh c83c8fd` (en el repositorio del responsable la misma línea base es `313794a`). Registro previo: salida de la campaña (`== fallos: 0`). La revisión independiente de esta continuación conserva los registros completos en `artifacts/e9-review/` (§9.3 y §9.7).
 
 ### 9.1 Homologación mínima de tests vigentes (E9-D16)
 
-Realizada directamente en el repositorio, sin copias temporales. Cada línea añadida lleva el marcador `E9 (homologación mínima)` o `Contrato actualizado`. No se alteró ninguna aserción, dato relevante ni objetivo de prueba; 66 archivos, +648/−57 líneas.
+Realizada directamente en el repositorio, sin copias temporales. Cada línea añadida lleva el marcador `E9 (homologación mínima)` o `Contrato actualizado`. La campaña original homologó 66 archivos (+648/−57 líneas). Esta revisión agrega dos homologaciones mínimas de snapshots de catálogo, descritas en §9.3; no modifica objetivos funcionales ni seguridad productiva.
 
 | Motivo | Cambio | Archivos |
 |---|---|---|
@@ -204,33 +204,44 @@ Nuevo: `supabase/tests/e9_t07_matriz_local_cerrado.sql` (TP08).
 | `tsc --noEmit` (typecheck) | OK |
 | Residuos | 0 slots, 0 conexiones de carrera, 0 bases efímeras |
 
-### 9.3 Fallos preexistentes, ajenos a E9 (pendientes de decisión del responsable)
+### 9.3 Fallos preexistentes / fuera del alcance de E9 — verificados individualmente
 
-Demostración: cada prueba fallida con E9 se ejecutó también en la baseline pre-E9 (migraciones hasta `20260930000200`) con la versión del test de `c83c8fd`, extraída con `git archive`. Las 21 fallan allí (la baseline, con los tests de `c83c8fd`, tiene 23 fallos: estos 21 más `h4_t05_realtime_publication_rls` y `h5_t06_realtime_cashier_signal`, que pasan tras la homologación de §9.1). Causas ya descritas en E7-T11 §5.4: tests H3–H6/E1 que esperan `40001` donde E1-T18 normalizó a `PT409`, contratos superados por E7/E10 que sólo se homologaron en copias, y snapshots de catálogo de su época. **No se corrigen** (fuera del alcance de E9; corregirlos alteraría aserciones) ni se reclasifican como esperados: se informan.
+Revisión independiente del 2026-10-01 en PostgreSQL 17.6 efímero y aislado (`e9-baseline-audit`, sin red publicada). Se exportaron con `git show 313794a:<archivo>` los tests anteriores a E9 y se reprodujeron las 59 migraciones + seed. La versión vigente se ejecutó con 61 migraciones + seed, incluidas las homologaciones de catálogo descritas abajo. Baseline: **46 PASS / 23 FAIL**; E9: **52 PASS / 21 FAIL**. Los 21 nombres fallidos con E9 existen también entre los fallos de baseline; ninguno nuevo. Las dos diferencias resueltas son los contratos Realtime H4-T05/H5-T06 homologados.
 
-| # | Prueba | Error con E9 | Error en la baseline |
-|---|---|---|---|
-| 1 | `dbstd_t03_function_metadata` | `P0001 DBSTD-TP14 grants de tablas o columnas cambiaron: b29f118c…` | igual con hash `a42c2a24…` (snapshot de grants de su época; E9 añade la tabla, por eso el hash difiere) |
-| 2 | `dbstd_t04_catalog_comments` | `P0001 DBSTD-TP16 comentario inesperado: public.registrar_auditoria_detalle_pedido()` | igual (comentario cambiado por E7-D05) |
-| 3 | `domain_object_names` | `P0001 Objetos permanentes con prefijo de hito: {function:h3_abrir_o_recuperar_pedido}` | igual |
-| 4 | `e1_delta_t09_cobro_atomico` | `PT409 La sesión ya no está abierta` | igual (espera `40001`) |
-| 5 | `e1_t09_pagos_multiples` | `PT409 Un pedido con pagos no admite mutaciones` | igual |
-| 6 | `h3_t04_open_order_detail_mutations` | `P0001 H3-T04 matriz de privilegios inesperada: <NULL>` | igual |
-| 7 | `h4_t03_kitchen_detail_state_transition` | `P0001 H4-T03 contrato, bloqueo o alcance inesperados` | igual |
-| 8 | `h5_t02_reopen_delivered_order` | `PT409 El pedido ya no está listo para entregar` | igual |
-| 9 | `h5_t02_safe_order_delivery` | `PT409 El pedido ya no está listo para entregar` | igual |
-| 10 | `h5_t04_transactional_payment` | `PT409 Pedido no disponible para cobro` | igual |
-| 11 | `order_audit_trail` | `P0001 TP21 cambió el cuerpo de registrar_auditoria_detalle_pedido()` | igual |
-| 12 | `tp09_tp11_schema` | `P0001 TP-09: expected 10 exact public tables, found 27` | igual con 26 (snapshot de H1; E9 suma `jornada_operativa`) |
-| 13 | `e1_t03_caja_sesion` | `P0001 E1-T03: una caja minima por local activo` | igual |
-| 14 | `e1_t04_apertura_sesion` | `P0001 T04: TP08 sesion de otra caja rechazada` | igual |
-| 15 | `e1_t05_movimientos_cierre` | `PT409 La sesión de caja ya está cerrada` | igual |
-| 16 | `e1_t06_descuento_pedido` | `PT409 El pedido no admite descuento` | igual |
-| 17 | `e1_t07_anulacion_administrativa` | `PT409 El pedido ya fue anulado` | igual |
-| 18 | `e1_t08_pago_sesion` | `P0001 T08: fila pago actor sesion propina clave` | igual |
-| 19 | Carrera H4-T03 doble transición cocina — cleanup | `23503 … fk_historial_detalle_pedido_pedido` | igual |
-| 20 | Carrera H5-T04 doble pago — “ambas sesiones fallaron” | ambas `PT409` | igual |
-| 21 | Carrera H5-T04 doble pago — verify | `P0001 H5-T04 resultado concurrente incorrecto` | igual |
+Evidencia reproducible conservada: `artifacts/e9-review/suite-base.txt`, `suite-final.txt`, `comparison.json` (errores por test). La decisión del responsable en esta continuación autoriza clasificar como fuera de alcance sólo los fallos que reproduzcan sin agravarse; todos los de esta tabla cumplen esa condición. No se presentan como PASS ni como deuda corregida.
+
+Para descartar defectos E9 ocultos tras errores históricos se repitió el diagnóstico complementario anterior en copias temporales de ambos lados (40001→PT409, comentario/cuerpo E7 y publicación E10): **57/12 baseline y 61/12 E9**, los mismos doce nombres fallidos y ningún adicional; `diag-base.txt`, `diag-e9.txt`. Estas copias no sustituyen los tests del repositorio ni son criterio de aceptación.
+
+| # | Prueba | Error con E9 final | Resultado en baseline pre-E9 | Causa y relación con E9 |
+|---|---|---|---|---|
+| 1 | `dbstd_t03_function_metadata` | `P0001: DBSTD-TP14 grants de tablas o columnas cambiaron: a42c2a240c1e4006fd4f9db193e77d1c` | FAIL: `P0001: DBSTD-TP14 grants de tablas o columnas cambiaron: a42c2a240c1e4006fd4f9db193e77d1c` | Snapshot DBSTD de grants anterior a E7. E9 añadía SELECT de la nueva columna de pedido; homologado para conservar la proyección histórica: ahora hash a42c2a24 igual a baseline. Seguridad E9 se verifica separadamente en TP01. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 2 | `dbstd_t04_catalog_comments` | `P0001: DBSTD-TP16 comentario inesperado: public.registrar_auditoria_detalle_pedido()` | FAIL: `P0001: DBSTD-TP16 comentario inesperado: public.registrar_auditoria_detalle_pedido()` | Comentario de registrar_auditoria_detalle_pedido cambiado deliberadamente por E7-D05; el test aún exige el texto anterior. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 3 | `domain_object_names` | `P0001: Objetos permanentes con prefijo de hito: {function:h3_abrir_o_recuperar_pedido}` | FAIL: `P0001: Objetos permanentes con prefijo de hito: {function:h3_abrir_o_recuperar_pedido}` | La función heredada h3_abrir_o_recuperar_pedido conserva el prefijo H3 desde antes de E9. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 4 | `e1_delta_t09_cobro_atomico` | `PT409: La sesión ya no está abierta` | FAIL: `PT409: La sesión ya no está abierta` | El test captura 40001; E1-T18 devuelve PT409 para sesión cerrada. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 5 | `e1_t09_pagos_multiples` | `PT409: Un pedido con pagos no admite mutaciones` | FAIL: `PT409: Un pedido con pagos no admite mutaciones` | El test captura 40001; E1-T18 devuelve PT409 para mutación de pedido con pagos. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 6 | `h3_t04_open_order_detail_mutations` | `P0001: H3-T04 matriz de privilegios inesperada: <NULL>` | FAIL: `P0001: H3-T04 matriz de privilegios inesperada: <NULL>` | El test exige UPDATE de cantidad/observacion y DELETE directos sobre detalle_pedido; E7 retiró esos permisos y usa RPC. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 7 | `h4_t03_kitchen_detail_state_transition` | `P0001: H4-T03 contrato, bloqueo o alcance inesperados` | FAIL: `P0001: H4-T03 contrato, bloqueo o alcance inesperados` | El test exige el literal 40001 en la definición de la función; E1-T18 lo sustituyó por PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 8 | `h5_t02_reopen_delivered_order` | `PT409: El pedido ya no está listo para entregar` | FAIL: `PT409: El pedido ya no está listo para entregar` | El test captura 40001 para pedido no disponible; E1-T18 devuelve PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 9 | `h5_t02_safe_order_delivery` | `PT409: El pedido ya no está listo para entregar` | FAIL: `PT409: El pedido ya no está listo para entregar` | El test captura 40001 al repetir entrega; E1-T18 devuelve PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 10 | `h5_t04_transactional_payment` | `PT409: Pedido no disponible para cobro` | FAIL: `PT409: Pedido no disponible para cobro` | El test captura 40001 para pedido no cobrable; E1-T18 devuelve PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 11 | `order_audit_trail` | `P0001: TP21 cambió el cuerpo de registrar_auditoria_detalle_pedido()` | FAIL: `P0001: TP21 cambió el cuerpo de registrar_auditoria_detalle_pedido()` | Snapshot del cuerpo de registrar_auditoria_detalle_pedido anterior a E7; ya cambia en baseline. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 12 | `tp09_tp11_schema` | `P0001: TP-09: expected 11 exact public tables (H1 + E9), found 27: {anulacion_pedido,auditoria_caja,caja,categoria,cobro,comanda,descuento_pedido,detalle_pedido,historial_detalle_pedido,historial_estado,jornada_operativa,local,lote_movimiento_caja,mesa,movimiento_caja,notificacion_caja,notificacion_caja_destinatario,pago,pedido,perfil_usuario,producto,resumen_cierre_sesion_caja,rol,sesion_caja,solicitud_apertura_caja,solicitud_cierre_caja,solicitud_cuenta}` | FAIL: `P0001: TP-09: expected 10 exact public tables, found 26: {anulacion_pedido,auditoria_caja,caja,categoria,cobro,comanda,descuento_pedido,detalle_pedido,historial_detalle_pedido,historial_estado,local,lote_movimiento_caja,mesa,movimiento_caja,notificacion_caja,notificacion_caja_destinatario,pago,pedido,perfil_usuario,producto,resumen_cierre_sesion_caja,rol,sesion_caja,solicitud_apertura_caja,solicitud_cierre_caja,solicitud_cuenta}` | Snapshot H1 de diez tablas anterior a E1/E7/E10. Homologados sólo los deltas E9: once esperadas frente a 27; baseline diez frente a 26. Exceso previo de 16 idéntico; no se corrige el catálogo histórico ajeno. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 13 | `e1_t03_caja_sesion` | `P0001: E1-T03: una caja minima por local activo` | FAIL: `P0001: E1-T03: una caja minima por local activo` | Fixture E1-T03 crea locales después de la migración que provisionó caja mínima; no reproduce la precondición original de esa migración y exige una caja por todos los locales de la campaña. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 14 | `e1_t04_apertura_sesion` | `P0001: T04: TP08 sesion de otra caja rechazada` | FAIL: `P0001: T04: TP08 sesion de otra caja rechazada` | Helper t04_reject espera 40001 para sesión de otra caja; obtiene PT409 desde E1-T18. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 15 | `e1_t05_movimientos_cierre` | `PT409: La sesión de caja ya está cerrada` | FAIL: `PT409: La sesión de caja ya está cerrada` | El test captura 40001 al operar sesión cerrada; E1-T18 devuelve PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 16 | `e1_t06_descuento_pedido` | `PT409: El pedido no admite descuento` | FAIL: `PT409: El pedido no admite descuento` | El test captura 40001 para pedido que no admite descuento; E1-T18 devuelve PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 17 | `e1_t07_anulacion_administrativa` | `PT409: El pedido ya fue anulado` | FAIL: `PT409: El pedido ya fue anulado` | El test captura 40001 al repetir anulación; E1-T18 devuelve PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 18 | `e1_t08_pago_sesion` | `P0001: T08: fila pago actor sesion propina clave` | FAIL: `P0001: T08: fila pago actor sesion propina clave` | Contrato anterior al cobro atómico E1 DT-02: el test busca la clave de la solicitud en pago; la RPC vigente la guarda en cobro y genera una clave por fila de pago. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 19 | `H4-T03 doble transición cocina cleanup` | `23503: update or delete on table "pedido" violates foreign key constraint "fk_historial_detalle_pedido_pedido" on table "historial_detalle_pedido"` | FAIL: `23503: update or delete on table "pedido" violates foreign key constraint "fk_historial_detalle_pedido_pedido" on table "historial_detalle_pedido"` | Cleanup histórico borra pedido antes de borrar historial_detalle_pedido, añadido por E7; viola la misma FK RESTRICT en ambos lados. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 20 | `H5-T04 doble pago: ambas sesiones fallaron` | `ambas sesiones PT409 (sin sesión de caja en fixture)` | FAIL: `ambas sesiones PT409 (sin sesión de caja en fixture)` | Fixture H5-T04 no abre una sesión de caja; registrar_pago_pedido vigente la exige por E1. Ambos participantes rechazan el cobro con PT409. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+| 21 | `H5-T04 doble pago verify` | `P0001: H5-T04 resultado concurrente incorrecto` | FAIL: `P0001: H5-T04 resultado concurrente incorrecto` | Consecuencia del fallo anterior: no existe el pago ganador ni los estados esperados por verify. **Preexistente / fuera del alcance de E9; no regresión nueva.** |
+
+**Contratos rígidos, homologación mínima E9-D16:**
+
+- `dbstd_t03_function_metadata.sql`: el hash abarca diez tablas históricas, no la tabla nueva (la explicación previa de §9.3 era imprecisa). Cambiaba por el grant SELECT heredado de `pedido.jornada_operativa_id`. Se excluye sólo esa columna de la proyección histórica; el hash vuelve exactamente a `a42c2a240c1e4006fd4f9db193e77d1c`, igual a baseline. El test sigue fallando por la evolución previa de permisos E7; no se añade un hash permisivo ni se cambia seguridad.
+- `tp09_tp11_schema.sql`: incorpora únicamente el delta E9 a su snapshot H1: tabla/PK/identity +1, FK RESTRICT +5, UNIQUE +3, CHECK +4, columna obligatoria e índice de pedido. Sigue exponiendo el desfase anterior de dieciséis tablas, ahora 27 frente a 11 (antes 26 frente a 10). No se homologa globalmente la deuda E1/E7/E10 ni se omiten sus aserciones.
+- Publicación: cinco tablas exactas, tests H4-T05/H5-T06/E10-T02 PASS en la suite vigente. `to_jsonb(sesion_caja)`: no hay comparación del conjunto exacto de claves; conserva las igualdades idempotentes y consumidores vigentes.
+- HZ-E9-01: invocación autenticada directa de `h3_abrir_o_recuperar_pedido` produce **42883** por `public.h2_auth_context()` ausente tanto en baseline como en E9 (`hz-base.txt`, `hz-e9.txt`). Las definiciones previas son idénticas; no se corrige ni se contabiliza como regresión E9.
 
 ### 9.4 Seguridad, RLS y concurrencia
 
@@ -241,18 +252,50 @@ Demostración: cada prueba fallida con E9 se ejecutó también en la baseline pr
 
 ### 9.5 Realtime
 
-Sólo señal + relectura autoritativa, sin polling y sin refactor de `operationsRealtimeService` (DC-10/E9-D12). Verificado: publicación, WAL (`test_decoding`), autorización por RLS por rol y reacción del cliente con canal simulado. Pendiente: TP22 con servidor Realtime real (§9.7).
+Sólo señal + relectura autoritativa, sin polling y sin refactor de `operationsRealtimeService` (DC-10/E9-D12). Verificado: publicación, WAL (`test_decoding`), autorización por RLS por rol y reacción del cliente con canal simulado. TP22 con servidor Realtime real: **7/7 PASS** (§9.7).
 
 ### 9.6 Desviaciones y hallazgos
 
-- **DV-01** (ver §4): pendiente de decisión del responsable.
+- **DV-01** (ver §4): aprobada e incorporada a D06 y TP09; sin cambio de contrato E1.
 - **HZ-E9-01** (ver §4): preexistente, informado.
 - Homologación de `h4_t05`/`h5_t06`: además de `jornada_operativa` incorporan `solicitud_cuenta`, contrato de E10 que nunca se había llevado al repositorio (se documenta como parte del mismo contrato de publicación).
 
-### 9.7 Pendiente en Windows (stack Supabase local)
+### 9.7 Windows: TP22 real y cierre técnico (2026-10-01)
 
-`powershell -ExecutionPolicy Bypass -File scripts\e9_t06_local.ps1` → TP22 real, pruebas SQL de E9 sobre la imagen de Supabase, `npm run typecheck` y `npm run build` (el build requiere los binarios nativos win32 de `rolldown`/`lightningcss`, no instalables en el entorno de construcción). Resultado: _pendiente_.
+La ejecución inicial del responsable ya confirmó `npm run typecheck` y `npm run build`: **PASS**, nunca pendientes. El fallo TP22 era 6/7. Se diagnosticó primero el harness y se conservan dos intentos fallidos de esta revisión (`realtime-subscribed-failure.txt`, `realtime-wal-barrier-failure.txt`): exigir sólo cinco `SUBSCRIBED` no resolvió la apertura, ni comprobar únicamente el avance global del WAL aseguró todos los receptores. Estas comprobaciones diagnósticas no permanecen como workaround.
 
-**Estado de T07:** homologación y regresión técnica completas con 0 fallos nuevos; **no se marca completada** hasta registrar §9.7 y la decisión del responsable sobre los 21 fallos preexistentes de §9.3 y DV-01.
+**Causa raíz:** el join WebSocket del canal (`SUBSCRIBED`) y su snapshot inicial no certifican que el servidor haya terminado el alta de `postgres_changes` para ese cliente. En el arranque frío observado, los cinco joins ocurrieron a las 21:28:53 UTC, mientras las confirmaciones CDC `system {extension: postgres_changes, status: ok, message: Subscribed to PostgreSQL}` llegaron entre 21:28:55 y 21:28:56 UTC. La apertura anterior se adelantaba a esa condición; el cierre, posterior, sí encontraba CDC listo.
 
-**Defectos de E9 abiertos:** ninguno.
+**Corrección sólo del harness:** `scripts/e9_realtime_verificacion.mjs` observa los estados reales y las confirmaciones CDC de cada canal, exige ambos más lectura inicial terminada antes de abrir, y los vuelve a exigir tras remontaje/reconexión. Cuenta los INSERT/UPDATE del local de fixture y exige el evento además del estado obtenido por el servicio real. No se cambian topics, filtros, RLS, publicación ni código productivo. No se agrega demora fija; los intervalos cortos consultan condiciones del harness, no realizan polling REST. Los 10 segundos de TP21 son la ventana medida de ausencia de polling, no una espera de readiness. `scripts/e9_t06_local.ps1` acumula fallos de SQL/Realtime/typecheck/build y devuelve exit 1 si cualquiera falla, después de limpiar claves y detener el stack. Verificado además con un paso simulado exit 1 seguido de exit 0: el fallo permanece registrado (`runner-exit-check.txt`); sintaxis PowerShell y JavaScript válida.
+
+Verificación focal previa: **7/7 PASS**. Confirmación desde `supabase stop/start` + `db reset --local`, ejecutando `powershell -ExecutionPolicy Bypass -File scripts\e9_t06_local.ps1`: **7/7 PASS**. Registros completos: `artifacts/e9-review/local-final.txt`, `realtime-final.txt`.
+
+| Verificación final | Resultado real |
+|---|---|
+| Replay local Supabase | 61 migraciones + seed OK; última `20261001000200`; PostgreSQL 17.6 |
+| Modelo, RPC, integración TP23, matriz TP08 | SQL E9 **4/4 PASS**, exit 0 en cada paso |
+| Publicación | Cinco tablas exactas, incluye `jornada_operativa` |
+| Cinco SUBSCRIBED + CDC + snapshot cerrado | PASS; apertura sólo después de las cinco confirmaciones |
+| Apertura INSERT + relectura por cinco clientes | PASS, **340 ms** |
+| Apertura idempotente | PASS |
+| Remontaje/topic propio y ausencia de polling | PASS, **0 peticiones REST** durante 10 s |
+| Reconexión + CDC + resync | PASS, **60 ms** |
+| Cierre UPDATE + relectura por cinco clientes | PASS, **513 ms** |
+| Realtime total | **7/7 PASS** |
+| Concurrencia TP16–TP18 con plantilla limpia | **13/13 PASS**, sin interbloqueos ni 40001; `concurrency-clean.txt` |
+| Precondición TP02 con plantilla limpia | **4/4 PASS**; `precondition-clean.txt` |
+| Regresión SQL vigente | **52 PASS / 21 FAIL preexistentes**, 0 fallos nuevos (§9.3) |
+| Node completo Windows | **430/430 PASS**, 0 fallos; `node.txt` |
+| Typecheck Windows | **PASS**, exit 0 |
+| Build Windows | **PASS**, exit 0; warning >500 kB fuera de alcance, sin cambios |
+| Funciones previas: baseline limpia frente a E9 limpia | **0 modificadas, 0 eliminadas**, once nuevas; `definitions-summary.txt` |
+
+La primera repetición adicional de carreras y TP02 usó incorrectamente plantillas ya pobladas por fixtures persistentes de la suite histórica. Se conservan las salidas (`concurrency.txt`, `precondition.txt`), excluidas del resultado final por esa precondición inválida; los replays limpios posteriores dan 13/13 y 4/4 respectivamente. No fue un defecto E9. El contenedor efímero de auditoría se elimina al terminar; el stack Supabase local queda detenido. No se toca DEV compartido ni PROD.
+
+**Estado T06: completada técnicamente. Estado T07: completada técnicamente.** DV-01 aprobada y los 21 fallos demostrados se clasifican expresamente como preexistentes / fuera del alcance de E9 según la decisión del responsable. **Defectos E9 abiertos: ninguno.** E9-T08 completada por aceptación humana del responsable: seis ejecutadas/aprobadas y TH02/TH07 no ejecutadas, aceptadas por dispensa explícita. E9 CERRADA, VALIDADA Y ACEPTADA; [acceptance.md](acceptance.md) registra el cierre. Sin merge, push ni despliegue.
+
+## 10. E9-T08 — Aceptación humana y cierre documental
+
+El responsable del proyecto aprobó explícitamente el cierre el **01/10/2026 (America/Lima)**. Reportó TH01, TH03, TH04, TH05, TH06 y TH08 ejecutadas y aprobadas. TH02 **NO EJECUTADA — ACEPTADA POR DISPENSA DEL RESPONSABLE**, por no disponer de un segundo ADMIN. TH07 **NO EJECUTADA — ACEPTADA POR DISPENSA DEL RESPONSABLE**, porque el frontend aún no está desplegado en un entorno adecuado para validar pérdida/recuperación real de conectividad. Las dispensas son decisiones humanas de aceptación, no PASS ejecutados.
+
+T02–T07 permanecen completadas con los resultados de §9.7; no se ejecutaron nuevas pruebas técnicas para este cierre. DV-01 aprobada, HZ-E9-01 y los 21 fallos preexistentes conservados fuera de alcance (§9.3), ninguno convertido en PASS. Defectos E9 abiertos: ninguno. T08 completada por aceptación humana. Estimación aprobada: **22 h**; no constituye tiempo real consumido. Estado final **CERRADA, VALIDADA Y ACEPTADA**, conforme a [acceptance.md](acceptance.md). Este cierre no acredita despliegue a PROD ni cambia PM-002.

@@ -12,6 +12,8 @@ Sistema web de operaciones para restaurantes orientado al flujo **mesa → pedid
 - **Producción actual:** <https://mikuyapp.pages.dev/> continúa sobre la versión desplegada del MVP y los cambios post-MVP ya publicados, como PM-001.
 - **E1 — Operación de caja:** implementada, validada, aceptada y cerrada documentalmente el **21/09/2026**. Su despliegue a producción continúa pendiente del proceso de liberación correspondiente.
 - **E7 — Mejoras operativas de pedidos:** implementada, validada, aceptada y cerrada documentalmente el **30/09/2026** (productos sin cocina, recepción completa en cocina, cancelación de productos por el mozo, trazabilidad y comandas imprimibles opcionales). Su despliegue a producción continúa pendiente del proceso de liberación correspondiente.
+- **E10 — Solicitud de cuenta y atención en caja:** cerrada y aceptada el **30/09/2026**; [aceptación](specs/E10-AccountRequest/acceptance.md).
+- **E9 — Jornada operativa del local:** **CERRADA, VALIDADA Y ACEPTADA** el **01/10/2026**; seis humanas ejecutadas/aprobadas y TH02/TH07 no ejecutadas, aceptadas por dispensa del responsable. [Aceptación](specs/E9-OperationalDay/acceptance.md). Su despliegue a PROD no se acredita con este cierre.
 
 E1 reemplaza funcionalmente el cobro único de la baseline por actos de cobro totales o parciales, con uno o varios medios y propinas separadas. También amplía el modelo de caja; por ello, las cifras históricas de H1 no describen la arquitectura vigente de E1.
 
@@ -40,6 +42,8 @@ H1 establece la base técnica verificable, H2 incorpora autenticación, roles, c
 | PM-001 | DB Standardization | Aceptado y desplegado |
 | E1 | Operación de caja e Inicio ADMIN | Implementada, cerrada y aceptada; pendiente de despliegue |
 | E7 | Mejoras operativas de pedidos | Implementada, cerrada y aceptada; pendiente de despliegue |
+| E10 | Solicitud de cuenta y atención en caja | Cerrada y aceptada; aceptación no equivale a despliegue |
+| E9 | Jornada operativa del local | Cerrada, validada y aceptada; despliegue a PROD no acreditado |
 
 El plan base fue de **24 h**. La referencia de planificación vigente es **40.5 h**, incluida la reestimación aprobada de H5 de 4 h a 12 h; las causas y el detalle se mantienen en [CHANGELOG_SCOPE](docs/CHANGELOG_SCOPE.md). Estas cifras no representan tiempo real consumido.
 
@@ -58,6 +62,12 @@ Los cambios `PM-###` son posteriores al MVP y no reemplazan ni renumeran las Evo
 - Navegación adaptable para escritorio, tablet y móvil.
 
 El [resumen funcional de E1](docs/E1_RESUMEN_FUNCIONAL.md) explica el alcance en lenguaje operativo. También están disponibles la [presentación para usuarios](docs/E1_PRESENTACION_USUARIO.md) y las [notas de entrega](docs/E1_RELEASE_NOTES.md).
+
+## Jornada operativa del local — E9
+
+ADMIN abre y cierra la jornada; PostgreSQL asocia pedidos y sesiones de caja a ella y bloquea la operación cuando el local está cerrado. El cierre exige que no queden pedidos pendientes ni sesiones abiertas. ADMIN consulta el historial y los dispositivos reciben apertura/cierre por Realtime con relectura autoritativa. No hay cierre automático, horarios ni métricas por jornada.
+
+El [spec E9](specs/E9-OperationalDay/requirements.md), la [evidencia](specs/E9-OperationalDay/implementation.md) y la [aceptación](specs/E9-OperationalDay/acceptance.md) detallan el alcance. El modelo implementado hasta E9 contiene **27 tablas públicas y 61 migraciones**; la publicación Realtime incluye `detalle_pedido`, `jornada_operativa`, `mesa`, `pedido` y `solicitud_cuenta`. Son cifras del repositorio validado, no una declaración de despliegue a PROD.
 
 ## Funcionalidades de la baseline desplegada
 
@@ -109,6 +119,8 @@ La siguiente navegación corresponde a E1 implementada y aceptada. Estará dispo
 | `CAJA` | `/caja` | Sesión y movimientos de caja, pedidos pendientes, descuentos, precuenta, cobros totales/parciales, propinas, documentos internos, cierre y resumen diario |
 
 Las rutas protegidas requieren sesión y contexto válidos. Un acceso de rol no autorizado se dirige a `/403`; una sesión ausente se dirige a `/login`. `ADMINISTRADOR` conserva sus funciones administrativas, pero no ejecuta entrega ni cobro; `MOZO` entrega y `CAJA` cobra.
+
+Con E9, las pantallas de MOZO, COCINA y CAJA quedan bloqueadas con el local cerrado, incluidas `/ventas` y `/tecnica`; ADMIN conserva sus funciones administrativas y gestiona jornadas desde Inicio e historial `/admin/jornadas`.
 
 ## Arquitectura
 
@@ -399,10 +411,16 @@ H1 cerró con TP-01–TP-20 aprobadas. H2 cerró con 212 pruebas automatizadas, 
 - [Presentación de E1 para usuarios](docs/E1_PRESENTACION_USUARIO.md)
 - [Notas de entrega de E1](docs/E1_RELEASE_NOTES.md)
 - [Aceptación de E7](specs/E7-OrderOperationalImprovements/acceptance.md)
+- [Aceptación de E10](specs/E10-AccountRequest/acceptance.md)
+- [Spec E9](specs/E9-OperationalDay/requirements.md)
+- [Evidencia E9](specs/E9-OperationalDay/implementation.md)
+- [Aceptación de E9](specs/E9-OperationalDay/acceptance.md)
 
 ## Estado de liberación
 
 MikuyApp v1.0.0 — MVP H1–H6 está cerrado, validado, aceptado y constituye la baseline productiva. PM-001 — DB Standardization está aceptado y desplegado. E1 — Operación de caja y E7 — Mejoras operativas de pedidos están implementadas, cerradas, validadas y aceptadas, pero todavía no deben considerarse disponibles en producción hasta completar su proceso de despliegue.
+
+E10 está cerrada y aceptada. E9 está cerrada, validada y aceptada; su cierre documental no declara despliegue a PROD. PM-002 conserva su estado vigente.
 
 ## Licencia
 

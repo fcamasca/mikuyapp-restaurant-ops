@@ -2,7 +2,7 @@
 
 ## 1. Estado
 
-**E9: SPEC APROBADO — construcción autorizada (E9-T02–E9-T07); E9-T08 pendiente; no cerrada ni aceptada.** DH-01, DH-02 y DH-03 están resueltas (DC-10, DC-11 y DC-12, `requirements.md` §10.2); no quedan decisiones humanas pendientes. El responsable aprobó el spec (estimación 22 h) y autorizó la construcción de E9-T02 a E9-T07. La evidencia se registra en `implementation.md`.
+**E9: CERRADA, VALIDADA Y ACEPTADA (01/10/2026).** DH-01, DH-02 y DH-03 están resueltas (DC-10, DC-11 y DC-12, `requirements.md` §10.2); no quedan decisiones humanas pendientes. El responsable aprobó el spec (estimación 22 h) y autorizó la construcción de E9-T02 a E9-T07. La evidencia se registra en [implementation.md](implementation.md) y la aceptación humana en [acceptance.md](acceptance.md).
 
 | Tarea | Estado | Evidencia |
 |---|---|---|
@@ -11,9 +11,9 @@
 | E9-T03 | Completada | `implementation.md` §5 |
 | E9-T04 | Completada | `implementation.md` §6 |
 | E9-T05 | Completada | `implementation.md` §7 |
-| E9-T06 | En curso — falta TP22 con servidor Realtime real (stack Supabase local, Windows) | `implementation.md` §8 |
-| E9-T07 | En curso — regresión con 0 fallos nuevos; faltan TP22 real, `npm run build` y la decisión del responsable sobre 21 fallos preexistentes y DV-01 | `implementation.md` §9 |
-| E9-T08 | No iniciada | — |
+| E9-T06 | Completada técnicamente — TP22 real 7/7 PASS en Windows | `implementation.md` §8 |
+| E9-T07 | Completada técnicamente — 0 fallos nuevos; 21 preexistentes verificados fuera de alcance; Realtime 7/7, Node/typecheck/build PASS; DV-01 aprobada | `implementation.md` §9 |
+| E9-T08 | Completada por aceptación humana — 6 ejecutadas/aprobadas; TH02 y TH07 NO EJECUTADAS, aceptadas por dispensa explícita del responsable | `acceptance.md`; `test-plan.md` §4.1 |
 
 ## 2. Tareas
 

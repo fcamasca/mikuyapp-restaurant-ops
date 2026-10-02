@@ -1,6 +1,6 @@
 # MikuyApp — Evolución 9 — Jornada operativa del local: diseño
 
-**Estado de E9: SPEC APROBADO — construcción autorizada (E9-T02–E9-T07); E9-T08 pendiente; no cerrada ni aceptada.** Diseño derivado de la inspección de `main` en `5e3b40b`. Incorpora las decisiones cerradas DC-10 (validación en puntos de entrada), DC-11 (local cerrado = sólo cerrar sesión) y DC-12 (sin backfill; aborto explícito de la migración) de `requirements.md` §10.2. No quedan decisiones humanas pendientes.
+**Estado de E9: CERRADA, VALIDADA Y ACEPTADA (01/10/2026).** Diseño derivado de la inspección de `main` en `5e3b40b`. Incorpora las decisiones cerradas DC-10 (validación en puntos de entrada), DC-11 (local cerrado = sólo cerrar sesión) y DC-12 (sin backfill; aborto explícito de la migración) de `requirements.md` §10.2. No quedan decisiones humanas pendientes. Cierre y dispensas TH02/TH07 registrados en [acceptance.md](acceptance.md); evidencia en [implementation.md](implementation.md).
 
 ## E9-D01 — Principios y cambio mínimo
 
@@ -163,7 +163,7 @@ trg_pago_before_insert_validar_jornada_operativa
   EXECUTE FUNCTION tgf_pago_validar_jornada_operativa()     -- SECURITY DEFINER
 ```
 
-- Si `new.sesion_caja_id` es nulo → rechazo `23514` (no existe ya ninguna vía vigente que pague sin sesión: `registrar_pago_pedido` delega en `rpc_registrar_pago_total_pedido` con sesión; sin datos históricos no hay pagos legacy que proteger).
+- **DV-01 aprobada (2026-10-01):** si `new.sesion_caja_id` es nulo, E9 no agrega un rechazo; permanecen las reglas de E1 y las RPC vigentes. Cuando existe sesión, la coherencia de jornada es obligatoria (R18, I-4).
 - Lee `sesion_caja.jornada_operativa_id` y `pedido.jornada_operativa_id` (filas ya bloqueadas por la RPC de cobro, sin locks nuevos). Si difieren → `PT409` (“El pedido y la sesión de caja pertenecen a jornadas distintas”).
 - Se ubica en `pago` porque **toda** vía de cobro inserta al menos una fila `pago` con su `sesion_caja_id` (`rpc_registrar_cobro_pedido` inserta `cobro` y sus N `pago`; las vías heredadas insertan `pago`). Un único trigger cubre las cuatro vías sin modificarlas; un fallo revierte el `cobro` y la auditoría de la misma transacción.
 - Por I-1–I-3 la condición no debería ocurrir nunca; el trigger hace explícita I-4 y la deja probada.
