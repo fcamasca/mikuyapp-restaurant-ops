@@ -69,7 +69,7 @@ async function device(user, label) {
   must(await client.auth.signInWithPassword({ email: user.email, password }), `login ${label}`)
   const context = { profile: { id: user.id, local_id: fx.local, rol_id: 0, nombre: label, activo: true },
     role: { id: 0, codigo: user.code, activo: true }, local: { id: fx.local, nombre: 'Validación E9', activo: true } }
-  return { client, label, context, service: createOperationalDayService(client), state: 'desconocido', dayId: null, refetches: 0 }
+  return { client, label, context, service: createOperationalDayService(client), state: 'desconocido', dayId: null, refetches: 0, pending: 0, status: 'CREATED', events: { INSERT: 0, UPDATE: 0 } }
 }
 const devices = [
   await device(users.admin, 'admin-1'), await device(users.admin, 'admin-2'),
@@ -79,7 +79,10 @@ const [adminDevice] = devices
 
 async function refresh(d) {
   d.refetches += 1
+  d.pending += 1
   const r = await d.service.getCurrent()
+  d.pending -= 1
+  if (!r.ok) throw new Error(`${d.label}: ${r.error.message}`)
   if (r.ok) { d.state = r.data ? 'ABIERTA' : 'CERRADA'; d.dayId = r.data?.id ?? null }
 }
 async function waitAll(predicate, timeoutMs = 10000) {
@@ -88,42 +91,79 @@ async function waitAll(predicate, timeoutMs = 10000) {
   return -1
 }
 
+// Observe real channel acknowledgements and payloads without changing the frontend service.
+async function subscribeDevice(d) {
+  d.status = 'CREATED'
+  d.cdcReady = false
+  const observedClient = {
+    channel(topic) {
+      const channel = d.client.channel(topic)
+      channel.on('system', {}, (payload) => {
+        log(`${d.label}: system ${JSON.stringify(payload)}`)
+        if (payload.extension === 'postgres_changes') d.cdcReady = payload.status === 'ok'
+      })
+      const originalOn = channel.on.bind(channel)
+      channel.on = (type, filter, callback) => originalOn(type, filter, (payload) => {
+        if (payload.new?.local_id === fx.local) {
+          d.events[filter.event] += 1
+          log(`${d.label}: ${filter.event} jornada=${payload.new.id} topic=${topic}`)
+        }
+        callback(payload)
+      })
+      const originalSubscribe = channel.subscribe.bind(channel)
+      channel.subscribe = (callback) => originalSubscribe((status, error) => {
+        d.status = status
+        if (status !== 'SUBSCRIBED') d.cdcReady = false
+        log(`${d.label}: ${status} topic=${topic}${error ? ' error=' + error.message : ''}`)
+        callback(status)
+      })
+      return channel
+    },
+    removeChannel: (channel) => d.client.removeChannel(channel),
+  }
+  return subscribeToOperationalDay(observedClient, () => refresh(d),
+    () => log(`${d.label}: error de conexión`), { channelName: 'e9-local-operational-day' })
+}
+const ready = (d) => d.status === 'SUBSCRIBED' && d.cdcReady && d.pending === 0 && d.state !== 'desconocido'
+const diagnostic = () => devices.map((d) => `${d.label}=${d.status}/CDC=${d.cdcReady}/${d.state} INSERT=${d.events.INSERT} UPDATE=${d.events.UPDATE}`).join(' ')
+
 const handles = []
 let openedId = null
 try {
   for (const d of devices) {
-    handles.push(await subscribeToOperationalDay(d.client, () => refresh(d), () => log(`${d.label}: error de conexión`), { channelName: 'e9-local-operational-day' }))
+    handles.push(await subscribeDevice(d))
   }
-  await waitAll((d) => d.state === 'CERRADA')
-  check('Suscripción inicial: los cinco clientes ven el local cerrado', devices.every((d) => d.state === 'CERRADA'), devices.map((d) => `${d.label}=${d.state}`).join(' '))
+  const initialReady = await waitAll((d) => ready(d) && d.state === 'CERRADA', 60000)
+  check('Suscripción inicial: cinco SUBSCRIBED + CDC confirmado y snapshot cerrado', initialReady >= 0, diagnostic())
+  if (initialReady < 0) throw new Error('No se abre la jornada sin cinco canales SUBSCRIBED con CDC confirmado.')
 
   const opened = unwrap(await adminDevice.service.open(adminDevice.context, randomUUID()), 'abrir')
   openedId = opened.id
-  const tOpen = await waitAll((d) => d.state === 'ABIERTA' && d.dayId === opened.id)
-  check('TP22 apertura recibida sin refrescar por MOZO, COCINA, CAJA y el segundo ADMIN', tOpen >= 0, `${tOpen} ms (${opened.identificacion})`)
+  const tOpen = await waitAll((d) => d.events.INSERT > 0 && d.state === 'ABIERTA' && d.dayId === opened.id)
+  check('TP22 apertura recibida sin refrescar por MOZO, COCINA, CAJA y el segundo ADMIN', tOpen >= 0, `${tOpen} ms (${opened.identificacion}); ${diagnostic()}`)
   const again = unwrap(await devices[1].service.open(devices[1].context, randomUUID()), 'abrir de nuevo')
   check('TP22 apertura idempotente desde el segundo ADMIN', again.yaExistia && again.id === opened.id, `ya_existia=${again.yaExistia}`)
 
   const mozo = devices[2]
   await handles[2].stop()
-  handles[2] = await subscribeToOperationalDay(mozo.client, () => refresh(mozo), () => log('mozo remontado: error'), { channelName: 'e9-local-operational-day' })
-  await sleep(1500)
+  handles[2] = await subscribeDevice(mozo)
+  if (await waitAll(ready, 60000) < 0) throw new Error('Remontaje sin SUBSCRIBED.')
   const beforeIdle = restRequests
   await sleep(10000)
   check('TP21 sin polling: 10 s sin señales no generan peticiones REST', restRequests === beforeIdle, `${restRequests - beforeIdle} peticiones`)
   const cocina = devices[3]
   cocina.client.realtime.disconnect()
-  await sleep(1500)
+  if (await waitAll((d) => d !== cocina || d.status !== 'SUBSCRIBED') < 0) throw new Error('No se observó desconexión.')
   const beforeReconnect = cocina.refetches
   cocina.client.realtime.connect()
   const start = Date.now(); let tReconnect = -1
-  while (Date.now() - start < 15000) { if (cocina.refetches > beforeReconnect) { tReconnect = Date.now() - start; break } await sleep(50) }
+  while (Date.now() - start < 15000) { if (ready(cocina) && cocina.refetches > beforeReconnect) { tReconnect = Date.now() - start; break } await sleep(50) }
   check('TP21 la reconexión resincroniza el estado autoritativo', tReconnect >= 0, `${tReconnect} ms`)
 
   const closed = unwrap(await adminDevice.service.close(adminDevice.context, opened.id), 'cerrar')
   openedId = null
-  const tClose = await waitAll((d) => d.state === 'CERRADA')
-  check('TP22 cierre recibido sin refrescar por los cinco clientes (incluido el mozo remontado, topic único)', tClose >= 0 && !closed.yaEstabaCerrada, `${tClose} ms`)
+  const tClose = await waitAll((d) => d.events.UPDATE > 0 && d.state === 'CERRADA')
+  check('TP22 cierre recibido sin refrescar por los cinco clientes (incluido el mozo remontado, topic único)', tClose >= 0 && !closed.yaEstabaCerrada, `${tClose} ms; ${diagnostic()}`)
 } catch (error) {
   check('Ejecución sin excepciones', false, error instanceof Error ? error.message : String(error))
 } finally {

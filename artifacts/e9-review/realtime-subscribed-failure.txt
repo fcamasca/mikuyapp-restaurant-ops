@@ -1,0 +1,30 @@
+[2026-10-01T21:21:25.964Z] Stack Supabase local: http://127.0.0.1:54321
+[2026-10-01T21:21:27.678Z] Base local: 61 migraciones, última 20261001000200; publicación = detalle_pedido,jornada_operativa,mesa,pedido,solicitud_cuenta; local de prueba E9-VAL-3f92192f
+[2026-10-01T21:21:27.679Z] PASS Publicación incluye jornada_operativa: detalle_pedido,jornada_operativa,mesa,pedido,solicitud_cuenta
+[2026-10-01T21:21:28.594Z] admin-1: SUBSCRIBED topic=e9-local-operational-day:1
+[2026-10-01T21:21:28.601Z] mozo: SUBSCRIBED topic=e9-local-operational-day:3
+[2026-10-01T21:21:28.607Z] caja: SUBSCRIBED topic=e9-local-operational-day:5
+[2026-10-01T21:21:28.614Z] cocina: SUBSCRIBED topic=e9-local-operational-day:4
+[2026-10-01T21:21:28.619Z] admin-2: SUBSCRIBED topic=e9-local-operational-day:2
+[2026-10-01T21:21:28.790Z] PASS Suscripción inicial: cinco SUBSCRIBED y snapshot cerrado: admin-1=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 admin-2=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 mozo=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 cocina=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 caja=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0
+[2026-10-01T21:21:38.822Z] FAIL TP22 apertura recibida sin refrescar por MOZO, COCINA, CAJA y el segundo ADMIN: -1 ms (Jornada 2026-10-01 (1)); admin-1=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 admin-2=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 mozo=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 cocina=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0 caja=SUBSCRIBED/CERRADA INSERT=0 UPDATE=0
+[2026-10-01T21:21:38.841Z] PASS TP22 apertura idempotente desde el segundo ADMIN: ya_existia=true
+[2026-10-01T21:21:38.845Z] mozo: CLOSED topic=e9-local-operational-day:3
+[2026-10-01T21:21:38.853Z] mozo: SUBSCRIBED topic=e9-local-operational-day:6
+[2026-10-01T21:21:48.906Z] PASS TP21 sin polling: 10 s sin señales no generan peticiones REST: 0 peticiones
+[2026-10-01T21:21:48.916Z] cocina: CHANNEL_ERROR topic=e9-local-operational-day:4 error=socket closed: 1005
+[2026-10-01T21:21:48.916Z] cocina: error de conexión
+[2026-10-01T21:21:48.987Z] cocina: SUBSCRIBED topic=e9-local-operational-day:4
+[2026-10-01T21:21:49.022Z] PASS TP21 la reconexión resincroniza el estado autoritativo: 52 ms
+[2026-10-01T21:21:49.294Z] admin-2: UPDATE jornada=18 topic=e9-local-operational-day:2
+[2026-10-01T21:21:49.295Z] caja: UPDATE jornada=18 topic=e9-local-operational-day:5
+[2026-10-01T21:21:49.296Z] cocina: UPDATE jornada=18 topic=e9-local-operational-day:4
+[2026-10-01T21:21:49.297Z] admin-1: UPDATE jornada=18 topic=e9-local-operational-day:1
+[2026-10-01T21:21:49.298Z] mozo: UPDATE jornada=18 topic=e9-local-operational-day:6
+[2026-10-01T21:21:49.471Z] PASS TP22 cierre recibido sin refrescar por los cinco clientes (incluido el mozo remontado, topic único): 437 ms; admin-1=SUBSCRIBED/CERRADA INSERT=0 UPDATE=1 admin-2=SUBSCRIBED/CERRADA INSERT=0 UPDATE=1 mozo=SUBSCRIBED/CERRADA INSERT=0 UPDATE=1 cocina=SUBSCRIBED/CERRADA INSERT=0 UPDATE=1 caja=SUBSCRIBED/CERRADA INSERT=0 UPDATE=1
+[2026-10-01T21:21:49.473Z] admin-1: CLOSED topic=e9-local-operational-day:1
+[2026-10-01T21:21:49.474Z] admin-2: CLOSED topic=e9-local-operational-day:2
+[2026-10-01T21:21:49.477Z] mozo: CLOSED topic=e9-local-operational-day:6
+[2026-10-01T21:21:49.478Z] cocina: CLOSED topic=e9-local-operational-day:4
+[2026-10-01T21:21:49.480Z] caja: CLOSED topic=e9-local-operational-day:5
+[2026-10-01T21:21:49.481Z] RESUMEN 6/7 PASS — FALLAS: TP22 apertura recibida sin refrescar por MOZO, COCINA, CAJA y el segundo ADMIN

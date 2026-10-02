@@ -1,0 +1,42 @@
+[2026-10-01T21:28:51.433Z] Stack Supabase local: http://127.0.0.1:54321
+[2026-10-01T21:28:53.059Z] Base local: 61 migraciones, última 20261001000200; publicación = detalle_pedido,jornada_operativa,mesa,pedido,solicitud_cuenta; local de prueba E9-VAL-52fc118e
+[2026-10-01T21:28:53.060Z] PASS Publicación incluye jornada_operativa: detalle_pedido,jornada_operativa,mesa,pedido,solicitud_cuenta
+[2026-10-01T21:28:53.946Z] admin-1: SUBSCRIBED topic=e9-local-operational-day:1
+[2026-10-01T21:28:53.953Z] cocina: SUBSCRIBED topic=e9-local-operational-day:4
+[2026-10-01T21:28:53.958Z] admin-2: SUBSCRIBED topic=e9-local-operational-day:2
+[2026-10-01T21:28:53.964Z] mozo: SUBSCRIBED topic=e9-local-operational-day:3
+[2026-10-01T21:28:53.969Z] caja: SUBSCRIBED topic=e9-local-operational-day:5
+[2026-10-01T21:28:55.272Z] cocina: system {"message":"Subscribed to PostgreSQL","status":"ok","extension":"postgres_changes","channel":"e9-local-operational-day:4"}
+[2026-10-01T21:28:55.469Z] caja: system {"message":"Subscribed to PostgreSQL","status":"ok","extension":"postgres_changes","channel":"e9-local-operational-day:5"}
+[2026-10-01T21:28:56.249Z] mozo: system {"message":"Subscribed to PostgreSQL","status":"ok","extension":"postgres_changes","channel":"e9-local-operational-day:3"}
+[2026-10-01T21:28:56.653Z] admin-2: system {"message":"Subscribed to PostgreSQL","status":"ok","extension":"postgres_changes","channel":"e9-local-operational-day:2"}
+[2026-10-01T21:28:56.917Z] admin-1: system {"message":"Subscribed to PostgreSQL","status":"ok","extension":"postgres_changes","channel":"e9-local-operational-day:1"}
+[2026-10-01T21:28:56.964Z] PASS Suscripción inicial: cinco SUBSCRIBED + CDC confirmado y snapshot cerrado: admin-1=SUBSCRIBED/CDC=true/CERRADA INSERT=0 UPDATE=0 admin-2=SUBSCRIBED/CDC=true/CERRADA INSERT=0 UPDATE=0 mozo=SUBSCRIBED/CDC=true/CERRADA INSERT=0 UPDATE=0 cocina=SUBSCRIBED/CDC=true/CERRADA INSERT=0 UPDATE=0 caja=SUBSCRIBED/CDC=true/CERRADA INSERT=0 UPDATE=0
+[2026-10-01T21:28:57.164Z] admin-2: INSERT jornada=18 topic=e9-local-operational-day:2
+[2026-10-01T21:28:57.166Z] admin-1: INSERT jornada=18 topic=e9-local-operational-day:1
+[2026-10-01T21:28:57.167Z] cocina: INSERT jornada=18 topic=e9-local-operational-day:4
+[2026-10-01T21:28:57.169Z] mozo: INSERT jornada=18 topic=e9-local-operational-day:3
+[2026-10-01T21:28:57.170Z] caja: INSERT jornada=18 topic=e9-local-operational-day:5
+[2026-10-01T21:28:57.328Z] PASS TP22 apertura recibida sin refrescar por MOZO, COCINA, CAJA y el segundo ADMIN: 340 ms (Jornada 2026-10-01 (1)); admin-1=SUBSCRIBED/CDC=true/ABIERTA INSERT=1 UPDATE=0 admin-2=SUBSCRIBED/CDC=true/ABIERTA INSERT=1 UPDATE=0 mozo=SUBSCRIBED/CDC=true/ABIERTA INSERT=1 UPDATE=0 cocina=SUBSCRIBED/CDC=true/ABIERTA INSERT=1 UPDATE=0 caja=SUBSCRIBED/CDC=true/ABIERTA INSERT=1 UPDATE=0
+[2026-10-01T21:28:57.339Z] PASS TP22 apertura idempotente desde el segundo ADMIN: ya_existia=true
+[2026-10-01T21:28:57.342Z] mozo: CLOSED topic=e9-local-operational-day:3
+[2026-10-01T21:28:57.348Z] mozo: SUBSCRIBED topic=e9-local-operational-day:6
+[2026-10-01T21:28:57.367Z] mozo: system {"message":"Subscribed to PostgreSQL","status":"ok","extension":"postgres_changes","channel":"e9-local-operational-day:6"}
+[2026-10-01T21:29:07.412Z] PASS TP21 sin polling: 10 s sin señales no generan peticiones REST: 0 peticiones
+[2026-10-01T21:29:07.425Z] cocina: CHANNEL_ERROR topic=e9-local-operational-day:4 error=socket closed: 1005
+[2026-10-01T21:29:07.425Z] cocina: error de conexión
+[2026-10-01T21:29:07.487Z] cocina: SUBSCRIBED topic=e9-local-operational-day:4
+[2026-10-01T21:29:07.500Z] cocina: system {"message":"Subscribed to PostgreSQL","status":"ok","extension":"postgres_changes","channel":"e9-local-operational-day:4"}
+[2026-10-01T21:29:07.528Z] PASS TP21 la reconexión resincroniza el estado autoritativo: 60 ms
+[2026-10-01T21:29:07.912Z] caja: UPDATE jornada=18 topic=e9-local-operational-day:5
+[2026-10-01T21:29:07.913Z] admin-2: UPDATE jornada=18 topic=e9-local-operational-day:2
+[2026-10-01T21:29:07.914Z] cocina: UPDATE jornada=18 topic=e9-local-operational-day:4
+[2026-10-01T21:29:07.915Z] mozo: UPDATE jornada=18 topic=e9-local-operational-day:6
+[2026-10-01T21:29:07.916Z] admin-1: UPDATE jornada=18 topic=e9-local-operational-day:1
+[2026-10-01T21:29:08.059Z] PASS TP22 cierre recibido sin refrescar por los cinco clientes (incluido el mozo remontado, topic único): 513 ms; admin-1=SUBSCRIBED/CDC=true/CERRADA INSERT=1 UPDATE=1 admin-2=SUBSCRIBED/CDC=true/CERRADA INSERT=1 UPDATE=1 mozo=SUBSCRIBED/CDC=true/CERRADA INSERT=1 UPDATE=1 cocina=SUBSCRIBED/CDC=true/CERRADA INSERT=1 UPDATE=1 caja=SUBSCRIBED/CDC=true/CERRADA INSERT=1 UPDATE=1
+[2026-10-01T21:29:08.062Z] admin-1: CLOSED topic=e9-local-operational-day:1
+[2026-10-01T21:29:08.064Z] admin-2: CLOSED topic=e9-local-operational-day:2
+[2026-10-01T21:29:08.066Z] mozo: CLOSED topic=e9-local-operational-day:6
+[2026-10-01T21:29:08.068Z] cocina: CLOSED topic=e9-local-operational-day:4
+[2026-10-01T21:29:08.071Z] caja: CLOSED topic=e9-local-operational-day:5
+[2026-10-01T21:29:08.072Z] RESUMEN 7/7 PASS

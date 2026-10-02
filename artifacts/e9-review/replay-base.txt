@@ -1,0 +1,1 @@
+REPLAY OK audit_base: 59 migraciones (última 20260930000200_e10_t03_solicitar_cuenta_lectura_caja.sql) + seed

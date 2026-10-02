@@ -1,0 +1,5 @@
+== TP22 simulated failure
+-- exit 1
+== sql simulated success
+-- exit 0
+PASS: child exit 1 retained after later exit 0; final guard exits 1 when failure count > 0.

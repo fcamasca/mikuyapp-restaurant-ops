@@ -1,0 +1,2218 @@
+(node:4980) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+TAP version 13
+# (node:22800) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: E1-TP59: Inicio conserva KPI, vacíos, caja cerrada y medios en cero
+ok 1 - E1-TP59: Inicio conserva KPI, vacíos, caja cerrada y medios en cero
+  ---
+  duration_ms: 6.0291
+  ...
+# Subtest: E1-TP60: atención diferencia decisiones de descuentos y consulta de cierres
+ok 2 - E1-TP60: atención diferencia decisiones de descuentos y consulta de cierres
+  ---
+  duration_ms: 0.4551
+  ...
+# Subtest: E1-TP60/64: navegación usa sidebar desktop y drawer accesible en anchos menores
+ok 3 - E1-TP60/64: navegación usa sidebar desktop y drawer accesible en anchos menores
+  ---
+  duration_ms: 0.9787
+  ...
+# Subtest: E1-TP59/60/63/64: Pedidos ADMIN conserva lectura, anulación y responsive aprobados
+ok 4 - E1-TP59/60/63/64: Pedidos ADMIN conserva lectura, anulación y responsive aprobados
+  ---
+  duration_ms: 0.9449
+  ...
+# Subtest: E1-T16: Usuarios permanece visible pero deshabilitado al no existir contrato
+ok 5 - E1-T16: Usuarios permanece visible pero deshabilitado al no existir contrato
+  ---
+  duration_ms: 0.6545
+  ...
+# (node:15460) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: E1-TP63: reutiliza los contratos autoritativos existentes
+ok 6 - E1-TP63: reutiliza los contratos autoritativos existentes
+  ---
+  duration_ms: 3.5957
+  ...
+# Subtest: E1-TP63: una solicitud usa una clave estable y bloquea doble envío
+ok 7 - E1-TP63: una solicitud usa una clave estable y bloquea doble envío
+  ---
+  duration_ms: 0.6008
+  ...
+# Subtest: E1-TP63: pago o estado terminal bloquean la acción
+ok 8 - E1-TP63: pago o estado terminal bloquean la acción
+  ---
+  duration_ms: 0.54
+  ...
+# Subtest: E1-TP59/63: filtra anulables por defecto y permite consultar todos
+ok 9 - E1-TP59/63: filtra anulables por defecto y permite consultar todos
+  ---
+  duration_ms: 2.0944
+  ...
+# Subtest: E1-TP59/63: Cuenta agrupa total y saldo autoritativos en una sola celda
+ok 10 - E1-TP59/63: Cuenta agrupa total y saldo autoritativos en una sola celda
+  ---
+  duration_ms: 1.3719
+  ...
+# Subtest: E1-TP59/63: permite ordenar sin controles ambiguos por columna
+ok 11 - E1-TP59/63: permite ordenar sin controles ambiguos por columna
+  ---
+  duration_ms: 0.8429
+  ...
+# Subtest: E1-TP59/63: muestra fecha y hora sin segundos y conserva orden autoritativo
+ok 12 - E1-TP59/63: muestra fecha y hora sin segundos y conserva orden autoritativo
+  ---
+  duration_ms: 1.3668
+  ...
+# Subtest: E1-TP61: ampliación de lectura mantiene autoridad, aislamiento y privilegio mínimo
+ok 13 - E1-TP61: ampliación de lectura mantiene autoridad, aislamiento y privilegio mínimo
+  ---
+  duration_ms: 0.6084
+  ...
+# (node:20096) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: redirige usuarios anónimos desde todas las rutas protegidas a login
+ok 14 - redirige usuarios anónimos desde todas las rutas protegidas a login
+  ---
+  duration_ms: 6.7566
+  ...
+# Subtest: permite abrir login a usuarios sin sesión
+ok 15 - permite abrir login a usuarios sin sesión
+  ---
+  duration_ms: 0.4008
+  ...
+# Subtest: mantiene carga sin exponer contenido durante restauración de sesión
+ok 16 - mantiene carga sin exponer contenido durante restauración de sesión
+  ---
+  duration_ms: 0.4769
+  ...
+# Subtest: mantiene carga sin exponer contenido mientras se valida el contexto
+ok 17 - mantiene carga sin exponer contenido mientras se valida el contexto
+  ---
+  duration_ms: 0.3018
+  ...
+# Subtest: redirige cada rol a su destino inicial autorizado
+ok 18 - redirige cada rol a su destino inicial autorizado
+  ---
+  duration_ms: 0.6509
+  ...
+# Subtest: envía a 403 cuando un rol abre directamente una ruta ajena
+ok 19 - envía a 403 cuando un rol abre directamente una ruta ajena
+  ---
+  duration_ms: 1.2575
+  ...
+# Subtest: permite acceso a técnica a los cuatro roles autorizados
+ok 20 - permite acceso a técnica a los cuatro roles autorizados
+  ---
+  duration_ms: 0.5278
+  ...
+# Subtest: redirige un usuario autenticado que abre login a su destino por rol
+ok 21 - redirige un usuario autenticado que abre login a su destino por rol
+  ---
+  duration_ms: 0.4219
+  ...
+# Subtest: bloquea acceso operativo cuando el contexto es inválido
+ok 22 - bloquea acceso operativo cuando el contexto es inválido
+  ---
+  duration_ms: 1.2958
+  ...
+# Subtest: mantiene visible el error recuperable sin mostrar contenido protegido
+ok 23 - mantiene visible el error recuperable sin mostrar contenido protegido
+  ---
+  duration_ms: 1.4125
+  ...
+# Subtest: redirige una ruta inexistente a 403 sin generar bucles
+ok 24 - redirige una ruta inexistente a 403 sin generar bucles
+  ---
+  duration_ms: 0.6492
+  ...
+# Subtest: rechaza rutas de retorno externas o ambiguas
+ok 25 - rechaza rutas de retorno externas o ambiguas
+  ---
+  duration_ms: 0.4931
+  ...
+# Subtest: permite únicamente la ruta operativa correspondiente a cada rol
+ok 26 - permite únicamente la ruta operativa correspondiente a cada rol
+  ---
+  duration_ms: 0.7745
+  ...
+# Subtest: conserva la ruta administrativa legacy sin conceder operación de caja
+ok 27 - conserva la ruta administrativa legacy sin conceder operación de caja
+  ---
+  duration_ms: 2.3457
+  ...
+# (node:3040) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: restaura una sesión existente durante la carga inicial
+ok 28 - restaura una sesión existente durante la carga inicial
+  ---
+  duration_ms: 5.119
+  ...
+# Subtest: representa una sesión ausente después de la restauración inicial
+ok 29 - representa una sesión ausente después de la restauración inicial
+  ---
+  duration_ms: 0.7544
+  ...
+# Subtest: actualiza el estado cuando Supabase notifica un cambio de sesión
+ok 30 - actualiza el estado cuando Supabase notifica un cambio de sesión
+  ---
+  duration_ms: 0.8015
+  ...
+# Subtest: muestra un mensaje seguro ante credenciales inválidas
+ok 31 - muestra un mensaje seguro ante credenciales inválidas
+  ---
+  duration_ms: 2.0481
+  ...
+# Subtest: informa cuando el inicio de sesión está en curso
+ok 32 - informa cuando el inicio de sesión está en curso
+  ---
+  duration_ms: 0.7773
+  ...
+# Subtest: cierra sesión y limpia el estado autenticado
+ok 33 - cierra sesión y limpia el estado autenticado
+  ---
+  duration_ms: 3.9914
+  ...
+# Subtest: cancela la suscripción y omite eventos después del desmontaje
+ok 34 - cancela la suscripción y omite eventos después del desmontaje
+  ---
+  duration_ms: 1.1736
+  ...
+# Subtest: presenta un error recuperable si falla la conexión inicial
+ok 35 - presenta un error recuperable si falla la conexión inicial
+  ---
+  duration_ms: 0.9765
+  ...
+# (node:3052) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: mapea contador, actor legible y alerta de cierre
+ok 36 - mapea contador, actor legible y alerta de cierre
+  ---
+  duration_ms: 34.8323
+  ...
+# Subtest: marca la entrega propia mediante RPC y rechaza roles no administradores localmente
+ok 37 - marca la entrega propia mediante RPC y rechaza roles no administradores localmente
+  ---
+  duration_ms: 1.7282
+  ...
+# Subtest: marca todas las entregas propias como leídas mediante una única RPC
+ok 38 - marca todas las entregas propias como leídas mediante una única RPC
+  ---
+  duration_ms: 5.5345
+  ...
+# Subtest: la campana ofrece estados informativo/alerta, contador y lectura; Caja avisa la diferencia
+ok 39 - la campana ofrece estados informativo/alerta, contador y lectura; Caja avisa la diferencia
+  ---
+  duration_ms: 5.8306
+  ...
+# Subtest: la UI administrativa incorpora la campana sin ampliar lecturas directas de perfiles
+ok 40 - la UI administrativa incorpora la campana sin ampliar lecturas directas de perfiles
+  ---
+  duration_ms: 3.4314
+  ...
+# (node:15336) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: mantiene /caja exclusiva de CAJA
+ok 41 - mantiene /caja exclusiva de CAJA
+  ---
+  duration_ms: 7.0963
+  ...
+# Subtest: consume importes autoritativos sin reconstruir neto o saldo
+ok 42 - consume importes autoritativos sin reconstruir neto o saldo
+  ---
+  duration_ms: 1.9009
+  ...
+# Subtest: registra un cobro atómico con N medios, propinas e idempotencia
+ok 43 - registra un cobro atómico con N medios, propinas e idempotencia
+  ---
+  duration_ms: 6.5179
+  ...
+# Subtest: lee movimientos con actor y registra siempre mediante lote
+ok 44 - lee movimientos con actor y registra siempre mediante lote
+  ---
+  duration_ms: 5.6871
+  ...
+# Subtest: cierre consume reporte y snapshot autoritativos
+ok 45 - cierre consume reporte y snapshot autoritativos
+  ---
+  duration_ms: 4.8597
+  ...
+# Subtest: TP35, TP45-47 y TP59-60 están representados
+ok 46 - TP35, TP45-47 y TP59-60 están representados
+  ---
+  duration_ms: 1.6152
+  ...
+# Subtest: administración queda en shell admin sin capacidad de cobro
+ok 47 - administración queda en shell admin sin capacidad de cobro
+  ---
+  duration_ms: 2.3548
+  ...
+# Subtest: TP62 UX separa estado, pedido, cobro y pagos con controles visibles
+ok 48 - TP62 UX separa estado, pedido, cobro y pagos con controles visibles
+  ---
+  duration_ms: 1.8494
+  ...
+# Subtest: TP62 permite ocultar y mostrar la lista de pedidos sin perder el detalle
+ok 49 - TP62 permite ocultar y mostrar la lista de pedidos sin perder el detalle
+  ---
+  duration_ms: 1.5248
+  ...
+# Subtest: TP62 usa automáticamente la única caja activa y no muestra selector ni cajero duplicado
+ok 50 - TP62 usa automáticamente la única caja activa y no muestra selector ni cajero duplicado
+  ---
+  duration_ms: 1.7469
+  ...
+# Subtest: TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demanda
+ok 51 - TP62 UX prioriza saldo completo, N medios y revela excepciones bajo demanda
+  ---
+  duration_ms: 1.5397
+  ...
+# Subtest: TP62 compacta saldo y controles por fila sin permitir eliminar la primera
+ok 52 - TP62 compacta saldo y controles por fila sin permitir eliminar la primera
+  ---
+  duration_ms: 1.3967
+  ...
+# Subtest: TP62 prioriza cobro e historial, compacta el resumen y colapsa productos
+ok 53 - TP62 prioriza cobro e historial, compacta el resumen y colapsa productos
+  ---
+  duration_ms: 1.4964
+  ...
+# Subtest: TP62 presenta el historial como una tabla compacta por acto de cobro
+ok 54 - TP62 presenta el historial como una tabla compacta por acto de cobro
+  ---
+  duration_ms: 1.7951
+  ...
+# Subtest: TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la derecha
+ok 55 - TP62 integra las acciones auxiliares dentro de Cobro y las alinea a la derecha
+  ---
+  duration_ms: 1.3556
+  ...
+# Subtest: TP62 usa el mismo lenguaje operativo en cobro total y parcial
+ok 56 - TP62 usa el mismo lenguaje operativo en cobro total y parcial
+  ---
+  duration_ms: 1.0065
+  ...
+# Subtest: TP62 alinea la mesa a la derecha del encabezado del pedido
+ok 57 - TP62 alinea la mesa a la derecha del encabezado del pedido
+  ---
+  duration_ms: 2.0129
+  ...
+# Subtest: TP62 UX previene importes inválidos y limpia estado transitorio
+ok 58 - TP62 UX previene importes inválidos y limpia estado transitorio
+  ---
+  duration_ms: 1.3416
+  ...
+# Subtest: TP62 muestra una única solicitud de descuento por pedido
+ok 59 - TP62 muestra una única solicitud de descuento por pedido
+  ---
+  duration_ms: 1.2669
+  ...
+# Subtest: TP62 presenta movimientos históricos bloqueados y altas batch en una sola grilla
+ok 60 - TP62 presenta movimientos históricos bloqueados y altas batch en una sola grilla
+  ---
+  duration_ms: 7.1575
+  ...
+# Subtest: TP62 revisa el cierre antes de mutar y usa el snapshot para el reporte
+ok 61 - TP62 revisa el cierre antes de mutar y usa el snapshot para el reporte
+  ---
+  duration_ms: 1.917
+  ...
+# Subtest: TP62 UX no repite cajero ni expone el UUID de quien abrió
+ok 62 - TP62 UX no repite cajero ni expone el UUID de quien abrió
+  ---
+  duration_ms: 0.8741
+  ...
+# Subtest: TP62 cobro prepara una confirmación y no invoca la RPC desde el formulario
+ok 63 - TP62 cobro prepara una confirmación y no invoca la RPC desde el formulario
+  ---
+  duration_ms: 0.5603
+  ...
+# Subtest: TP62 modal resume el cobro total, parcial y sus medios antes de registrar
+ok 64 - TP62 modal resume el cobro total, parcial y sus medios antes de registrar
+  ---
+  duration_ms: 1.5915
+  ...
+# Subtest: TP62 separa venta, propina y total físico a recibir
+ok 65 - TP62 separa venta, propina y total físico a recibir
+  ---
+  duration_ms: 1.5228
+  ...
+# Subtest: TP62 confirmar registra una sola vez y Volver no registra
+ok 66 - TP62 confirmar registra una sola vez y Volver no registra
+  ---
+  duration_ms: 1.3474
+  ...
+# Subtest: TP62 resync invalida una confirmación obsoleta
+ok 67 - TP62 resync invalida una confirmación obsoleta
+  ---
+  duration_ms: 0.4084
+  ...
+# (node:26756) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: TP48 distingue recibo parcial y ticket consolidado
+ok 68 - TP48 distingue recibo parcial y ticket consolidado
+  ---
+  duration_ms: 6.7722
+  ...
+# Subtest: precuenta reutiliza el documento con snapshot vigente y sin mutaciones
+ok 69 - precuenta reutiliza el documento con snapshot vigente y sin mutaciones
+  ---
+  duration_ms: 2.3254
+  ...
+# Subtest: recibo parcial muestra resumen y exclusivamente el acto vigente
+ok 70 - recibo parcial muestra resumen y exclusivamente el acto vigente
+  ---
+  duration_ms: 5.956
+  ...
+# Subtest: ticket final muestra consumo completo y medios repetidos sin identificadores técnicos visibles
+ok 71 - ticket final muestra consumo completo y medios repetidos sin identificadores técnicos visibles
+  ---
+  duration_ms: 3.1741
+  ...
+# Subtest: usa identidad disponible con fallback MikuyApp y sede del contexto
+ok 72 - usa identidad disponible con fallback MikuyApp y sede del contexto
+  ---
+  duration_ms: 3.0544
+  ...
+# Subtest: impresión térmica conserva overlay, permite contenido largo y oculta acciones
+ok 73 - impresión térmica conserva overlay, permite contenido largo y oculta acciones
+  ---
+  duration_ms: 1.8875
+  ...
+# Subtest: impresión renderiza una sola copia y elimina el layout de aplicación
+ok 74 - impresión renderiza una sola copia y elimina el layout de aplicación
+  ---
+  duration_ms: 5.7611
+  ...
+# Subtest: los tres documentos comparten una jerarquía tipográfica térmica compacta
+ok 75 - los tres documentos comparten una jerarquía tipográfica térmica compacta
+  ---
+  duration_ms: 16.4619
+  ...
+# (node:17616) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: E1-T18 cashierService traduce PT409 como conflict
+ok 76 - E1-T18 cashierService traduce PT409 como conflict
+  ---
+  duration_ms: 3.2776
+  ...
+# Subtest: E1-T18 cashierService traduce 40001 como conflict
+ok 77 - E1-T18 cashierService traduce 40001 como conflict
+  ---
+  duration_ms: 0.4828
+  ...
+# Subtest: E1-T18 cashierService traduce 23505 como conflict
+ok 78 - E1-T18 cashierService traduce 23505 como conflict
+  ---
+  duration_ms: 0.393
+  ...
+# Subtest: E1-T18 cashierService no trata un error ajeno como conflict
+ok 79 - E1-T18 cashierService no trata un error ajeno como conflict
+  ---
+  duration_ms: 0.8361
+  ...
+# (node:8212) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: T07 concede exactamente las columnas aprobadas para categorías
+ok 80 - T07 concede exactamente las columnas aprobadas para categorías
+  ---
+  duration_ms: 33.3636
+  ...
+# Subtest: T07 concede exactamente las columnas aprobadas para productos
+ok 81 - T07 concede exactamente las columnas aprobadas para productos
+  ---
+  duration_ms: 1.5445
+  ...
+# Subtest: T07 concede exactamente las columnas aprobadas para mesas
+ok 82 - T07 concede exactamente las columnas aprobadas para mesas
+  ---
+  duration_ms: 1.0038
+  ...
+# Subtest: T07 no concede id, creado_en, local_id en UPDATE ni mesa.estado
+ok 83 - T07 no concede id, creado_en, local_id en UPDATE ni mesa.estado
+  ---
+  duration_ms: 2.2168
+  ...
+# Subtest: las políticas INSERT y UPDATE exigen local propio y rol administrador
+ok 84 - las políticas INSERT y UPDATE exigen local propio y rol administrador
+  ---
+  duration_ms: 4.2706
+  ...
+# Subtest: H1 define LIBRE por defecto y T08 lo exige al insertar una mesa
+ok 85 - H1 define LIBRE por defecto y T08 lo exige al insertar una mesa
+  ---
+  duration_ms: 0.5537
+  ...
+# Subtest: T08 permite conservar mesas activas y exige LIBRE para desactivarlas
+ok 86 - T08 permite conservar mesas activas y exige LIBRE para desactivarlas
+  ---
+  duration_ms: 0.7434
+  ...
+# Subtest: rechaza completamente payload mixto en INSERT de categoria
+ok 87 - rechaza completamente payload mixto en INSERT de categoria
+  ---
+  duration_ms: 2.1781
+  ...
+# Subtest: rechaza completamente payload mixto en UPDATE de categoria sin cambios parciales
+ok 88 - rechaza completamente payload mixto en UPDATE de categoria sin cambios parciales
+  ---
+  duration_ms: 1.6181
+  ...
+# Subtest: rechaza completamente payload mixto en INSERT de producto
+ok 89 - rechaza completamente payload mixto en INSERT de producto
+  ---
+  duration_ms: 11.0286
+  ...
+# Subtest: rechaza completamente payload mixto en UPDATE de producto sin cambios parciales
+ok 90 - rechaza completamente payload mixto en UPDATE de producto sin cambios parciales
+  ---
+  duration_ms: 1.0394
+  ...
+# Subtest: rechaza completamente payload mixto en INSERT de mesa
+ok 91 - rechaza completamente payload mixto en INSERT de mesa
+  ---
+  duration_ms: 0.9724
+  ...
+# Subtest: rechaza completamente payload mixto en UPDATE de mesa sin cambios parciales
+ok 92 - rechaza completamente payload mixto en UPDATE de mesa sin cambios parciales
+  ---
+  duration_ms: 6.0376
+  ...
+# Subtest: los INSERT válidos construyen exclusivamente columnas autorizadas y local contextual
+ok 93 - los INSERT válidos construyen exclusivamente columnas autorizadas y local contextual
+  ---
+  duration_ms: 14.6755
+  ...
+# Subtest: los UPDATE válidos construyen exclusivamente columnas autorizadas
+ok 94 - los UPDATE válidos construyen exclusivamente columnas autorizadas
+  ---
+  duration_ms: 2.1995
+  ...
+# Subtest: rechaza por completo desactivar una mesa OCUPADA
+ok 95 - rechaza por completo desactivar una mesa OCUPADA
+  ---
+  duration_ms: 0.9513
+  ...
+# Subtest: rechaza por completo desactivar una mesa PEDIDO_LISTO
+ok 96 - rechaza por completo desactivar una mesa PEDIDO_LISTO
+  ---
+  duration_ms: 0.3365
+  ...
+# Subtest: rechaza por completo desactivar una mesa PENDIENTE_PAGO
+ok 97 - rechaza por completo desactivar una mesa PENDIENTE_PAGO
+  ---
+  duration_ms: 0.5233
+  ...
+# Subtest: edita código y nombre de una mesa activa no libre sin alterar su estado
+ok 98 - edita código y nombre de una mesa activa no libre sin alterar su estado
+  ---
+  duration_ms: 0.7275
+  ...
+# Subtest: activar una mesa no modifica ni transmite su estado
+ok 99 - activar una mesa no modifica ni transmite su estado
+  ---
+  duration_ms: 0.8522
+  ...
+# Subtest: traduce 42501 sin cambios parciales ni detalles internos
+ok 100 - traduce 42501 sin cambios parciales ni detalles internos
+  ---
+  duration_ms: 0.9577
+  ...
+# Subtest: servicio y formularios no propagan objetos de entrada a INSERT o UPDATE
+ok 101 - servicio y formularios no propagan objetos de entrada a INSERT o UPDATE
+  ---
+  duration_ms: 1.1759
+  ...
+# (node:15804) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: administrador conserva categorías y productos activos e inactivos
+ok 102 - administrador conserva categorías y productos activos e inactivos
+  ---
+  duration_ms: 5.6069
+  ...
+# Subtest: administración conserva categorías activas sin productos
+ok 103 - administración conserva categorías activas sin productos
+  ---
+  duration_ms: 2.3048
+  ...
+# Subtest: carta operativa omite grupos de categorías activas sin productos
+ok 104 - carta operativa omite grupos de categorías activas sin productos
+  ---
+  duration_ms: 1.2138
+  ...
+# Subtest: carta operativa excluye productos activos de categorías inactivas
+ok 105 - carta operativa excluye productos activos de categorías inactivas
+  ---
+  duration_ms: 1.5662
+  ...
+# Subtest: carta operativa excluye productos inactivos aunque el doble los entregue
+ok 106 - carta operativa excluye productos inactivos aunque el doble los entregue
+  ---
+  duration_ms: 2.2997
+  ...
+# Subtest: agrupa correctamente cada producto bajo su propia categoría
+ok 107 - agrupa correctamente cada producto bajo su propia categoría
+  ---
+  duration_ms: 4.5137
+  ...
+# Subtest: ordena categorías por orden/nombre y productos por nombre/código estable
+ok 108 - ordena categorías por orden/nombre y productos por nombre/código estable
+  ---
+  duration_ms: 21.3254
+  ...
+# Subtest: devuelve carta vacía cuando no existen productos visibles
+ok 109 - devuelve carta vacía cuando no existen productos visibles
+  ---
+  duration_ms: 0.9317
+  ...
+# Subtest: devuelve carta vacía cuando RLS no entrega categorías
+ok 110 - devuelve carta vacía cuando RLS no entrega categorías
+  ---
+  duration_ms: 1.9411
+  ...
+# Subtest: filtra ambas consultas exclusivamente por el local del contexto validado
+ok 111 - filtra ambas consultas exclusivamente por el local del contexto validado
+  ---
+  duration_ms: 2.1159
+  ...
+# Subtest: consulta únicamente las columnas mínimas de categorías y productos
+ok 112 - consulta únicamente las columnas mínimas de categorías y productos
+  ---
+  duration_ms: 1.3856
+  ...
+# Subtest: traduce un error de categoría a un mensaje recuperable sin información sensible
+ok 113 - traduce un error de categoría a un mensaje recuperable sin información sensible
+  ---
+  duration_ms: 4.4571
+  ...
+# Subtest: traduce un error de productos a un mensaje recuperable seguro
+ok 114 - traduce un error de productos a un mensaje recuperable seguro
+  ---
+  duration_ms: 2.9687
+  ...
+# Subtest: traduce una excepción de red a un mensaje recuperable seguro
+ok 115 - traduce una excepción de red a un mensaje recuperable seguro
+  ---
+  duration_ms: 0.8577
+  ...
+# Subtest: no reconstruye categorías ni productos ocultos por la respuesta RLS
+ok 116 - no reconstruye categorías ni productos ocultos por la respuesta RLS
+  ---
+  duration_ms: 0.8089
+  ...
+# Subtest: rechaza la consulta administrativa de roles no administradores sin consultar Supabase
+ok 117 - rechaza la consulta administrativa de roles no administradores sin consultar Supabase
+  ---
+  duration_ms: 0.5237
+  ...
+# Subtest: permite reintentar una consulta después de un error recuperable
+ok 118 - permite reintentar una consulta después de un error recuperable
+  ---
+  duration_ms: 0.575
+  ...
+# (node:20672) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: crea una categoría válida, conserva mayúsculas/minúsculas y recorta solo extremos
+ok 119 - crea una categoría válida, conserva mayúsculas/minúsculas y recorta solo extremos
+  ---
+  duration_ms: 9.1983
+  ...
+# Subtest: edita una categoría válida sin enviar identificadores ni columnas protegidas
+ok 120 - edita una categoría válida sin enviar identificadores ni columnas protegidas
+  ---
+  duration_ms: 1.6508
+  ...
+# Subtest: activa una categoría enviando únicamente la columna activo
+ok 121 - activa una categoría enviando únicamente la columna activo
+  ---
+  duration_ms: 3.6034
+  ...
+# Subtest: desactiva una categoría enviando únicamente la columna activo
+ok 122 - desactiva una categoría enviando únicamente la columna activo
+  ---
+  duration_ms: 1.4474
+  ...
+# Subtest: elimina físicamente una categoría únicamente tras confirmación explícita
+ok 123 - elimina físicamente una categoría únicamente tras confirmación explícita
+  ---
+  duration_ms: 2.1859
+  ...
+# Subtest: cancelar una eliminación no llama a Supabase ni consulta el catálogo
+ok 124 - cancelar una eliminación no llama a Supabase ni consulta el catálogo
+  ---
+  duration_ms: 0.6024
+  ...
+# Subtest: traduce la eliminación rechazada por productos relacionados sin revelar restricciones
+ok 125 - traduce la eliminación rechazada por productos relacionados sin revelar restricciones
+  ---
+  duration_ms: 1.0817
+  ...
+# Subtest: la confirmación de categoría identifica nombre y código y bloquea duplicados
+ok 126 - la confirmación de categoría identifica nombre y código y bloquea duplicados
+  ---
+  duration_ms: 1.8924
+  ...
+# Subtest: elimina únicamente la categoría seleccionada y conserva el resto del catálogo
+ok 127 - elimina únicamente la categoría seleccionada y conserva el resto del catálogo
+  ---
+  duration_ms: 2.3961
+  ...
+# Subtest: conserva categoría y productos tras rechazo de dependencia sin eliminar ni desactivar otros
+ok 128 - conserva categoría y productos tras rechazo de dependencia sin eliminar ni desactivar otros
+  ---
+  duration_ms: 2.0646
+  ...
+# Subtest: traduce denegaciones de eliminación de categoría sin revelar detalles internos
+ok 129 - traduce denegaciones de eliminación de categoría sin revelar detalles internos
+  ---
+  duration_ms: 1.2918
+  ...
+# Subtest: traduce errores inesperados al eliminar una categoría sin desactivarla
+ok 130 - traduce errores inesperados al eliminar una categoría sin desactivarla
+  ---
+  duration_ms: 0.7034
+  ...
+# Subtest: traduce un código de categoría duplicado sin revelar restricciones internas
+ok 131 - traduce un código de categoría duplicado sin revelar restricciones internas
+  ---
+  duration_ms: 0.8171
+  ...
+# Subtest: rechaza códigos vacíos o compuestos únicamente por espacios
+ok 132 - rechaza códigos vacíos o compuestos únicamente por espacios
+  ---
+  duration_ms: 0.8855
+  ...
+# Subtest: rechaza nombres vacíos o compuestos únicamente por espacios
+ok 133 - rechaza nombres vacíos o compuestos únicamente por espacios
+  ---
+  duration_ms: 0.6591
+  ...
+# Subtest: rechaza orden negativo, decimal o no numérico sin invocar Supabase
+ok 134 - rechaza orden negativo, decimal o no numérico sin invocar Supabase
+  ---
+  duration_ms: 2.7982
+  ...
+# Subtest: rechaza orden vacío antes de convertirlo accidentalmente en cero
+ok 135 - rechaza orden vacío antes de convertirlo accidentalmente en cero
+  ---
+  duration_ms: 2.1392
+  ...
+# Subtest: conserva el formulario de categorías ante error y bloquea envíos duplicados
+ok 136 - conserva el formulario de categorías ante error y bloquea envíos duplicados
+  ---
+  duration_ms: 2.5978
+  ...
+# Subtest: acepta orden cero como valor entero válido
+ok 137 - acepta orden cero como valor entero válido
+  ---
+  duration_ms: 1.1793
+  ...
+# Subtest: rechaza completamente propiedades protegidas en una inserción manipulada
+ok 138 - rechaza completamente propiedades protegidas en una inserción manipulada
+  ---
+  duration_ms: 1.7968
+  ...
+# Subtest: rechaza completamente columnas protegidas y local_id en una edición manipulada
+ok 139 - rechaza completamente columnas protegidas y local_id en una edición manipulada
+  ---
+  duration_ms: 1.0162
+  ...
+# Subtest: recarga categorías, productos y agrupaciones tras una mutación exitosa
+ok 140 - recarga categorías, productos y agrupaciones tras una mutación exitosa
+  ---
+  duration_ms: 1.1968
+  ...
+# Subtest: traduce una denegación PostgreSQL a un mensaje seguro de autorización
+ok 141 - traduce una denegación PostgreSQL a un mensaje seguro de autorización
+  ---
+  duration_ms: 0.6505
+  ...
+# Subtest: rechaza mutaciones de roles no administradores antes de consultar Supabase
+ok 142 - rechaza mutaciones de roles no administradores antes de consultar Supabase
+  ---
+  duration_ms: 1.3316
+  ...
+# Subtest: traduce errores internos desconocidos a un mensaje recuperable seguro
+ok 143 - traduce errores internos desconocidos a un mensaje recuperable seguro
+  ---
+  duration_ms: 1.8035
+  ...
+# Subtest: traduce excepciones de red sin revelar detalles sensibles
+ok 144 - traduce excepciones de red sin revelar detalles sensibles
+  ---
+  duration_ms: 0.8759
+  ...
+# Subtest: informa un error recuperable si falla la recarga posterior a una mutación
+ok 145 - informa un error recuperable si falla la recarga posterior a una mutación
+  ---
+  duration_ms: 1.412
+  ...
+# Subtest: preserva los espacios interiores y la capitalización original de código y nombre
+ok 146 - preserva los espacios interiores y la capitalización original de código y nombre
+  ---
+  duration_ms: 0.7443
+  ...
+# (node:21188) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: E10-T04 solicita la cuenta sólo vía RPC con el pedido, sin actor, local, mesa ni hora del cliente
+ok 147 - E10-T04 solicita la cuenta sólo vía RPC con el pedido, sin actor, local, mesa ni hora del cliente
+  ---
+  duration_ms: 27.3097
+  ...
+# Subtest: E10-T04 una repetición devuelve la solicitud existente (ya_existia) sin error
+ok 148 - E10-T04 una repetición devuelve la solicitud existente (ya_existia) sin error
+  ---
+  duration_ms: 0.5297
+  ...
+# Subtest: E10-T04 PT409 es conflicto recuperable; otros errores y roles ajenos no muestran éxito
+ok 149 - E10-T04 PT409 es conflicto recuperable; otros errores y roles ajenos no muestran éxito
+  ---
+  duration_ms: 1.103
+  ...
+# Subtest: E10-TP13 la revisión del pedido lee la solicitud PENDIENTE embebida en la misma petición
+ok 150 - E10-TP13 la revisión del pedido lee la solicitud PENDIENTE embebida en la misma petición
+  ---
+  duration_ms: 9.0493
+  ...
+# Subtest: E10-TP13 el tablero de mesas muestra la solicitud sin viajes de red adicionales
+ok 151 - E10-TP13 el tablero de mesas muestra la solicitud sin viajes de red adicionales
+  ---
+  duration_ms: 2.289
+  ...
+# Subtest: E10-T04 la solicitud sólo se ofrece para ENTREGADO sin solicitud pendiente
+ok 152 - E10-T04 la solicitud sólo se ofrece para ENTREGADO sin solicitud pendiente
+  ---
+  duration_ms: 35.7532
+  ...
+# Subtest: E10-T04 WaiterOrderPage: botón Solicitar cuenta con confirmación, guard y estado persistido
+ok 153 - E10-T04 WaiterOrderPage: botón Solicitar cuenta con confirmación, guard y estado persistido
+  ---
+  duration_ms: 0.9111
+  ...
+# Subtest: E10-T04 WaiterOrderPage: PT409 resincroniza y un pedido no vigente vuelve a mesas por el flujo E7-T12
+ok 154 - E10-T04 WaiterOrderPage: PT409 resincroniza y un pedido no vigente vuelve a mesas por el flujo E7-T12
+  ---
+  duration_ms: 0.4747
+  ...
+# Subtest: E10-T04 aviso de reapertura con solicitud pendiente, sin bloquear la reapertura H5
+ok 155 - E10-T04 aviso de reapertura con solicitud pendiente, sin bloquear la reapertura H5
+  ---
+  duration_ms: 0.9717
+  ...
+# Subtest: E10-T04 WaiterTablesPage muestra la etiqueta Cuenta solicitada en la tarjeta
+ok 156 - E10-T04 WaiterTablesPage muestra la etiqueta Cuenta solicitada en la tarjeta
+  ---
+  duration_ms: 1.7688
+  ...
+# Subtest: E10-TP16 por defecto se conservan las seis señales base (cocina sin cambios)
+ok 157 - E10-TP16 por defecto se conservan las seis señales base (cocina sin cambios)
+  ---
+  duration_ms: 1.5364
+  ...
+# Subtest: E10-TP16 mozo agrega solicitud_cuenta (INSERT/UPDATE) al mismo canal con topic único y sin polling
+ok 158 - E10-TP16 mozo agrega solicitud_cuenta (INSERT/UPDATE) al mismo canal con topic único y sin polling
+  ---
+  duration_ms: 27.9119
+  ...
+# Subtest: E10-T05 la lectura de Caja mapea la solicitud y la hora de servidor sin cambiar importes
+ok 159 - E10-T05 la lectura de Caja mapea la solicitud y la hora de servidor sin cambiar importes
+  ---
+  duration_ms: 3.2726
+  ...
+# Subtest: E10-T05 prioriza cuentas solicitadas por antigüedad y conserva el orden E1 del resto
+ok 160 - E10-T05 prioriza cuentas solicitadas por antigüedad y conserva el orden E1 del resto
+  ---
+  duration_ms: 1.4537
+  ...
+# Subtest: E10-T05 DH-02 B: la huella sólo cambia con estado, total, descuento, pagado o saldo del pedido seleccionado
+ok 161 - E10-T05 DH-02 B: la huella sólo cambia con estado, total, descuento, pagado o saldo del pedido seleccionado
+  ---
+  duration_ms: 16.4643
+  ...
+# Subtest: E10-T05 aviso sólo para solicitudes nuevas y tiempo transcurrido con reloj de servidor
+ok 162 - E10-T05 aviso sólo para solicitudes nuevas y tiempo transcurrido con reloj de servidor
+  ---
+  duration_ms: 2.4463
+  ...
+# Subtest: E10-T05 CashierPage: Realtime con solicitud_cuenta conserva el borrador salvo cambio del seleccionado
+ok 163 - E10-T05 CashierPage: Realtime con solicitud_cuenta conserva el borrador salvo cambio del seleccionado
+  ---
+  duration_ms: 1.6492
+  ...
+# Subtest: E10-T05 CashierPage: prioridad visible, tiempo, mozo, contador y aviso accesible sin acciones nuevas de cobro
+ok 164 - E10-T05 CashierPage: prioridad visible, tiempo, mozo, contador y aviso accesible sin acciones nuevas de cobro
+  ---
+  duration_ms: 1.9401
+  ...
+# (node:26300) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: E9-T05 abrir envía sólo la clave de solicitud e informa ya_existia sin tratarlo como error
+ok 165 - E9-T05 abrir envía sólo la clave de solicitud e informa ya_existia sin tratarlo como error
+  ---
+  duration_ms: 7.1317
+  ...
+# Subtest: E9-T05 cerrar envía sólo la jornada; ya_estaba_cerrada no es error; PT409 conserva los conteos del servidor
+ok 166 - E9-T05 cerrar envía sólo la jornada; ya_estaba_cerrada no es error; PT409 conserva los conteos del servidor
+  ---
+  duration_ms: 4.3064
+  ...
+# Subtest: E9-T05 pendientes e historial se mapean sin importes y sólo ADMIN llama a las RPC
+ok 167 - E9-T05 pendientes e historial se mapean sin importes y sólo ADMIN llama a las RPC
+  ---
+  duration_ms: 1.7475
+  ...
+# Subtest: E9-T05 /admin/jornadas sólo para ADMINISTRADOR y en OPERACIÓN → Jornadas
+ok 168 - E9-T05 /admin/jornadas sólo para ADMINISTRADOR y en OPERACIÓN → Jornadas
+  ---
+  duration_ms: 1.842
+  ...
+# Subtest: E9-T05 el bloque de jornada es el primero de Inicio y no altera los bloques existentes
+ok 169 - E9-T05 el bloque de jornada es el primero de Inicio y no altera los bloques existentes
+  ---
+  duration_ms: 1.1193
+  ...
+# Subtest: E9-T05 abrir y cerrar con confirmación, una sola llamada ante doble clic y avisos de idempotencia
+ok 170 - E9-T05 abrir y cerrar con confirmación, una sola llamada ante doble clic y avisos de idempotencia
+  ---
+  duration_ms: 1.0355
+  ...
+# Subtest: E9-T05 un cierre impedido muestra los pendientes con enlaces y la secuencia sugerida
+ok 171 - E9-T05 un cierre impedido muestra los pendientes con enlaces y la secuencia sugerida
+  ---
+  duration_ms: 1.1564
+  ...
+# Subtest: E9-T05 / R25: sin métricas ni totales en el bloque ni en el historial; historial paginado con Cargar más
+ok 172 - E9-T05 / R25: sin métricas ni totales en el bloque ni en el historial; historial paginado con Cargar más
+  ---
+  duration_ms: 2.6862
+  ...
+# Subtest: E9-T05 responsive y táctil: objetivos de 44 px y filas que no fuerzan desplazamiento horizontal
+ok 173 - E9-T05 responsive y táctil: objetivos de 44 px y filas que no fuerzan desplazamiento horizontal
+  ---
+  duration_ms: 1.0833
+  ...
+# (node:6424) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: E9-T04 lee el estado del local sólo por RPC, sin enviar local ni rol; cero filas = local cerrado
+ok 174 - E9-T04 lee el estado del local sólo por RPC, sin enviar local ni rol; cero filas = local cerrado
+  ---
+  duration_ms: 9.9254
+  ...
+# Subtest: E9-T04 un error de lectura no se presenta como local abierto ni cerrado (fail-closed)
+ok 175 - E9-T04 un error de lectura no se presenta como local abierto ni cerrado (fail-closed)
+  ---
+  duration_ms: 1.1082
+  ...
+# Subtest: E9-T04 reconoce el PT409 de local cerrado sólo con el mensaje exacto de PostgreSQL
+ok 176 - E9-T04 reconoce el PT409 de local cerrado sólo con el mensaje exacto de PostgreSQL
+  ---
+  duration_ms: 0.4761
+  ...
+# Subtest: E9-T04 la suscripción escucha sólo INSERT/UPDATE de jornada_operativa con topic propio por suscripción
+ok 177 - E9-T04 la suscripción escucha sólo INSERT/UPDATE de jornada_operativa con topic propio por suscripción
+  ---
+  duration_ms: 2.0417
+  ...
+# Subtest: E9-T04 las señales duplicadas se coalescen en una relectura; SUBSCRIBED y errores relevan el estado
+ok 178 - E9-T04 las señales duplicadas se coalescen en una relectura; SUBSCRIBED y errores relevan el estado
+  ---
+  duration_ms: 1.368
+  ...
+# Subtest: E9-T04 no modifica ni refactoriza operationsRealtimeService; reutiliza subscriptionTopic y no hace polling
+ok 179 - E9-T04 no modifica ni refactoriza operationsRealtimeService; reutiliza subscriptionTopic y no hace polling
+  ---
+  duration_ms: 0.7192
+  ...
+# Subtest: E9-T04 la pantalla de local cerrado muestra el texto exacto, el local y Cerrar sesión, sin acciones operativas
+ok 180 - E9-T04 la pantalla de local cerrado muestra el texto exacto, el local y Cerrar sesión, sin acciones operativas
+  ---
+  duration_ms: 0.9675
+  ...
+# Subtest: E9-T04 fail-closed: cargando o con error no muestra la pantalla operativa; Reintentar y Cerrar sesión
+ok 181 - E9-T04 fail-closed: cargando o con error no muestra la pantalla operativa; Reintentar y Cerrar sesión
+  ---
+  duration_ms: 0.6697
+  ...
+# Subtest: E9-T04 / DC-11: todas las rutas de MOZO, COCINA y CAJA pasan por el gate; ADMIN, /login y /403 no
+ok 182 - E9-T04 / DC-11: todas las rutas de MOZO, COCINA y CAJA pasan por el gate; ADMIN, /login y /403 no
+  ---
+  duration_ms: 1.5426
+  ...
+# Subtest: E9-T04 Caja muestra la identificación de la jornada y resincroniza ante local cerrado
+ok 183 - E9-T04 Caja muestra la identificación de la jornada y resincroniza ante local cerrado
+  ---
+  duration_ms: 1.3449
+  ...
+# Subtest: E9-T04 la apertura de caja rechazada por local cerrado conserva el mensaje del servidor
+ok 184 - E9-T04 la apertura de caja rechazada por local cerrado conserva el mensaje del servidor
+  ---
+  duration_ms: 5.3911
+  ...
+# Subtest: E9-T04 abrir pedido con local cerrado informa el mensaje del servidor y la vista resincroniza el gate
+ok 185 - E9-T04 abrir pedido con local cerrado informa el mensaje del servidor y la vista resincroniza el gate
+  ---
+  duration_ms: 1.978
+  ...
+# (node:7180) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: TP07 permite Preview conectado al proyecto actual destinado a DEV
+ok 186 - TP07 permite Preview conectado al proyecto actual destinado a DEV
+  ---
+  duration_ms: 5.4439
+  ...
+# Subtest: TP08 permite Production al proyecto actual durante LEGACY_SHARED y TRANSITIONING
+ok 187 - TP08 permite Production al proyecto actual durante LEGACY_SHARED y TRANSITIONING
+  ---
+  duration_ms: 3.0143
+  ...
+# Subtest: TP08 permite Production conectado a PROD en SEPARATED
+ok 188 - TP08 permite Production conectado a PROD en SEPARATED
+  ---
+  duration_ms: 0.5225
+  ...
+# Subtest: TP09 bloquea Preview conectado a PROD
+ok 189 - TP09 bloquea Preview conectado a PROD
+  ---
+  duration_ms: 2.0673
+  ...
+# Subtest: TP10 bloquea Production conectado a DEV exclusivo en SEPARATED
+ok 190 - TP10 bloquea Production conectado a DEV exclusivo en SEPARATED
+  ---
+  duration_ms: 0.6945
+  ...
+# Subtest: TP11 bloquea estado, identidad, contexto y ref incompletos o inconsistentes
+ok 191 - TP11 bloquea estado, identidad, contexto y ref incompletos o inconsistentes
+  ---
+  duration_ms: 1.5108
+  ...
+# Subtest: TP12 permite Local con DEV vinculado y bloquea Local conectado a PROD
+ok 192 - TP12 permite Local con DEV vinculado y bloquea Local conectado a PROD
+  ---
+  duration_ms: 0.7632
+  ...
+# Subtest: extrae el project ref solo desde una URL Supabase HTTPS reconocible
+ok 193 - extrae el project ref solo desde una URL Supabase HTTPS reconocible
+  ---
+  duration_ms: 1.0235
+  ...
+# (node:16900) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: H5-T06 caja reutiliza infraestructura H4 y descarta respuestas tardías
+ok 194 - H5-T06 caja reutiliza infraestructura H4 y descarta respuestas tardías
+  ---
+  duration_ms: 3.8341
+  ...
+# Subtest: H5-T06 señales duplicadas convergen caja de vacío a ENTREGADO y luego a vacío
+ok 195 - H5-T06 señales duplicadas convergen caja de vacío a ENTREGADO y luego a vacío
+  ---
+  duration_ms: 15.6504
+  ...
+# Subtest: H5-T06 mozo converge PEDIDO_LISTO a PENDIENTE_PAGO y luego LIBRE por snapshots
+ok 196 - H5-T06 mozo converge PEDIDO_LISTO a PENDIENTE_PAGO y luego LIBRE por snapshots
+  ---
+  duration_ms: 6.3515
+  ...
+# Subtest: H5-T06 reconecta, resincroniza, limpia y nunca consume payload como verdad
+ok 197 - H5-T06 reconecta, resincroniza, limpia y nunca consume payload como verdad
+  ---
+  duration_ms: 3.9586
+  ...
+# (node:23400) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: H4-T06 protege /cocina y la usa como destino operativo de COCINA
+ok 198 - H4-T06 protege /cocina y la usa como destino operativo de COCINA
+  ---
+  duration_ms: 7.1614
+  ...
+# Subtest: H4-T06 agrupa por pedido/mesa y ordena grupos y líneas por enviado_en
+ok 199 - H4-T06 agrupa por pedido/mesa y ordena grupos y líneas por enviado_en
+  ---
+  duration_ms: 1.3218
+  ...
+# Subtest: H4-T06 prioriza trabajo no listo y muestra antigüedad legible
+ok 200 - H4-T06 prioriza trabajo no listo y muestra antigüedad legible
+  ---
+  duration_ms: 1.092
+  ...
+# Subtest: H4-T10 pedido mixto prioriza pendientes y conserva LISTO al final del grupo
+ok 201 - H4-T10 pedido mixto prioriza pendientes y conserva LISTO al final del grupo
+  ---
+  duration_ms: 0.6379
+  ...
+# Subtest: H4-T10 pedidos completamente LISTO van al final y permanecen visibles
+ok 202 - H4-T10 pedidos completamente LISTO van al final y permanecen visibles
+  ---
+  duration_ms: 1.2135
+  ...
+# Subtest: H4-T06 muestra estados textuales y únicamente acciones adyacentes válidas
+ok 203 - H4-T06 muestra estados textuales y únicamente acciones adyacentes válidas
+  ---
+  duration_ms: 0.6839
+  ...
+# Subtest: H4-T06 transición usa RPC, conserva estados esperados y traduce conflicto
+ok 204 - H4-T06 transición usa RPC, conserva estados esperados y traduce conflicto
+  ---
+  duration_ms: 2.5173
+  ...
+# Subtest: E1-T18 H4-T06 transición traduce conflicto con el código vigente PT409
+ok 205 - E1-T18 H4-T06 transición traduce conflicto con el código vigente PT409
+  ---
+  duration_ms: 1.0082
+  ...
+# Subtest: H4-T06 bloquea por detalle, muestra feedback y resincroniza tras éxito o conflicto
+ok 206 - H4-T06 bloquea por detalle, muestra feedback y resincroniza tras éxito o conflicto
+  ---
+  duration_ms: 1.701
+  ...
+# Subtest: H4-TH06 RPC pendiente + snapshot ganador libera Actualizando inmediatamente
+ok 207 - H4-TH06 RPC pendiente + snapshot ganador libera Actualizando inmediatamente
+  ---
+  duration_ms: 2.0189
+  ...
+# Subtest: H4-TH06 respuesta RPC tardía queda invalidada por token y no sobrescribe snapshot
+ok 208 - H4-TH06 respuesta RPC tardía queda invalidada por token y no sobrescribe snapshot
+  ---
+  duration_ms: 0.8063
+  ...
+# Subtest: H4-TH06 libera Actualizando al recibir 40001 aunque la resincronización siga pendiente
+ok 209 - H4-TH06 libera Actualizando al recibir 40001 aunque la resincronización siga pendiente
+  ---
+  duration_ms: 25.5112
+  ...
+# Subtest: H4-TH06 libera guard también ante error y resincro refleja snapshot ganador
+ok 210 - H4-TH06 libera guard también ante error y resincro refleja snapshot ganador
+  ---
+  duration_ms: 0.8577
+  ...
+# Subtest: H4-T06 incluye carga, vacío, error recuperable y responsive táctil
+ok 211 - H4-T06 incluye carga, vacío, error recuperable y responsive táctil
+  ---
+  duration_ms: 0.698
+  ...
+# Subtest: H4-T07 página reemplaza filas con snapshots y limpia el canal al desmontarse
+ok 212 - H4-T07 página reemplaza filas con snapshots y limpia el canal al desmontarse
+  ---
+  duration_ms: 1.0245
+  ...
+# Subtest: E7-T08 valida el snapshot unificado y rechaza formas inválidas
+ok 213 - E7-T08 valida el snapshot unificado y rechaza formas inválidas
+  ---
+  duration_ms: 0.5662
+  ...
+# Subtest: E7-T08 cuenta sólo ENVIADO para Recibir pedido (N) y agrupa cancelaciones por pedido
+ok 214 - E7-T08 cuenta sólo ENVIADO para Recibir pedido (N) y agrupa cancelaciones por pedido
+  ---
+  duration_ms: 0.5942
+  ...
+# Subtest: E7-T08 recepción completa usa la RPC transaccional y 0 recibidos es éxito
+ok 215 - E7-T08 recepción completa usa la RPC transaccional y 0 recibidos es éxito
+  ---
+  duration_ms: 0.8005
+  ...
+# Subtest: E7-T08 recepción completa: PT409 es conflicto recuperable; otros errores no filtran detalles
+ok 216 - E7-T08 recepción completa: PT409 es conflicto recuperable; otros errores no filtran detalles
+  ---
+  duration_ms: 0.5639
+  ...
+# Subtest: E7-T08 transición individual sobre producto cancelado informa la cancelación
+ok 217 - E7-T08 transición individual sobre producto cancelado informa la cancelación
+  ---
+  duration_ms: 0.3837
+  ...
+# Subtest: E7-T08 pantalla: botón Recibir pedido (N) con guard por pedido y resync
+ok 218 - E7-T08 pantalla: botón Recibir pedido (N) con guard por pedido y resync
+  ---
+  duration_ms: 0.5376
+  ...
+# Subtest: E7-T08 pantalla: cancelaciones del pedido visibles como sólo lectura
+ok 219 - E7-T08 pantalla: cancelaciones del pedido visibles como sólo lectura
+  ---
+  duration_ms: 0.3036
+  ...
+# Subtest: E7-T08 cocina lee sólo la RPC unificada, sin polling ni estado calculado localmente
+ok 220 - E7-T08 cocina lee sólo la RPC unificada, sin polling ni estado calculado localmente
+  ---
+  duration_ms: 1.7917
+  ...
+# Subtest: E7-T08 snapshot inválido se trata como error recuperable y no reemplaza el tablero
+ok 221 - E7-T08 snapshot inválido se trata como error recuperable y no reemplaza el tablero
+  ---
+  duration_ms: 0.651
+  ...
+# (node:10196) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: E7-T09 una sola primera solicitud: Imprimir y luego Reimprimir
+ok 222 - E7-T09 una sola primera solicitud: Imprimir y luego Reimprimir
+  ---
+  duration_ms: 3.2425
+  ...
+# Subtest: E7-T09 identifica COPIA n en reimpresiones
+ok 223 - E7-T09 identifica COPIA n en reimpresiones
+  ---
+  duration_ms: 0.5536
+  ...
+# Subtest: E7-T09 documento: líneas históricas, canceladas marcadas y datos de mesa/pedido/mozo
+ok 224 - E7-T09 documento: líneas históricas, canceladas marcadas y datos de mesa/pedido/mozo
+  ---
+  duration_ms: 3.3026
+  ...
+# Subtest: E7-T09 registra la primera solicitud y las reimpresiones vía RPC
+ok 225 - E7-T09 registra la primera solicitud y las reimpresiones vía RPC
+  ---
+  duration_ms: 1.6944
+  ...
+# Subtest: E7-T09 primera solicitud ya registrada en otro dispositivo es conflicto recuperable
+ok 226 - E7-T09 primera solicitud ya registrada en otro dispositivo es conflicto recuperable
+  ---
+  duration_ms: 1.167
+  ...
+# Subtest: E7-T09 pantalla: comandas en el tablero con Imprimir/Reimprimir, guard y registro previo a window.print()
+ok 227 - E7-T09 pantalla: comandas en el tablero con Imprimir/Reimprimir, guard y registro previo a window.print()
+  ---
+  duration_ms: 0.9281
+  ...
+# Subtest: E7-T09 documento 80 mm reutiliza estilos de impresión y no ofrece imprimir sin registrar
+ok 228 - E7-T09 documento 80 mm reutiliza estilos de impresión y no ofrece imprimir sin registrar
+  ---
+  duration_ms: 0.4116
+  ...
+# Subtest: E7-T09 sin preferencias, almacenamiento del navegador ni infraestructura de impresión
+ok 229 - E7-T09 sin preferencias, almacenamiento del navegador ni infraestructura de impresión
+  ---
+  duration_ms: 1.4372
+  ...
+# (node:19216) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: T05 publica exclusivamente las tres tablas y agrega políticas SELECT de cocina
+ok 230 - T05 publica exclusivamente las tres tablas y agrega políticas SELECT de cocina
+  ---
+  duration_ms: 6.4048
+  ...
+# Subtest: T05 carga snapshot, suscribe seis señales y hace segunda carga al SUBSCRIBED
+ok 231 - T05 carga snapshot, suscribe seis señales y hace segunda carga al SUBSCRIBED
+  ---
+  duration_ms: 17.1638
+  ...
+# Subtest: T05 agrupa eventos repetidos/fuera de orden y reemplaza con snapshot autoritativo
+ok 232 - T05 agrupa eventos repetidos/fuera de orden y reemplaza con snapshot autoritativo
+  ---
+  duration_ms: 16.6257
+  ...
+# Subtest: T05 resincroniza en error y otra vez al reconectar
+ok 233 - T05 resincroniza en error y otra vez al reconectar
+  ---
+  duration_ms: 3.4481
+  ...
+# Subtest: T05 no usa polling ni construye el tablero mediante append de eventos
+ok 234 - T05 no usa polling ni construye el tablero mediante append de eventos
+  ---
+  duration_ms: 0.8078
+  ...
+# Subtest: T07 incorpora un detalle nuevo reemplazando el snapshot sin duplicar filas
+ok 235 - T07 incorpora un detalle nuevo reemplazando el snapshot sin duplicar filas
+  ---
+  duration_ms: 3.2938
+  ...
+# Subtest: T07 refleja UPDATE repetido o fuera de orden desde el snapshot ganador
+ok 236 - T07 refleja UPDATE repetido o fuera de orden desde el snapshot ganador
+  ---
+  duration_ms: 2.5459
+  ...
+# Subtest: T07 cleanup cancela canal y descarta snapshot o status tardíos
+ok 237 - T07 cleanup cancela canal y descarta snapshot o status tardíos
+  ---
+  duration_ms: 3.1809
+  ...
+# (node:26272) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: crea un producto válido con columnas exactas y conserva su capitalización
+ok 238 - crea un producto válido con columnas exactas y conserva su capitalización
+  ---
+  duration_ms: 11.8523
+  ...
+# Subtest: edita un producto con columnas exactas y sin campos protegidos
+ok 239 - edita un producto con columnas exactas y sin campos protegidos
+  ---
+  duration_ms: 1.7312
+  ...
+# Subtest: permite cambiar el producto a otra categoría del mismo catálogo
+ok 240 - permite cambiar el producto a otra categoría del mismo catálogo
+  ---
+  duration_ms: 1.0024
+  ...
+# Subtest: activa y reactiva un producto enviando exclusivamente activo
+ok 241 - activa y reactiva un producto enviando exclusivamente activo
+  ---
+  duration_ms: 1.3476
+  ...
+# Subtest: desactiva un producto enviando exclusivamente activo
+ok 242 - desactiva un producto enviando exclusivamente activo
+  ---
+  duration_ms: 1.2299
+  ...
+# Subtest: permite producto activo en categoría inactiva y lo conserva para administración
+ok 243 - permite producto activo en categoría inactiva y lo conserva para administración
+  ---
+  duration_ms: 1.3351
+  ...
+# Subtest: elimina físicamente un producto confirmado y recarga el catálogo
+ok 244 - elimina físicamente un producto confirmado y recarga el catálogo
+  ---
+  duration_ms: 1.1669
+  ...
+# Subtest: cancelar la eliminación de un producto no ejecuta consultas
+ok 245 - cancelar la eliminación de un producto no ejecuta consultas
+  ---
+  duration_ms: 0.5198
+  ...
+# Subtest: traduce historial de pedidos y recomienda desactivar el producto
+ok 246 - traduce historial de pedidos y recomienda desactivar el producto
+  ---
+  duration_ms: 2.3883
+  ...
+# Subtest: la confirmación de producto identifica nombre y código y bloquea duplicados
+ok 247 - la confirmación de producto identifica nombre y código y bloquea duplicados
+  ---
+  duration_ms: 4.8091
+  ...
+# Subtest: elimina únicamente el producto elegido y conserva categorías y otros productos
+ok 248 - elimina únicamente el producto elegido y conserva categorías y otros productos
+  ---
+  duration_ms: 1.8126
+  ...
+# Subtest: conserva el producto tras rechazo por historial sin eliminar detalles ni desactivarlo
+ok 249 - conserva el producto tras rechazo por historial sin eliminar detalles ni desactivarlo
+  ---
+  duration_ms: 1.0747
+  ...
+# Subtest: traduce denegaciones de eliminación de producto sin revelar detalles internos
+ok 250 - traduce denegaciones de eliminación de producto sin revelar detalles internos
+  ---
+  duration_ms: 1.3286
+  ...
+# Subtest: traduce errores inesperados al eliminar un producto sin desactivarlo
+ok 251 - traduce errores inesperados al eliminar un producto sin desactivarlo
+  ---
+  duration_ms: 0.5375
+  ...
+# Subtest: traduce códigos duplicados de productos sin revelar constraints
+ok 252 - traduce códigos duplicados de productos sin revelar constraints
+  ---
+  duration_ms: 0.6261
+  ...
+# Subtest: rechaza códigos vacíos o compuestos únicamente por espacios
+ok 253 - rechaza códigos vacíos o compuestos únicamente por espacios
+  ---
+  duration_ms: 0.5362
+  ...
+# Subtest: rechaza nombres vacíos o compuestos únicamente por espacios
+ok 254 - rechaza nombres vacíos o compuestos únicamente por espacios
+  ---
+  duration_ms: 0.51
+  ...
+# Subtest: rechaza precios negativos, no numéricos, NaN e infinitos
+ok 255 - rechaza precios negativos, no numéricos, NaN e infinitos
+  ---
+  duration_ms: 1.1332
+  ...
+# Subtest: rechaza precio vacío antes de convertirlo accidentalmente en cero
+ok 256 - rechaza precio vacío antes de convertirlo accidentalmente en cero
+  ---
+  duration_ms: 1.4012
+  ...
+# Subtest: conserva el formulario de productos ante error y bloquea envíos duplicados
+ok 257 - conserva el formulario de productos ante error y bloquea envíos duplicados
+  ---
+  duration_ms: 1.4125
+  ...
+# Subtest: acepta un precio numérico igual a cero
+ok 258 - acepta un precio numérico igual a cero
+  ---
+  duration_ms: 0.7591
+  ...
+# Subtest: rechaza una categoría ausente antes de consultar Supabase
+ok 259 - rechaza una categoría ausente antes de consultar Supabase
+  ---
+  duration_ms: 1.0725
+  ...
+# Subtest: rechaza categorías inexistentes o ajenas al catálogo del local
+ok 260 - rechaza categorías inexistentes o ajenas al catálogo del local
+  ---
+  duration_ms: 1.0743
+  ...
+# Subtest: traduce el rechazo de la FK compuesta como categoría inexistente o ajena
+ok 261 - traduce el rechazo de la FK compuesta como categoría inexistente o ajena
+  ---
+  duration_ms: 0.7256
+  ...
+# Subtest: rechaza completamente campos protegidos en una inserción manipulada
+ok 262 - rechaza completamente campos protegidos en una inserción manipulada
+  ---
+  duration_ms: 0.7201
+  ...
+# Subtest: rechaza completamente id, local_id y creado_en manipulados durante UPDATE
+ok 263 - rechaza completamente id, local_id y creado_en manipulados durante UPDATE
+  ---
+  duration_ms: 0.6249
+  ...
+# Subtest: recarga categorías, productos y agrupaciones después de modificar un producto
+ok 264 - recarga categorías, productos y agrupaciones después de modificar un producto
+  ---
+  duration_ms: 0.9224
+  ...
+# Subtest: traduce permisos PostgreSQL denegados a un mensaje seguro
+ok 265 - traduce permisos PostgreSQL denegados a un mensaje seguro
+  ---
+  duration_ms: 0.5344
+  ...
+# Subtest: rechaza mutaciones de usuarios que no son administradores
+ok 266 - rechaza mutaciones de usuarios que no son administradores
+  ---
+  duration_ms: 0.7965
+  ...
+# Subtest: traduce errores internos a mensajes recuperables sin SQL ni tokens
+ok 267 - traduce errores internos a mensajes recuperables sin SQL ni tokens
+  ---
+  duration_ms: 1.163
+  ...
+# Subtest: traduce errores de red a mensajes recuperables seguros
+ok 268 - traduce errores de red a mensajes recuperables seguros
+  ---
+  duration_ms: 1.0806
+  ...
+# Subtest: traduce validaciones PostgreSQL de precio sin revelar restricciones
+ok 269 - traduce validaciones PostgreSQL de precio sin revelar restricciones
+  ---
+  duration_ms: 0.6541
+  ...
+# Subtest: informa fallo recuperable cuando la recarga posterior no está disponible
+ok 270 - informa fallo recuperable cuando la recarga posterior no está disponible
+  ---
+  duration_ms: 1.1836
+  ...
+# Subtest: conserva espacios interiores y mayúsculas originales en código y nombre
+ok 271 - conserva espacios interiores y mayúsculas originales en código y nombre
+  ---
+  duration_ms: 0.6396
+  ...
+# Subtest: E7-T06 crea un producto sin cocina cuando el administrador lo indica
+ok 272 - E7-T06 crea un producto sin cocina cuando el administrador lo indica
+  ---
+  duration_ms: 0.555
+  ...
+# Subtest: E7-T06 edita la condición de cocina y no la sobrescribe cuando no se indica
+ok 273 - E7-T06 edita la condición de cocina y no la sobrescribe cuando no se indica
+  ---
+  duration_ms: 0.7937
+  ...
+# Subtest: E7-T06 rechaza una condición de cocina no booleana sin tocar el servidor
+ok 274 - E7-T06 rechaza una condición de cocina no booleana sin tocar el servidor
+  ---
+  duration_ms: 0.291
+  ...
+# Subtest: E7-T06 roles distintos de ADMINISTRADOR no configuran la condición de cocina
+ok 275 - E7-T06 roles distintos de ADMINISTRADOR no configuran la condición de cocina
+  ---
+  duration_ms: 0.496
+  ...
+# Subtest: E7-T06 formulario con default marcado e indicador visible de producto sin cocina
+ok 276 - E7-T06 formulario con default marcado e indicador visible de producto sin cocina
+  ---
+  duration_ms: 0.625
+  ...
+# (node:27740) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: acepta un perfil propio con rol y local activos y coherentes
+ok 277 - acepta un perfil propio con rol y local activos y coherentes
+  ---
+  duration_ms: 8.4238
+  ...
+# Subtest: rechaza un usuario sin perfil sin revelar datos internos
+ok 278 - rechaza un usuario sin perfil sin revelar datos internos
+  ---
+  duration_ms: 0.8193
+  ...
+# Subtest: rechaza un perfil inactivo
+ok 279 - rechaza un perfil inactivo
+  ---
+  duration_ms: 0.8792
+  ...
+# Subtest: rechaza un rol inactivo
+ok 280 - rechaza un rol inactivo
+  ---
+  duration_ms: 0.9195
+  ...
+# Subtest: rechaza un código de rol no reconocido
+ok 281 - rechaza un código de rol no reconocido
+  ---
+  duration_ms: 31.3652
+  ...
+# Subtest: rechaza un local inactivo
+ok 282 - rechaza un local inactivo
+  ---
+  duration_ms: 0.5259
+  ...
+# Subtest: rechaza relaciones de rol o local incoherentes
+ok 283 - rechaza relaciones de rol o local incoherentes
+  ---
+  duration_ms: 1.195
+  ...
+# Subtest: distingue un error recuperable y permite reintentar
+ok 284 - distingue un error recuperable y permite reintentar
+  ---
+  duration_ms: 0.8838
+  ...
+# Subtest: consulta exclusivamente el UUID de la sesión y columnas mínimas
+ok 285 - consulta exclusivamente el UUID de la sesión y columnas mínimas
+  ---
+  duration_ms: 4.2906
+  ...
+# Subtest: limpia el contexto cuando se cierra la sesión
+ok 286 - limpia el contexto cuando se cierra la sesión
+  ---
+  duration_ms: 1.4528
+  ...
+# Subtest: descarta el contexto anterior cuando cambia la sesión
+ok 287 - descarta el contexto anterior cuando cambia la sesión
+  ---
+  duration_ms: 0.7287
+  ...
+# Subtest: descarta respuestas asíncronas obsoletas de otra sesión
+ok 288 - descarta respuestas asíncronas obsoletas de otra sesión
+  ---
+  duration_ms: 3.265
+  ...
+# Subtest: descarta una respuesta pendiente después de cerrar sesión
+ok 289 - descarta una respuesta pendiente después de cerrar sesión
+  ---
+  duration_ms: 0.4672
+  ...
+# Subtest: trata un resultado múltiple como contexto inválido
+ok 290 - trata un resultado múltiple como contexto inválido
+  ---
+  duration_ms: 0.7847
+  ...
+# (node:1356) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: H6-TP13: manifest define identidad, instalación standalone e iconos requeridos
+ok 291 - H6-TP13: manifest define identidad, instalación standalone e iconos requeridos
+  ---
+  duration_ms: 20.4443
+  ...
+# Subtest: H6-TP13: HTML enlaza manifest, identidad y metadatos de instalación
+ok 292 - H6-TP13: HTML enlaza manifest, identidad y metadatos de instalación
+  ---
+  duration_ms: 10.8744
+  ...
+# Subtest: H6-TP13: service worker habilita instalación sin caché ni lógica offline
+ok 293 - H6-TP13: service worker habilita instalación sin caché ni lógica offline
+  ---
+  duration_ms: 46.7184
+  ...
+# (node:18084) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: identidad autenticada reutiliza contexto y traduce los cuatro roles
+ok 294 - identidad autenticada reutiliza contexto y traduce los cuatro roles
+  ---
+  duration_ms: 3.9017
+  ...
+# Subtest: identidad autenticada es común a administración, mozo, pedido, técnica y áreas futuras
+ok 295 - identidad autenticada es común a administración, mozo, pedido, técnica y áreas futuras
+  ---
+  duration_ms: 0.6205
+  ...
+# Subtest: control de sesión autenticada permanece compacto y táctil en celular y tablet
+ok 296 - control de sesión autenticada permanece compacto y táctil en celular y tablet
+  ---
+  duration_ms: 0.7479
+  ...
+# Subtest: menú compacto cierra por tap externo, Escape y al cerrar sesión
+ok 297 - menú compacto cierra por tap externo, Escape y al cerrar sesión
+  ---
+  duration_ms: 2.8427
+  ...
+# Subtest: TP-24: login mantiene controles táctiles y estados accesibles en móvil
+ok 298 - TP-24: login mantiene controles táctiles y estados accesibles en móvil
+  ---
+  duration_ms: 0.6962
+  ...
+# Subtest: TP-13 y TP-29: la administración fluye sin anchos mínimos rígidos
+ok 299 - TP-13 y TP-29: la administración fluye sin anchos mínimos rígidos
+  ---
+  duration_ms: 0.9077
+  ...
+# Subtest: TP-29: cada catálogo conserva carga, vacío, error, éxito y reintento
+ok 300 - TP-29: cada catálogo conserva carga, vacío, error, éxito y reintento
+  ---
+  duration_ms: 0.6911
+  ...
+# Subtest: TP-29: operaciones de categorías, productos y mesas son independientes
+ok 301 - TP-29: operaciones de categorías, productos y mesas son independientes
+  ---
+  duration_ms: 0.7234
+  ...
+# Subtest: TP-29: catálogo y mesas administrativas cargan y reintentan por separado
+ok 302 - TP-29: catálogo y mesas administrativas cargan y reintentan por separado
+  ---
+  duration_ms: 1.1798
+  ...
+# Subtest: TP-53: tablero operativo adapta cards y controles para móvil y tablet
+ok 303 - TP-53: tablero operativo adapta cards y controles para móvil y tablet
+  ---
+  duration_ms: 1.63
+  ...
+# Subtest: TP-53: tablero conserva carga, vacío, error y reintento
+ok 304 - TP-53: tablero conserva carga, vacío, error y reintento
+  ---
+  duration_ms: 0.6334
+  ...
+# Subtest: TP-53: los cuatro estados de mesa tienen texto además del color
+ok 305 - TP-53: los cuatro estados de mesa tienen texto además del color
+  ---
+  duration_ms: 0.5736
+  ...
+# Subtest: TP-24: la vista 403 es táctil y no desborda en pantallas pequeñas
+ok 306 - TP-24: la vista 403 es táctil y no desborda en pantallas pequeñas
+  ---
+  duration_ms: 0.3267
+  ...
+# Subtest: contrato de anchos representativos conserva una sola columna antes de cada breakpoint
+ok 307 - contrato de anchos representativos conserva una sola columna antes de cada breakpoint
+  ---
+  duration_ms: 2.6685
+  ...
+# (node:21408) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: H6-TP01/02: resume filas autorizadas y normaliza cantidades/importes
+ok 308 - H6-TP01/02: resume filas autorizadas y normaliza cantidades/importes
+  ---
+  duration_ms: 5.1571
+  ...
+# Subtest: H6-TP04: roles no autorizados se rechazan sin RPC
+ok 309 - H6-TP04: roles no autorizados se rechazan sin RPC
+  ---
+  duration_ms: 1.9973
+  ...
+# Subtest: H6-TP05/06: CSV escapa comillas y termina en CRLF
+ok 310 - H6-TP05/06: CSV escapa comillas y termina en CRLF
+  ---
+  duration_ms: 2.3327
+  ...
+# Subtest: H6-TP07: exportaciones solo están disponibles para administrador
+ok 311 - H6-TP07: exportaciones solo están disponibles para administrador
+  ---
+  duration_ms: 0.6932
+  ...
+# Subtest: E1-TP57: resumen diario consume totales autoritativos y normaliza el snapshot
+ok 312 - E1-TP57: resumen diario consume totales autoritativos y normaliza el snapshot
+  ---
+  duration_ms: 1.1073
+  ...
+# Subtest: E1-TP56/58: reporte de sesión conserva actores, snapshots y solicita filtro autoritativo
+ok 313 - E1-TP56/58: reporte de sesión conserva actores, snapshots y solicita filtro autoritativo
+  ---
+  duration_ms: 1.1837
+  ...
+# Subtest: E1-T12: roles operativos ajenos se rechazan antes de invocar reportes
+ok 314 - E1-T12: roles operativos ajenos se rechazan antes de invocar reportes
+  ---
+  duration_ms: 0.66
+  ...
+# Subtest: E1-T16: flujo actual se limita a ADMIN y normaliza grupos y detalle
+ok 315 - E1-T16: flujo actual se limita a ADMIN y normaliza grupos y detalle
+  ---
+  duration_ms: 2.6218
+  ...
+# Subtest: E1-TP58: CSV usa los snapshots cargados sin recalcular totales financieros
+ok 316 - E1-TP58: CSV usa los snapshots cargados sin recalcular totales financieros
+  ---
+  duration_ms: 51.2646
+  ...
+# Subtest: H6-T02: administrador y caja tienen navegación visible de ida y retorno
+ok 317 - H6-T02: administrador y caja tienen navegación visible de ida y retorno
+  ---
+  duration_ms: 8.7992
+  ...
+# (node:27080) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: consulta mesas activas e inactivas con las columnas administrativas exactas
+ok 318 - consulta mesas activas e inactivas con las columnas administrativas exactas
+  ---
+  duration_ms: 7.9308
+  ...
+# Subtest: rechaza la consulta administrativa de mesas desde otro rol
+ok 319 - rechaza la consulta administrativa de mesas desde otro rol
+  ---
+  duration_ms: 0.5573
+  ...
+# Subtest: crea una mesa con columnas exactas sin enviar estado y comprueba LIBRE
+ok 320 - crea una mesa con columnas exactas sin enviar estado y comprueba LIBRE
+  ---
+  duration_ms: 2.0562
+  ...
+# Subtest: rechaza una creación cuyo estado resultante no es LIBRE
+ok 321 - rechaza una creación cuyo estado resultante no es LIBRE
+  ---
+  duration_ms: 1.1436
+  ...
+# Subtest: edita una mesa con las columnas exactas y conserva su estado operativo
+ok 322 - edita una mesa con las columnas exactas y conserva su estado operativo
+  ---
+  duration_ms: 2.2065
+  ...
+# Subtest: activa o reactiva una mesa sin alterar su estado operativo
+ok 323 - activa o reactiva una mesa sin alterar su estado operativo
+  ---
+  duration_ms: 1.6372
+  ...
+# Subtest: desactiva una mesa LIBRE enviando exclusivamente activo
+ok 324 - desactiva una mesa LIBRE enviando exclusivamente activo
+  ---
+  duration_ms: 2.4104
+  ...
+# Subtest: rechaza desactivar una mesa OCUPADA sin llamar a Supabase
+ok 325 - rechaza desactivar una mesa OCUPADA sin llamar a Supabase
+  ---
+  duration_ms: 0.9588
+  ...
+# Subtest: rechaza desactivar una mesa PEDIDO_LISTO sin llamar a Supabase
+ok 326 - rechaza desactivar una mesa PEDIDO_LISTO sin llamar a Supabase
+  ---
+  duration_ms: 1.0098
+  ...
+# Subtest: rechaza desactivar una mesa PENDIENTE_PAGO sin llamar a Supabase
+ok 327 - rechaza desactivar una mesa PENDIENTE_PAGO sin llamar a Supabase
+  ---
+  duration_ms: 1.2595
+  ...
+# Subtest: rechaza editar una mesa no LIBRE para dejarla inactiva
+ok 328 - rechaza editar una mesa no LIBRE para dejarla inactiva
+  ---
+  duration_ms: 0.741
+  ...
+# Subtest: rechaza estado, identificadores y creado_en proporcionados en una inserción
+ok 329 - rechaza estado, identificadores y creado_en proporcionados en una inserción
+  ---
+  duration_ms: 0.5491
+  ...
+# Subtest: rechaza estado, identificadores y creado_en proporcionados en una actualización
+ok 330 - rechaza estado, identificadores y creado_en proporcionados en una actualización
+  ---
+  duration_ms: 0.69
+  ...
+# Subtest: elimina una mesa confirmada, sin modificar estado ni pedidos, y recarga
+ok 331 - elimina una mesa confirmada, sin modificar estado ni pedidos, y recarga
+  ---
+  duration_ms: 0.8084
+  ...
+# Subtest: cancelar la eliminación no ejecuta consultas en Supabase
+ok 332 - cancelar la eliminación no ejecuta consultas en Supabase
+  ---
+  duration_ms: 0.4055
+  ...
+# Subtest: una mesa LIBRE con pedidos relacionados recomienda desactivación
+ok 333 - una mesa LIBRE con pedidos relacionados recomienda desactivación
+  ---
+  duration_ms: 0.9607
+  ...
+# Subtest: una mesa no LIBRE con pedidos relacionados no recomienda desactivación
+ok 334 - una mesa no LIBRE con pedidos relacionados no recomienda desactivación
+  ---
+  duration_ms: 0.5786
+  ...
+# Subtest: la confirmación de mesa identifica nombre y código y bloquea duplicados
+ok 335 - la confirmación de mesa identifica nombre y código y bloquea duplicados
+  ---
+  duration_ms: 3.0733
+  ...
+# Subtest: elimina únicamente la mesa seleccionada y conserva las demás
+ok 336 - elimina únicamente la mesa seleccionada y conserva las demás
+  ---
+  duration_ms: 0.9859
+  ...
+# Subtest: conserva la mesa tras rechazo por pedidos sin eliminar dependencias ni desactivarla
+ok 337 - conserva la mesa tras rechazo por pedidos sin eliminar dependencias ni desactivarla
+  ---
+  duration_ms: 0.7306
+  ...
+# Subtest: traduce denegaciones de eliminación de mesa sin revelar detalles internos
+ok 338 - traduce denegaciones de eliminación de mesa sin revelar detalles internos
+  ---
+  duration_ms: 0.9142
+  ...
+# Subtest: traduce errores inesperados al eliminar una mesa sin desactivarla
+ok 339 - traduce errores inesperados al eliminar una mesa sin desactivarla
+  ---
+  duration_ms: 0.5349
+  ...
+# Subtest: traduce error de conexión al eliminar una mesa sin mostrar detalles sensibles
+ok 340 - traduce error de conexión al eliminar una mesa sin mostrar detalles sensibles
+  ---
+  duration_ms: 0.5511
+  ...
+# Subtest: traduce el código duplicado sin revelar detalles internos
+ok 341 - traduce el código duplicado sin revelar detalles internos
+  ---
+  duration_ms: 0.5569
+  ...
+# Subtest: rechaza código vacío sin ejecutar consultas
+ok 342 - rechaza código vacío sin ejecutar consultas
+  ---
+  duration_ms: 0.5092
+  ...
+# Subtest: rechaza nombre vacío sin ejecutar consultas
+ok 343 - rechaza nombre vacío sin ejecutar consultas
+  ---
+  duration_ms: 0.4596
+  ...
+# Subtest: conserva mayúsculas, minúsculas y espacios interiores
+ok 344 - conserva mayúsculas, minúsculas y espacios interiores
+  ---
+  duration_ms: 0.5184
+  ...
+# Subtest: obtiene local_id exclusivamente del contexto validado en alta y filtros
+ok 345 - obtiene local_id exclusivamente del contexto validado en alta y filtros
+  ---
+  duration_ms: 0.5547
+  ...
+# Subtest: traduce falta de autorización sin mostrar detalles internos
+ok 346 - traduce falta de autorización sin mostrar detalles internos
+  ---
+  duration_ms: 0.664
+  ...
+# Subtest: traduce rechazo RLS al desactivar como mesa no libre
+ok 347 - traduce rechazo RLS al desactivar como mesa no libre
+  ---
+  duration_ms: 0.5729
+  ...
+# Subtest: traduce errores inesperados a un mensaje recuperable y seguro
+ok 348 - traduce errores inesperados a un mensaje recuperable y seguro
+  ---
+  duration_ms: 0.4879
+  ...
+# Subtest: traduce excepciones de conexión sin revelar información interna
+ok 349 - traduce excepciones de conexión sin revelar información interna
+  ---
+  duration_ms: 0.6194
+  ...
+# Subtest: informa como recuperable un error durante la recarga de mesas
+ok 350 - informa como recuperable un error durante la recarga de mesas
+  ---
+  duration_ms: 0.6606
+  ...
+# Subtest: rechaza mutaciones administrativas de mesas desde roles no autorizados
+ok 351 - rechaza mutaciones administrativas de mesas desde roles no autorizados
+  ---
+  duration_ms: 0.3995
+  ...
+# Subtest: el formulario administrativo no incorpora controles para cambiar estado
+ok 352 - el formulario administrativo no incorpora controles para cambiar estado
+  ---
+  duration_ms: 1.6017
+  ...
+# Subtest: conserva el formulario de mesas ante error y bloquea envíos duplicados
+ok 353 - conserva el formulario de mesas ante error y bloquea envíos duplicados
+  ---
+  duration_ms: 1.8179
+  ...
+# (node:25560) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: TP-02: técnica muestra únicamente los cinco indicadores aprobados
+ok 354 - TP-02: técnica muestra únicamente los cinco indicadores aprobados
+  ---
+  duration_ms: 5.9405
+  ...
+# Subtest: TP-02 y TP-19: técnica no consulta catálogos, mesas ni ejecuta mutaciones
+ok 355 - TP-02 y TP-19: técnica no consulta catálogos, mesas ni ejecuta mutaciones
+  ---
+  duration_ms: 0.9499
+  ...
+# Subtest: TP-02: técnica no expone identificadores, credenciales ni valores de configuración
+ok 356 - TP-02: técnica no expone identificadores, credenciales ni valores de configuración
+  ---
+  duration_ms: 0.7642
+  ...
+# Subtest: TP-09 y TP-10: los cuatro roles válidos acceden directamente a técnica
+ok 357 - TP-09 y TP-10: los cuatro roles válidos acceden directamente a técnica
+  ---
+  duration_ms: 5.7163
+  ...
+# Subtest: TP-09: usuario anónimo es enviado a login y contexto inválido es rechazado
+ok 358 - TP-09: usuario anónimo es enviado a login y contexto inválido es rechazado
+  ---
+  duration_ms: 0.9248
+  ...
+# Subtest: TP-10, H4-T06 y H5-T05: cocina y caja llegan a sus tableros
+ok 359 - TP-10, H4-T06 y H5-T05: cocina y caja llegan a sus tableros
+  ---
+  duration_ms: 1.191
+  ...
+# Subtest: TP-27: rutas operativas ajenas al rol continúan enviando a 403
+ok 360 - TP-27: rutas operativas ajenas al rol continúan enviando a 403
+  ---
+  duration_ms: 1.7522
+  ...
+# Subtest: App entrega a técnica solo el rol validado y conserva cierre de sesión
+ok 361 - App entrega a técnica solo el rol validado y conserva cierre de sesión
+  ---
+  duration_ms: 0.6422
+  ...
+# (node:21392) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: consulta mesas activas, pedidos vigentes y detalles con filtros de servidor
+ok 362 - consulta mesas activas, pedidos vigentes y detalles con filtros de servidor
+  ---
+  duration_ms: 11.4949
+  ...
+# Subtest: asocia un único pedido vigente por mesa y calcula total desde detalles persistidos
+ok 363 - asocia un único pedido vigente por mesa y calcula total desde detalles persistidos
+  ---
+  duration_ms: 1.8027
+  ...
+# Subtest: no consulta detalles ni inventa total cuando no existen pedidos vigentes
+ok 364 - no consulta detalles ni inventa total cuando no existen pedidos vigentes
+  ---
+  duration_ms: 0.734
+  ...
+# Subtest: excluye defensivamente mesas inactivas
+ok 365 - excluye defensivamente mesas inactivas
+  ---
+  duration_ms: 0.8018
+  ...
+# Subtest: filtra todas las opciones de estado sin búsqueda adicional
+ok 366 - filtra todas las opciones de estado sin búsqueda adicional
+  ---
+  duration_ms: 1.6971
+  ...
+# Subtest: ordena códigos numéricos de forma ascendente y descendente
+ok 367 - ordena códigos numéricos de forma ascendente y descendente
+  ---
+  duration_ms: 0.6683
+  ...
+# Subtest: Tomar pedido usa la RPC permanente sin enviar identidad ni local
+ok 368 - Tomar pedido usa la RPC permanente sin enviar identidad ni local
+  ---
+  duration_ms: 0.967
+  ...
+# Subtest: rechaza roles distintos de MOZO antes de consultar Supabase
+ok 369 - rechaza roles distintos de MOZO antes de consultar Supabase
+  ---
+  duration_ms: 1.1247
+  ...
+# Subtest: traduce errores de tablero y RPC a mensajes recuperables seguros
+ok 370 - traduce errores de tablero y RPC a mensajes recuperables seguros
+  ---
+  duration_ms: 1.5776
+  ...
+# Subtest: cards muestran código, estado textual, total y acción táctil
+ok 371 - cards muestran código, estado textual, total y acción táctil
+  ---
+  duration_ms: 1.3914
+  ...
+# Subtest: bloquea repetición visual mientras abre una mesa y conserva PostgreSQL como autoridad
+ok 372 - bloquea repetición visual mientras abre una mesa y conserva PostgreSQL como autoridad
+  ---
+  duration_ms: 0.8317
+  ...
+# Subtest: mantiene carga, vacío, filtro vacío y error recuperable
+ok 373 - mantiene carga, vacío, filtro vacío y error recuperable
+  ---
+  duration_ms: 0.443
+  ...
+# Subtest: navega a una ruta mínima de pedido y restringe acceso al MOZO
+ok 374 - navega a una ruta mínima de pedido y restringe acceso al MOZO
+  ---
+  duration_ms: 1.0027
+  ...
+# Subtest: T07 agrega exclusivamente mediante RPC sin precio ni estado del cliente
+ok 375 - T07 agrega exclusivamente mediante RPC sin precio ni estado del cliente
+  ---
+  duration_ms: 0.9865
+  ...
+# Subtest: T07 limita cambios a cantidad/observación y retiro de ABIERTO (vía RPC E7-D15)
+ok 376 - T07 limita cambios a cantidad/observación y retiro de ABIERTO (vía RPC E7-D15)
+  ---
+  duration_ms: 1.3855
+  ...
+# Subtest: T09 detecta actualización obsoleta y compara el valor confirmado anterior (PT409 vía RPC E7-D15)
+ok 377 - T09 detecta actualización obsoleta y compara el valor confirmado anterior (PT409 vía RPC E7-D15)
+  ---
+  duration_ms: 0.8772
+  ...
+# Subtest: T09 observaciones concurrentes conservan al ganador y la sesión perdedora recupera servidor
+ok 378 - T09 observaciones concurrentes conservan al ganador y la sesión perdedora recupera servidor
+  ---
+  duration_ms: 1.0652
+  ...
+# Subtest: T09 conflicto descarta borrador, cierra Guardar y permite editar de nuevo
+ok 379 - T09 conflicto descarta borrador, cierra Guardar y permite editar de nuevo
+  ---
+  duration_ms: 0.5868
+  ...
+# Subtest: T09 conflicto se asocia solo a la card afectada y desaparece al volver a editar
+ok 380 - T09 conflicto se asocia solo a la card afectada y desaparece al volver a editar
+  ---
+  duration_ms: 1.4781
+  ...
+# Subtest: T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controles táctiles
+ok 381 - T07 ofrece catálogo filtrable, observaciones frecuentes/libres y controles táctiles
+  ---
+  duration_ms: 1.2545
+  ...
+# Subtest: T07 conserva estado persistido cuando PostgreSQL rechaza una mutación
+ok 382 - T07 conserva estado persistido cuando PostgreSQL rechaza una mutación
+  ---
+  duration_ms: 0.6982
+  ...
+# Subtest: T07 confirma retiro, permite cancelar y muestra feedback local
+ok 383 - T07 confirma retiro, permite cancelar y muestra feedback local
+  ---
+  duration_ms: 0.4064
+  ...
+# Subtest: T07 impide doble mutación por línea y no usa menos uno para eliminar
+ok 384 - T07 impide doble mutación por línea y no usa menos uno para eliminar
+  ---
+  duration_ms: 0.6295
+  ...
+# Subtest: T07 muestra actualización local y rehabilita controles tras respuesta
+ok 385 - T07 muestra actualización local y rehabilita controles tras respuesta
+  ---
+  duration_ms: 0.7672
+  ...
+# Subtest: T07 recarga persistencia tras cada mutación y no muestra éxito optimista
+ok 386 - T07 recarga persistencia tras cada mutación y no muestra éxito optimista
+  ---
+  duration_ms: 0.7855
+  ...
+# Subtest: T07 abre carta para pedido vacío y resumen para pedido con detalles
+ok 387 - T07 abre carta para pedido vacío y resumen para pedido con detalles
+  ---
+  duration_ms: 0.5395
+  ...
+# Subtest: T07 alterna Pedido y Carta sin ruta adicional ni salida automática tras agregar
+ok 388 - T07 alterna Pedido y Carta sin ruta adicional ni salida automática tras agregar
+  ---
+  duration_ms: 0.469
+  ...
+# Subtest: T07 separa ya solicitado de por enviar y conserva edición solo para ABIERTO
+ok 389 - T07 separa ya solicitado de por enviar y conserva edición solo para ABIERTO
+  ---
+  duration_ms: 0.5396
+  ...
+# Subtest: T07 consolida atómicamente solo producto y observación equivalentes en ABIERTO
+ok 390 - T07 consolida atómicamente solo producto y observación equivalentes en ABIERTO
+  ---
+  duration_ms: 0.5324
+  ...
+# Subtest: T07 bloquea taps repetidos de agregar antes del siguiente render
+ok 391 - T07 bloquea taps repetidos de agregar antes del siguiente render
+  ---
+  duration_ms: 0.5464
+  ...
+# Subtest: T07 usa card compacta ABIERTO y cantidad de solo lectura para enviados
+ok 392 - T07 usa card compacta ABIERTO y cantidad de solo lectura para enviados
+  ---
+  duration_ms: 0.4926
+  ...
+# Subtest: T08 recupera mesa y cabecera vigente para la revisión
+ok 393 - T08 recupera mesa y cabecera vigente para la revisión
+  ---
+  duration_ms: 1.332
+  ...
+# Subtest: H5-TA18 alta posterior a ENTREGADO resincroniza el snapshot autoritativo
+ok 394 - H5-TA18 alta posterior a ENTREGADO resincroniza el snapshot autoritativo
+  ---
+  duration_ms: 0.4919
+  ...
+# Subtest: H5-TH01 entrega exclusivamente mediante entregar_pedido y conserva autoridad PostgreSQL
+ok 395 - H5-TH01 entrega exclusivamente mediante entregar_pedido y conserva autoridad PostgreSQL
+  ---
+  duration_ms: 1.186
+  ...
+# Subtest: H5-TH01 entrega rechaza rol ajeno y traduce conflicto sin falso éxito
+ok 396 - H5-TH01 entrega rechaza rol ajeno y traduce conflicto sin falso éxito
+  ---
+  duration_ms: 0.7915
+  ...
+# Subtest: H5-TH01 UI muestra, confirma y resincroniza la entrega solo cuando todo está LISTO
+ok 397 - H5-TH01 UI muestra, confirma y resincroniza la entrega solo cuando todo está LISTO
+  ---
+  duration_ms: 1.0959
+  ...
+# Subtest: T08 envía exclusivamente mediante enviar_pedido_cocina
+ok 398 - T08 envía exclusivamente mediante enviar_pedido_cocina
+  ---
+  duration_ms: 1.0214
+  ...
+# Subtest: T08 revisión muestra mesa, pedido, grupos, importes y total persistido
+ok 399 - T08 revisión muestra mesa, pedido, grupos, importes y total persistido
+  ---
+  duration_ms: 0.5024
+  ...
+# Subtest: T08 muestra envío solo con ABIERTO, feedback y bloqueo contra doble tap
+ok 400 - T08 muestra envío solo con ABIERTO, feedback y bloqueo contra doble tap
+  ---
+  duration_ms: 0.4264
+  ...
+# Subtest: T08 recarga PostgreSQL tras éxito o error y deriva los grupos del estado confirmado
+ok 401 - T08 recarga PostgreSQL tras éxito o error y deriva los grupos del estado confirmado
+  ---
+  duration_ms: 0.3515
+  ...
+# Subtest: T08 conserva agregados posteriores en Por enviar hasta un nuevo envío
+ok 402 - T08 conserva agregados posteriores en Por enviar hasta un nuevo envío
+  ---
+  duration_ms: 0.2115
+  ...
+# Subtest: T09 reconstruye pedido y mezcla desde PostgreSQL sin carrito efímero
+ok 403 - T09 reconstruye pedido y mezcla desde PostgreSQL sin carrito efímero
+  ---
+  duration_ms: 0.6751
+  ...
+# Subtest: T09 errores de alta y envío no producen éxito local y permiten recargar
+ok 404 - T09 errores de alta y envío no producen éxito local y permiten recargar
+  ---
+  duration_ms: 0.4832
+  ...
+# Subtest: T09 libera siempre guards locales y delega concurrencia crítica a PostgreSQL
+ok 405 - T09 libera siempre guards locales y delega concurrencia crítica a PostgreSQL
+  ---
+  duration_ms: 0.5174
+  ...
+# Subtest: H3-TA16 libera el pedido vacío exclusivamente mediante la operación de dominio
+ok 406 - H3-TA16 libera el pedido vacío exclusivamente mediante la operación de dominio
+  ---
+  duration_ms: 0.6859
+  ...
+# Subtest: H3-TA16 rechaza cliente no MOZO y conserva error recuperable del servidor
+ok 407 - H3-TA16 rechaza cliente no MOZO y conserva error recuperable del servidor
+  ---
+  duration_ms: 0.3219
+  ...
+# Subtest: H3-TA16 operación PostgreSQL es atómica, autorizada y no elimina pedidos
+ok 408 - H3-TA16 operación PostgreSQL es atómica, autorizada y no elimina pedidos
+  ---
+  duration_ms: 0.2783
+  ...
+# Subtest: H3-TA16 UI confirma, bloquea doble tap y navega solo tras éxito
+ok 409 - H3-TA16 UI confirma, bloquea doble tap y navega solo tras éxito
+  ---
+  duration_ms: 0.2469
+  ...
+# Subtest: evolución H3 registra auditoría segura de pedido y detalles
+ok 410 - evolución H3 registra auditoría segura de pedido y detalles
+  ---
+  duration_ms: 1.0887
+  ...
+# Subtest: tablero deriva y muestra el creador del pedido vigente sin consultar perfiles directamente
+ok 411 - tablero deriva y muestra el creador del pedido vigente sin consultar perfiles directamente
+  ---
+  duration_ms: 0.4805
+  ...
+# Subtest: frontend lee auditoría persistida sin enviar UUID de autor en mutaciones
+ok 412 - frontend lee auditoría persistida sin enviar UUID de autor en mutaciones
+  ---
+  duration_ms: 0.4531
+  ...
+# Subtest: E7-T07 matriz de cancelación: sólo ENVIADO/RECIBIDO_COCINA con cocina
+ok 413 - E7-T07 matriz de cancelación: sólo ENVIADO/RECIBIDO_COCINA con cocina
+  ---
+  duration_ms: 0.5017
+  ...
+# Subtest: E7-T07 productos sin cocina enviados se muestran como Listo para servir
+ok 414 - E7-T07 productos sin cocina enviados se muestran como Listo para servir
+  ---
+  duration_ms: 0.3266
+  ...
+# Subtest: E7-T07 lee el snapshot requiere_cocina de cada detalle
+ok 415 - E7-T07 lee el snapshot requiere_cocina de cada detalle
+  ---
+  duration_ms: 0.4473
+  ...
+# Subtest: E7-T07 cancela la línea completa vía RPC con motivo recortado
+ok 416 - E7-T07 cancela la línea completa vía RPC con motivo recortado
+  ---
+  duration_ms: 0.6017
+  ...
+# Subtest: E7-T07 motivo obligatorio y acotado sin llamar al servidor
+ok 417 - E7-T07 motivo obligatorio y acotado sin llamar al servidor
+  ---
+  duration_ms: 2.1318
+  ...
+# Subtest: E7-T07 PT409 de cancelación es conflicto recuperable; otros errores no muestran éxito
+ok 418 - E7-T07 PT409 de cancelación es conflicto recuperable; otros errores no muestran éxito
+  ---
+  duration_ms: 0.5257
+  ...
+# Subtest: E7-T07 lee cancelaciones del pedido vía RPC de sólo lectura
+ok 419 - E7-T07 lee cancelaciones del pedido vía RPC de sólo lectura
+  ---
+  duration_ms: 0.5899
+  ...
+# Subtest: E7-T07 pantalla: indicador sin cocina, cancelación con motivo, guard y sección Cancelados
+ok 420 - E7-T07 pantalla: indicador sin cocina, cancelación con motivo, guard y sección Cancelados
+  ---
+  duration_ms: 0.8076
+  ...
+# Subtest: E7-T07 éxito y conflicto resincronizan el snapshot autoritativo (incluidas cancelaciones)
+ok 421 - E7-T07 éxito y conflicto resincronizan el snapshot autoritativo (incluidas cancelaciones)
+  ---
+  duration_ms: 0.7184
+  ...
+# Subtest: E7-T12/TH06 pedido que pasó a PAGADO tras el cobro total ya no es vigente (no es error de carga)
+ok 422 - E7-T12/TH06 pedido que pasó a PAGADO tras el cobro total ya no es vigente (no es error de carga)
+  ---
+  duration_ms: 0.626
+  ...
+# Subtest: E7-T12/TH06 un fallo real de lectura del pedido sigue siendo error recuperable
+ok 423 - E7-T12/TH06 un fallo real de lectura del pedido sigue siendo error recuperable
+  ---
+  duration_ms: 0.4889
+  ...
+# Subtest: E7-T12/TH06 la vista del mozo vuelve a mesas al resincronizar o reintentar un pedido que dejó de ser vigente
+ok 424 - E7-T12/TH06 la vista del mozo vuelve a mesas al resincronizar o reintentar un pedido que dejó de ser vigente
+  ---
+  duration_ms: 1.0076
+  ...
+# (node:20424) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: H4-T08 suscribe tablero y pedido del mozo a detalle, pedido y mesa
+ok 425 - H4-T08 suscribe tablero y pedido del mozo a detalle, pedido y mesa
+  ---
+  duration_ms: 3.1593
+  ...
+# Subtest: H4-T08 usa eventos como señales, agrupa repetidos y no hace append de payloads
+ok 426 - H4-T08 usa eventos como señales, agrupa repetidos y no hace append de payloads
+  ---
+  duration_ms: 14.0598
+  ...
+# Subtest: H4-T08 hace segunda carga, recupera reconexión y limpia el canal
+ok 427 - H4-T08 hace segunda carga, recupera reconexión y limpia el canal
+  ---
+  duration_ms: 11.7704
+  ...
+# Subtest: H4-T08 protege las vistas contra respuestas tardías después del cleanup
+ok 428 - H4-T08 protege las vistas contra respuestas tardías después del cleanup
+  ---
+  duration_ms: 0.7519
+  ...
+# Subtest: E7-T12/TH06 un remontaje antes de que termine la salida del canal anterior sigue recibiendo señales
+ok 429 - E7-T12/TH06 un remontaje antes de que termine la salida del canal anterior sigue recibiendo señales
+  ---
+  duration_ms: 10.1565
+  ...
+# Subtest: E7-T12/TH06 cada suscripción usa un topic propio con el prefijo del canal
+ok 430 - E7-T12/TH06 cada suscripción usa un topic propio con el prefijo del canal
+  ---
+  duration_ms: 3.0008
+  ...
+1..430
+# tests 430
+# suites 0
+# pass 430
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3501.5215

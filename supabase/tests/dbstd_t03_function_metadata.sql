@@ -105,7 +105,10 @@ begin
       column_name, privilege_type, is_grantable
     ) as line
     from information_schema.role_column_grants
-    where table_schema = 'public'
+    -- E9 (homologación mínima): este fingerprint histórico conserva su proyección pre-E9.
+    -- El SELECT de jornada_operativa_id se verifica en e9_t02_modelo.sql.
+    where column_name <> 'jornada_operativa_id'
+      and table_schema = 'public'
       and table_name in ('local', 'rol', 'perfil_usuario', 'mesa', 'categoria',
         'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago')
   ) as grant_row;

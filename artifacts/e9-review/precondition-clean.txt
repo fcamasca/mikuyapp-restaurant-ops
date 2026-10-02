@@ -1,0 +1,5 @@
+RESULT PASS TP02 aborta con pedido existente
+RESULT PASS TP02 aborta con sesión de caja existente
+RESULT PASS TP02 aplica sobre la baseline vacía
+RESULT PASS TP02 sin jornadas creadas
+== TP02 fallos: 0

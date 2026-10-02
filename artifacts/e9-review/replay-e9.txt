@@ -1,0 +1,1 @@
+REPLAY OK audit_e9: 61 migraciones (última 20261001000200_e9_t03_rpc_jornada_operativa.sql) + seed

@@ -1,0 +1,101 @@
+== B1 suite SQL (standalone, orden alfabético)
+RESULT PASS dbstd_t02_authenticated_context_hardening
+RESULT FAIL dbstd_t03_function_metadata (exit 3)
+    psql:dbstd_t03_function_metadata.sql:125: ERROR:  P0001: DBSTD-TP14 grants de tablas o columnas cambiaron: a42c2a240c1e4006fd4f9db193e77d1c
+RESULT FAIL dbstd_t04_catalog_comments (exit 3)
+    psql:dbstd_t04_catalog_comments.sql:74: ERROR:  P0001: DBSTD-TP16 comentario inesperado: public.registrar_auditoria_detalle_pedido()
+RESULT FAIL domain_object_names (exit 3)
+    psql:domain_object_names.sql:113: ERROR:  P0001: Objetos permanentes con prefijo de hito: {function:h3_abrir_o_recuperar_pedido}
+RESULT PASS e10_t02_modelo
+RESULT PASS e10_t03_solicitud
+RESULT PASS e10_t06_integracion
+RESULT PASS e10_t07_complementos
+RESULT FAIL e1_delta_t09_cobro_atomico (exit 3)
+    psql:e1_delta_t09_cobro_atomico.sql:70: ERROR:  PT409: La sesión ya no está abierta
+RESULT PASS e1_delta_t10_lecturas_cobro
+RESULT PASS e1_delta_t11_auditoria_cobro
+RESULT PASS e1_delta_t12_reportes_cobro
+RESULT FAIL e1_t09_pagos_multiples (exit 3)
+    psql:e1_t09_pagos_multiples.sql:69: ERROR:  PT409: Un pedido con pagos no admite mutaciones
+RESULT PASS e1_t10_lecturas_autoritativas
+RESULT PASS e1_t11_auditoria_financiera
+RESULT PASS e1_t12_reportes_caja
+RESULT PASS e1_t14_movimientos_grilla
+RESULT PASS e1_t15_notificaciones_caja
+RESULT PASS e1_t16_flujo_actual_pedidos
+RESULT PASS e7_t02_modelo
+RESULT PASS e7_t03_envio
+RESULT PASS e7_t04_recepcion_tablero
+RESULT PASS e7_t05_cancelacion
+RESULT PASS e7_t05b_edicion_retiro
+RESULT PASS e7_t09_impresion_comanda
+RESULT PASS e7_t10_integracion
+RESULT PASS e7_t11_complementos
+RESULT PASS e9_t02_modelo
+RESULT PASS e9_t03_rpc
+RESULT PASS e9_t06_integracion
+RESULT PASS e9_t07_matriz_local_cerrado
+RESULT PASS h3_t01_model
+RESULT PASS h3_t02_open_or_recover_order
+RESULT PASS h3_t03_add_order_detail
+RESULT FAIL h3_t04_open_order_detail_mutations (exit 3)
+    psql:h3_t04_open_order_detail_mutations.sql:115: ERROR:  P0001: H3-T04 matriz de privilegios inesperada: <NULL>
+RESULT PASS h3_t05_send_order_to_kitchen
+RESULT PASS h4_t01_order_detail_sent_at
+RESULT PASS h4_t02_kitchen_board_snapshot
+RESULT FAIL h4_t03_kitchen_detail_state_transition (exit 3)
+    psql:h4_t03_kitchen_detail_state_transition.sql:56: ERROR:  P0001: H4-T03 contrato, bloqueo o alcance inesperados
+RESULT PASS h4_t04_derived_order_table_state
+RESULT PASS h4_t05_realtime_publication_rls
+RESULT FAIL h5_t02_reopen_delivered_order (exit 3)
+    psql:h5_t02_reopen_delivered_order.sql:91: ERROR:  PT409: El pedido ya no está listo para entregar
+RESULT FAIL h5_t02_safe_order_delivery (exit 3)
+    psql:h5_t02_safe_order_delivery.sql:255: ERROR:  PT409: El pedido ya no está listo para entregar
+RESULT PASS h5_t03_cashier_pending_orders_read
+RESULT FAIL h5_t04_transactional_payment (exit 3)
+    psql:h5_t04_transactional_payment.sql:152: ERROR:  PT409: Pedido no disponible para cobro
+RESULT PASS h5_t06_realtime_cashier_signal
+RESULT PASS h6_t02_sales_exports
+RESULT FAIL order_audit_trail (exit 3)
+    psql:order_audit_trail.sql:57: ERROR:  P0001: TP21 cambió el cuerpo de registrar_auditoria_detalle_pedido()
+RESULT PASS release_empty_order_table
+RESULT FAIL tp09_tp11_schema (exit 3)
+    psql:tp09_tp11_schema.sql:346: ERROR:  P0001: TP-09: expected 11 exact public tables (H1 + E9), found 27: {anulacion_pedido,auditoria_caja,caja,categoria,cobro,comanda,descuento_pedido,detalle_pedido,historial_detalle_pedido,historial_estado,jornada_operativa,local,lote_movimiento_caja,mesa,movimiento_caja,notificacion_caja,notificacion_caja_destinatario,pago,pedido,perfil_usuario,producto,resumen_cierre_sesion_caja,rol,sesion_caja,solicitud_apertura_caja,solicitud_cierre_caja,solicitud_cuenta}
+RESULT PASS tp10_constraints
+RESULT PASS tp12_tp13_seed
+== B2 E1 con fixtures
+RESULT PASS e1_t03_fixture
+RESULT FAIL e1_t03_caja_sesion (exit 3)
+    psql:e1_t03_caja_sesion.sql:26: ERROR:  P0001: E1-T03: una caja minima por local activo
+RESULT PASS e1_t04_fixture
+RESULT FAIL e1_t04_apertura_sesion (exit 3)
+    psql:e1_t04_apertura_sesion.sql:122: ERROR:  P0001: T04: TP08 sesion de otra caja rechazada
+RESULT PASS e1_t05_concurrency_setup
+RESULT FAIL e1_t05_movimientos_cierre (exit 3)
+    psql:e1_t05_movimientos_cierre.sql:184: ERROR:  PT409: La sesión de caja ya está cerrada
+RESULT PASS e1_t06_concurrency_setup
+RESULT FAIL e1_t06_descuento_pedido (exit 3)
+    psql:e1_t06_descuento_pedido.sql:106: ERROR:  PT409: El pedido no admite descuento
+RESULT PASS e1_t07_concurrency_setup
+RESULT FAIL e1_t07_anulacion_administrativa (exit 3)
+    psql:e1_t07_anulacion_administrativa.sql:117: ERROR:  PT409: El pedido ya fue anulado
+RESULT PASS e1_t08_concurrency_setup
+RESULT FAIL e1_t08_pago_sesion (exit 3)
+    psql:e1_t08_pago_sesion.sql:171: ERROR:  P0001: T08: fila pago actor sesion propina clave
+== B3 carreras históricas H4/H5
+RACE H4-T03 doble transición cocina: A exit=0  | B exit=3 sqlstate=PT409
+RESULT PASS H4-T03 doble transición cocina (una sesión confirmó)
+RESULT FAIL H4-T03 doble transición cocina cleanup (exit 3)
+    psql:h4_t03_concurrency_cleanup.sql:5: ERROR:  23503: update or delete on table "pedido" violates foreign key constraint "fk_historial_detalle_pedido_pedido" on table "historial_detalle_pedido"
+RACE H5-T02 doble entrega: A exit=0  | B exit=3 sqlstate=PT409
+RESULT PASS H5-T02 doble entrega verify
+RESULT PASS H5-T02 doble entrega cleanup
+RACE H5-T02 reapertura vs pago: A exit=0  | B exit=3 sqlstate=PT409
+RESULT PASS H5-T02 reapertura vs pago verify
+RESULT PASS H5-T02 reapertura vs pago cleanup
+RACE H5-T04 doble pago: A exit=3 sqlstate=PT409 | B exit=3 sqlstate=PT409
+RESULT FAIL H5-T04 doble pago: ambas sesiones fallaron
+RESULT FAIL H5-T04 doble pago verify (exit 3)
+    psql:h5_t04_concurrency_verify.sql:8: ERROR:  P0001: H5-T04 resultado concurrente incorrecto
+RESULT PASS H5-T04 doble pago cleanup
+== fallos: 21

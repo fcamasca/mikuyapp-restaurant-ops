@@ -1,0 +1,34 @@
+== TP16 apertura vs apertura
+RACE TP16 dos ADMIN abren a la vez: A exit=0  | B exit=0 
+RESULT PASS TP16 dos ADMIN abren a la vez
+RACE TP16 doble envío con la misma clave: A exit=0  | B exit=0 
+RESULT PASS TP16 doble envío con la misma clave
+== TP17 cierre vs creación y cierre vs cierre
+RACE TP17 cierre gana a crear pedido: A exit=0  | B exit=1 [ERROR:  Local cerrado — el sistema no se encuentra aperturado]
+RESULT FAIL TP17 cierre gana a crear pedido
+ERROR:  TP17: jornada cerrada con pedido o residuos
+RACE TP17 crear pedido gana al cierre: A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 1 pedidos pendientes y 0 sesiones de caja abiertas]
+RESULT PASS TP17 crear pedido gana al cierre
+RACE TP17 cierre gana a abrir caja: A exit=0  | B exit=1 [ERROR:  Local cerrado — el sistema no se encuentra aperturado]
+RESULT FAIL TP17 cierre gana a abrir caja
+ERROR:  TP17: jornada cerrada con sesión o residuos
+RACE TP17 abrir caja gana al cierre: A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 0 pedidos pendientes y 1 sesiones de caja abiertas]
+RESULT PASS TP17 abrir caja gana al cierre
+RACE TP17 cierre vs cierre: A exit=0  | B exit=0 
+RESULT PASS TP17 cierre vs cierre
+== TP18 otras carreras
+RESULT FAIL TP18 cobro final en curso vs cierre (sesión abierta): preparación
+ERROR:  more than one row returned by a subquery used as an expression
+RESULT FAIL TP18 cierre de caja en curso vs cierre de jornada: preparación
+ERROR:  more than one row returned by a subquery used as an expression
+RESULT FAIL TP18 cierre de jornada vs cierre de caja (jornada primero): preparación
+ERROR:  more than one row returned by a subquery used as an expression
+RESULT FAIL TP18 anulación en curso vs cierre: preparación
+ERROR:  more than one row returned by a subquery used as an expression
+RACE TP18 liberación de mesa vacía en curso vs cierre: A exit=1 [ERROR:  more than one row returned by a subquery used as an expression] | B exit=1 [ERROR:  No se puede cerrar la jornada: 1 pedidos pendientes y 0 sesiones de caja abiertas]
+RESULT FAIL TP18 liberación de mesa vacía en curso vs cierre
+ERROR:  more than one row returned by a subquery used as an expression
+RACE TP18 apertura en curso vs crear pedido: A exit=0  | B exit=1 [ERROR:  Local cerrado — el sistema no se encuentra aperturado]
+RESULT FAIL TP18 apertura en curso vs crear pedido
+ERROR:  TP18: pedido creado sin apertura confirmada
+== fallos: 8

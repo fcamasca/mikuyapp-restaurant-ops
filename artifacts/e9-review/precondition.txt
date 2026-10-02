@@ -1,0 +1,8 @@
+RESULT FAIL TP02 aborta con pedido existente (esperado '3|E9: la migración requiere pedido y sesion_caja vacías (encontradas: 1 pedidos, 0 sesiones de caja)|f|0|1/0', obtenido '3|E9: la migración requiere pedido y sesion_caja vacías (encontradas: 7 pedidos, 7 sesiones de caja)|f|0|7/7')
+RESULT FAIL TP02 aborta con sesión de caja existente (esperado '3|E9: la migración requiere pedido y sesion_caja vacías (encontradas: 0 pedidos, 1 sesiones de caja)|f|0|0/1', obtenido '3|E9: la migración requiere pedido y sesion_caja vacías (encontradas: 6 pedidos, 8 sesiones de caja)|f|0|6/8')
+RESULT FAIL TP02 aplica sobre la baseline vacía (esperado '0||t|2|0/0', obtenido '3|E9: la migración requiere pedido y sesion_caja vacías (encontradas: 6 pedidos, 7 sesiones de caja)|f|0|6/7')
+ERROR:  relation "public.jornada_operativa" does not exist
+LINE 1: select count(*) from public.jornada_operativa
+                             ^
+RESULT FAIL TP02 sin jornadas creadas (esperado '0', obtenido '')
+== TP02 fallos: 4

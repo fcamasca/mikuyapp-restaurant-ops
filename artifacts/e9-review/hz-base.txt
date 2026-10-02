@@ -1,0 +1,14 @@
+BEGIN
+              set_config              
+--------------------------------------
+ e1030000-0000-0000-0000-000000000011
+(1 row)
+
+ERROR:  42883: function public.h2_auth_context() does not exist
+LINE 2:                                   from public.h2_auth_contex...
+                                               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+QUERY:  select auth_context.local_id, auth_context.rol_codigo
+                                  from public.h2_auth_context() as auth_context
+CONTEXT:  PL/pgSQL function public.h3_abrir_o_recuperar_pedido(uuid) line 15 at SQL statement
+LOCATION:  ParseFuncOrColumn, parse_func.c:629

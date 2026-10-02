@@ -18,11 +18,12 @@ begin
   where n.nspname = 'public'
     and c.relkind in ('r', 'p');
 
-  if actual_count <> 10 or actual_names <> array[
-    'categoria', 'detalle_pedido', 'historial_estado', 'local', 'mesa',
+  -- E9 (homologación mínima): suma su tabla al contrato H1; la deuda anterior sigue visible.
+  if actual_count <> 11 or actual_names <> array[
+    'categoria', 'detalle_pedido', 'historial_estado', 'jornada_operativa', 'local', 'mesa',
     'pago', 'pedido', 'perfil_usuario', 'producto', 'rol'
   ]::text[] then
-    raise exception 'TP-09: expected 10 exact public tables, found %: %', actual_count, actual_names;
+    raise exception 'TP-09: expected 11 exact public tables (H1 + E9), found %: %', actual_count, actual_names;
   end if;
 
   with expected (
@@ -80,6 +81,8 @@ begin
       ('pedido', 'enviado_en', 'timestamp with time zone', false, null, ''),
       ('pedido', 'modificado_por', 'uuid', true, null, ''),
       ('pedido', 'modificado_en', 'timestamp with time zone', true, null, ''),
+      -- E9 (homologación mínima): columna obligatoria añadida a pedido.
+      ('pedido', 'jornada_operativa_id', 'bigint', true, null, ''),
       ('detalle_pedido', 'id', 'bigint', true, null, 'a'),
       ('detalle_pedido', 'pedido_id', 'bigint', true, null, ''),
       ('detalle_pedido', 'producto_id', 'uuid', true, null, ''),
@@ -145,24 +148,27 @@ begin
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'p';
-  if actual_count <> 10 then
-    raise exception 'TP-11: expected 10 PK, found %', actual_count;
+  -- E9 (homologación mínima): delta aditivo del catálogo.
+  if actual_count <> 11 then
+    raise exception 'TP-11: expected 11 PK, found %', actual_count;
   end if;
 
   select count(*) into actual_count
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'f';
-  if actual_count <> 19 then
-    raise exception 'TP-11: expected 19 FK, found %', actual_count;
+  -- E9 (homologación mínima): delta aditivo del catálogo.
+  if actual_count <> 24 then
+    raise exception 'TP-11: expected 24 FK, found %', actual_count;
   end if;
 
   select count(*) into actual_count
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'f' and con.confdeltype = 'r';
-  if actual_count <> 19 then
-    raise exception 'TP-11: expected 19 FK ON DELETE RESTRICT, found %', actual_count;
+  -- E9 (homologación mínima): delta aditivo del catálogo.
+  if actual_count <> 24 then
+    raise exception 'TP-11: expected 24 FK ON DELETE RESTRICT, found %', actual_count;
   end if;
 
   select count(*) into actual_count
@@ -170,8 +176,9 @@ begin
   join pg_class c on c.oid = a.attrelid
   join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public' and a.attidentity in ('a', 'd');
-  if actual_count <> 5 then
-    raise exception 'TP-11: expected 5 identity columns, found %', actual_count;
+  -- E9 (homologación mínima): delta aditivo del catálogo.
+  if actual_count <> 6 then
+    raise exception 'TP-11: expected 6 identity columns, found %', actual_count;
   end if;
 
   select count(*) into mismatch_count
@@ -181,7 +188,8 @@ begin
       ('pedido', 'id', 'a'),
       ('detalle_pedido', 'id', 'a'),
       ('historial_estado', 'id', 'a'),
-      ('pago', 'id', 'a')
+      ('pago', 'id', 'a'),
+      ('jornada_operativa', 'id', 'a') -- E9 (homologación mínima)
   ) as e(table_name, column_name, identity_kind)
   left join pg_class c on c.relname = e.table_name
   left join pg_namespace n on n.oid = c.relnamespace and n.nspname = 'public'
@@ -196,16 +204,18 @@ begin
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'u';
-  if actual_count <> 9 then
-    raise exception 'TP-11: expected 9 UNIQUE constraints, found %', actual_count;
+  -- E9 (homologación mínima): delta aditivo del catálogo.
+  if actual_count <> 12 then
+    raise exception 'TP-11: expected 12 UNIQUE constraints, found %', actual_count;
   end if;
 
   select count(*) into actual_count
   from pg_constraint con
   join pg_namespace n on n.oid = con.connamespace
   where n.nspname = 'public' and con.contype = 'c';
-  if actual_count <> 25 then
-    raise exception 'TP-11: expected 25 CHECK constraints, found %', actual_count;
+  -- E9 (homologación mínima): delta aditivo del catálogo.
+  if actual_count <> 29 then
+    raise exception 'TP-11: expected 29 CHECK constraints, found %', actual_count;
   end if;
 
   select count(*), array_agg(index_name order by index_name)
@@ -224,7 +234,7 @@ begin
         'producto', 'pedido', 'detalle_pedido', 'historial_estado', 'pago'
       )
   ) indexes;
-  if actual_count <> 15 or actual_names <> array[
+  if actual_count <> 16 or actual_names <> array[
     'idx_categoria_local_id_activo_orden',
     'idx_detalle_pedido_cocina_enviado_en',
     'idx_detalle_pedido_pedido_id',
@@ -233,6 +243,7 @@ begin
     'idx_historial_estado_pedido_id_creado_en',
     'idx_mesa_local_id_estado',
     'idx_pago_pagado_en',
+    'idx_pedido_jornada_operativa_id_estado', -- E9 (homologación mínima)
     'idx_pedido_local_id_estado_creado_en',
     'idx_pedido_mesa_id_estado',
     'idx_perfil_usuario_local_id',
@@ -241,7 +252,7 @@ begin
     'idx_producto_local_id_activo',
     'uq_pedido_mesa_id_vigente'
   ]::text[] then
-    raise exception 'TP-11: expected 15 exact additional indexes, found %: %', actual_count, actual_names;
+    raise exception 'TP-11: expected 16 exact additional indexes, found %: %', actual_count, actual_names;
   end if;
 
   select count(*) into actual_count

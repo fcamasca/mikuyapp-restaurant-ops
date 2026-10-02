@@ -8,6 +8,7 @@
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
+$validationFailures = @()
 $log = Join-Path $root 'e9-t06-local.log'
 Set-Content -Path $log -Value "E9 local $(Get-Date -Format o)" -Encoding utf8
 
@@ -16,6 +17,9 @@ function Step([string]$label, [scriptblock]$block) {
   $head | Out-File -FilePath $log -Append -Encoding utf8
   $out = & $block 2>&1 | ForEach-Object { "$_" }
   $code = $LASTEXITCODE
+  if ($code -ne 0 -and $label -match '^(sql |TP22 |npm run |versiones |publicacion )') {
+    $script:validationFailures += $label
+  }
   $out | Out-Host
   $out | Out-File -FilePath $log -Append -Encoding utf8
   "-- exit $code" | Out-File -FilePath $log -Append -Encoding utf8
@@ -70,4 +74,6 @@ Step 'supabase stop' { npx supabase stop } | Out-Null
 
 Step 'npm run typecheck' { npm run typecheck } | Out-Null
 Step 'npm run build' { npm run build } | Out-Null
-"== FIN" | Out-File -FilePath $log -Append -Encoding utf8
+"== FIN: $($validationFailures.Count) verificaciones fallidas" | Tee-Object -FilePath $log -Append | Out-Host
+if ($validationFailures.Count -gt 0) { exit 1 }
+exit 0

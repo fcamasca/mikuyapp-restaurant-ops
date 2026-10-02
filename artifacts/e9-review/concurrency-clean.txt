@@ -1,0 +1,30 @@
+== TP16 apertura vs apertura
+RACE TP16 dos ADMIN abren a la vez: A exit=0  | B exit=0 
+RESULT PASS TP16 dos ADMIN abren a la vez
+RACE TP16 doble envío con la misma clave: A exit=0  | B exit=0 
+RESULT PASS TP16 doble envío con la misma clave
+== TP17 cierre vs creación y cierre vs cierre
+RACE TP17 cierre gana a crear pedido: A exit=0  | B exit=1 [ERROR:  Local cerrado — el sistema no se encuentra aperturado]
+RESULT PASS TP17 cierre gana a crear pedido
+RACE TP17 crear pedido gana al cierre: A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 1 pedidos pendientes y 0 sesiones de caja abiertas]
+RESULT PASS TP17 crear pedido gana al cierre
+RACE TP17 cierre gana a abrir caja: A exit=0  | B exit=1 [ERROR:  Local cerrado — el sistema no se encuentra aperturado]
+RESULT PASS TP17 cierre gana a abrir caja
+RACE TP17 abrir caja gana al cierre: A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 0 pedidos pendientes y 1 sesiones de caja abiertas]
+RESULT PASS TP17 abrir caja gana al cierre
+RACE TP17 cierre vs cierre: A exit=0  | B exit=0 
+RESULT PASS TP17 cierre vs cierre
+== TP18 otras carreras
+RACE TP18 cobro final en curso vs cierre (sesión abierta): A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 1 pedidos pendientes y 1 sesiones de caja abiertas]
+RESULT PASS TP18 cobro final en curso vs cierre (sesión abierta)
+RACE TP18 cierre de caja en curso vs cierre de jornada: A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 0 pedidos pendientes y 1 sesiones de caja abiertas]
+RESULT PASS TP18 cierre de caja en curso vs cierre de jornada
+RACE TP18 cierre de jornada vs cierre de caja (jornada primero): A exit=1 [ERROR:  No se puede cerrar la jornada: 0 pedidos pendientes y 1 sesiones de caja abiertas] | B exit=0 
+RESULT PASS TP18 cierre de jornada vs cierre de caja (jornada primero)
+RACE TP18 anulación en curso vs cierre: A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 1 pedidos pendientes y 0 sesiones de caja abiertas]
+RESULT PASS TP18 anulación en curso vs cierre
+RACE TP18 liberación de mesa vacía en curso vs cierre: A exit=0  | B exit=1 [ERROR:  No se puede cerrar la jornada: 1 pedidos pendientes y 0 sesiones de caja abiertas]
+RESULT PASS TP18 liberación de mesa vacía en curso vs cierre
+RACE TP18 apertura en curso vs crear pedido: A exit=0  | B exit=1 [ERROR:  Local cerrado — el sistema no se encuentra aperturado]
+RESULT PASS TP18 apertura en curso vs crear pedido
+== fallos: 0
